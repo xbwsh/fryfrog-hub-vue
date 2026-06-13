@@ -1,0 +1,706 @@
+<template>
+  <div class="player-bar">
+    <div class="player-left">
+      <div class="cover-wrapper" @click="toggleLyricsPanel">
+        <img v-if="playerStore.currentTrack?.coverArt" :src="getCoverArt(playerStore.currentTrack.coverArt, 60)"
+          class="player-cover" :class="{ rotating: playerStore.isPlaying }" alt="封面" />
+        <div class="cover-overlay" v-if="currentLyrics">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+          </svg>
+        </div>
+      </div>
+      <div class="track-info">
+        <div class="track-text" v-if="playerStore.currentTrack">
+          <span class="track-title">{{ playerStore.currentTrack.title }}</span>
+          <span class="track-artist">{{ playerStore.currentTrack.artist }}</span>
+        </div>
+        <div v-else class="track-text empty">
+          <span class="placeholder">选择一首歌曲开始播放</span>
+        </div>
+        <div v-if="currentLyrics && showLyrics" class="lyrics-preview">
+          {{ currentLyrics }}
+        </div>
+      </div>
+    </div>
+
+    <div class="player-center">
+      <div class="player-controls">
+        <button class="control-btn star-btn" :class="{ starred: isStarred }" @click="toggleStarred" title="收藏">
+          <svg width="16" height="16" viewBox="0 0 24 24" :fill="isStarred ? 'currentColor' : 'none'"
+            stroke="currentColor" stroke-width="2">
+            <polygon
+              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+          </svg>
+        </button>
+        <button class="control-btn" @click="playerStore.prevTrack" title="上一首">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+          </svg>
+        </button>
+
+        <button class="control-btn play-main" @click="playerStore.togglePlay" :disabled="!playerStore.currentTrack">
+          <svg v-if="!playerStore.isPlaying" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M8 5v14l11-7z" />
+          </svg>
+          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+          </svg>
+        </button>
+
+        <button class="control-btn" @click="playerStore.nextTrack" title="下一首">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+          </svg>
+        </button>
+
+        <button class="control-btn active" @click="playerStore.cyclePlayMode" :title="playModeTitle">
+          <!-- 顺序播放 -->
+          <svg v-if="playerStore.playMode === 'order'" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <!-- 第一行，中心 y=4 -->
+            <line x1="4" y1="4" x2="17" y2="4" />
+            <polyline points="17 1, 21 4, 17 7" />
+            <!-- 第二行，中心 y=12 -->
+            <line x1="4" y1="12" x2="17" y2="12" />
+            <polyline points="17 9, 21 12, 17 15" />
+            <!-- 第三行，中心 y=20 -->
+            <line x1="4" y1="20" x2="17" y2="20" />
+            <polyline points="17 17, 21 20, 17 23" />
+          </svg>
+          <svg v-else-if="playerStore.playMode === 'shuffle'" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <polyline points="16 3 21 3 21 8" />
+            <line x1="4" y1="20" x2="21" y2="3" />
+            <polyline points="21 16 21 21 16 21" />
+            <line x1="15" y1="15" x2="21" y2="21" />
+            <line x1="4" y1="4" x2="9" y2="9" />
+          </svg>
+          <!-- 循环播放（列表循环 / 单曲循环） -->
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <!-- 原有的循环箭头路径 -->
+            <polyline points="17 1 21 5 17 9" />
+            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+            <polyline points="7 23 3 19 7 15" />
+            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+
+            <!-- 单曲循环时在中心显示数字 1 -->
+            <text v-if="playerStore.playMode === 'repeat_one'" x="12" y="12" text-anchor="middle"
+              dominant-baseline="central" font-size="10" font-weight="bold" fill="currentColor" stroke="none">1</text>
+          </svg>
+        </button>
+
+      </div>
+
+      <div class="player-progress">
+        <span class="time">{{ formatTime(playerStore.currentTime) }}/{{ formatTime(playerStore.duration) }}</span>
+        <div class="progress-bar" @click="seekTo($event)">
+          <div class="progress-fill" :style="{ width: playerStore.progress + '%' }">
+            <div class="progress-thumb"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="player-volume">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+        <path v-if="playerStore.volume > 0" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+        <path v-if="playerStore.volume > 0.5" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
+      </svg>
+      <div class="volume-bar" @mousedown="onVolumeMouseDown" @click="onVolumeBarClick">
+        <div class="volume-fill" :style="{ width: (playerStore.volume * 100) + '%' }"></div>
+        <div class="volume-thumb" :style="{ left: (playerStore.volume * 100) + '%' }"></div>
+      </div>
+    </div>
+
+  </div>
+
+</template>
+
+<script setup lang="ts">
+import { usePlayerStore } from '@/stores/player'
+import { useLibraryStore } from '@/stores/library'
+import { getCoverArt } from '@/api/navidrome'
+import { computed, ref, watch } from 'vue'
+
+const playerStore = usePlayerStore()
+const libraryStore = useLibraryStore()
+
+const emit = defineEmits(['toggle-lyrics'])
+
+const currentLyrics = ref('')
+const showLyrics = ref(false)
+
+const isStarred = computed(() => {
+  if (!playerStore.currentTrack) return false
+  return libraryStore.isTrackStarred(playerStore.currentTrack.id)
+})
+
+const playModeTitle = computed(() => {
+  const titles = {
+    order: '顺序播放',
+    shuffle: '随机播放',
+    repeat_all: '列表循环',
+    repeat_one: '单曲循环'
+  }
+  return titles[playerStore.playMode]
+})
+
+function parseEmbeddedLyrics(lyricsString: string): string {
+  try {
+    const lyricsData = JSON.parse(lyricsString)
+    if (!Array.isArray(lyricsData) || lyricsData.length === 0) return ''
+
+    const lines: string[] = []
+    const lyricObj = lyricsData[0]
+
+    if (lyricObj.line && Array.isArray(lyricObj.line)) {
+      for (const line of lyricObj.line) {
+        if (line.start !== undefined && line.value) {
+          const timeMs = line.start
+          const mins = Math.floor(timeMs / 60000)
+          const secs = Math.floor((timeMs % 60000) / 1000)
+          const ms = Math.floor(timeMs % 1000)
+          const timeStr = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`
+          lines.push(`[${timeStr}]${line.value}`)
+        }
+      }
+    }
+
+    return lines.join('\n')
+  } catch {
+    return ''
+  }
+}
+
+async function loadLyrics() {
+  if (!playerStore.currentTrack) return
+  currentLyrics.value = ''
+  libraryStore.currentLyrics = ''
+
+  if (playerStore.currentTrack.lyrics) {
+    const embeddedLyrics = parseEmbeddedLyrics(playerStore.currentTrack.lyrics)
+    if (embeddedLyrics) {
+      currentLyrics.value = embeddedLyrics
+      libraryStore.currentLyrics = embeddedLyrics
+      showLyrics.value = true
+      return
+    }
+  }
+
+  try {
+    const lyrics = await libraryStore.fetchLyrics(
+      playerStore.currentTrack.artist || '',
+      playerStore.currentTrack.title || '',
+      playerStore.currentTrack.id
+    )
+    currentLyrics.value = lyrics
+    showLyrics.value = currentLyrics.value.length > 0
+  } catch {
+    showLyrics.value = false
+  }
+}
+
+async function toggleStarred() {
+  if (!playerStore.currentTrack) return
+  await libraryStore.toggleStar(playerStore.currentTrack.id, isStarred.value, playerStore.currentTrack)
+}
+
+function toggleLyricsPanel() {
+  emit('toggle-lyrics')
+}
+
+watch(() => playerStore.currentTrack, () => {
+  loadLyrics()
+})
+
+function updateVolumeFromMouse(e: MouseEvent) {
+  const bar = document.querySelector('.volume-bar') as HTMLElement
+  if (!bar) return
+  const rect = bar.getBoundingClientRect()
+  const percent = (e.clientX - rect.left) / rect.width
+  const volume = Math.max(0, Math.min(1, percent))
+  playerStore.setVolume(volume)
+}
+
+function onVolumeMouseDown(e: MouseEvent) {
+  e.preventDefault()
+  updateVolumeFromMouse(e)
+  document.addEventListener('mousemove', onVolumeMouseMove)
+  document.addEventListener('mouseup', onVolumeMouseUp)
+}
+
+function onVolumeMouseMove(e: MouseEvent) {
+  updateVolumeFromMouse(e)
+}
+
+function onVolumeMouseUp() {
+  document.removeEventListener('mousemove', onVolumeMouseMove)
+  document.removeEventListener('mouseup', onVolumeMouseUp)
+}
+
+function onVolumeBarClick(e: MouseEvent) {
+  const bar = e.currentTarget as HTMLElement
+  const rect = bar.getBoundingClientRect()
+  const percent = (e.clientX - rect.left) / rect.width
+  const volume = Math.max(0, Math.min(1, percent))
+  playerStore.setVolume(volume)
+}
+
+function seekTo(e: MouseEvent) {
+  const bar = e.currentTarget as HTMLElement
+  const rect = bar.getBoundingClientRect()
+  const percent = (e.clientX - rect.left) / rect.width
+  playerStore.seekTo(percent * playerStore.duration)
+}
+
+function formatTime(seconds: number): string {
+  if (!seconds || isNaN(seconds)) return '0:00'
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+</script>
+
+<style scoped>
+.player-bar {
+  position: relative;
+  height: 80px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: 280px 1fr 120px;
+  align-items: center;
+  padding: 0 24px;
+  gap: 24px;
+  flex-shrink: 0;
+}
+
+.player-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+}
+
+.track-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.error-message {
+  font-size: 12px;
+  color: var(--accent);
+  width: 100%;
+  margin-top: 4px;
+}
+
+.player-cover {
+  width: 50px;
+  height: 50px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.track-text {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.track-text.empty {
+  justify-content: center;
+}
+
+.placeholder {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.track-title {
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.player-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.player-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.control-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--text-secondary);
+  transition: var(--transition);
+}
+
+.control-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.control-btn.active {
+  color: var(--accent);
+}
+
+.repeat-badge {
+  font-size: 9px;
+  font-weight: 700;
+  position: absolute;
+  top: 2px;
+  right: 4px;
+}
+
+.play-main {
+  width: 40px;
+  height: 40px;
+  background: var(--text-primary);
+  color: var(--bg-primary) !important;
+}
+
+.play-main:hover {
+  transform: scale(1.05);
+}
+
+.play-main:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.player-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px;
+}
+
+.time {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 70px;
+  text-align: left;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: var(--bg-hover);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+  transition: height 0.15s ease;
+}
+
+.progress-bar:hover {
+  height: 6px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--text-primary);
+  border-radius: 2px;
+  position: relative;
+  transition: width 0.1s linear;
+}
+
+.progress-bar:hover .progress-fill {
+  background: var(--accent);
+}
+
+.progress-thumb {
+  position: absolute;
+  right: -5px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.progress-bar:hover .progress-thumb {
+  opacity: 1;
+}
+
+.player-volume {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.volume-bar {
+  width: 80px;
+  height: 4px;
+  background: var(--bg-hover);
+  border-radius: 2px;
+  cursor: pointer;
+  position: relative;
+}
+
+.volume-fill {
+  height: 100%;
+  background: var(--text-primary);
+  border-radius: 2px;
+  transition: width 0.1s linear;
+}
+
+.volume-bar:hover .volume-fill {
+  background: var(--accent);
+}
+
+.volume-thumb {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text-primary);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.volume-bar:hover .volume-thumb {
+  opacity: 1;
+}
+
+.volume-bar:hover .volume-thumb {
+  background: var(--accent);
+}
+
+.lyrics-preview {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-style: italic;
+}
+
+.control-btn.star-btn:hover {
+  color: var(--accent);
+  background: rgba(232, 93, 74, 0.1);
+}
+
+.control-btn.star-btn.starred {
+  color: var(--accent);
+}
+
+.cover-wrapper {
+  position: relative;
+  cursor: pointer;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.player-cover {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.player-cover.rotating {
+  animation: rotate 8s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.cover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  color: white;
+}
+
+.cover-wrapper:hover .cover-overlay {
+  opacity: 1;
+}
+
+.lyrics-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.lyrics-panel {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 500px;
+  max-height: 70vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+@media screen and (max-width: 1024px) {
+  .player-bar {
+    grid-template-columns: 200px 1fr 80px;
+    padding: 0 16px;
+    gap: 16px;
+  }
+
+  .player-cover {
+    width: 40px;
+    height: 40px;
+  }
+
+  .control-btn {
+    width: 32px;
+    height: 32px;
+  }
+
+  .control-btn.play-main svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .volume-bar {
+    width: 60px;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .player-bar {
+    grid-template-columns: 140px 1fr 60px;
+    padding: 0 12px;
+    gap: 12px;
+    height: 70px;
+  }
+
+  .player-cover {
+    width: 36px;
+    height: 36px;
+  }
+
+  .player-left {
+    gap: 10px;
+  }
+
+  .track-title {
+    font-size: 13px;
+  }
+
+  .track-artist {
+    font-size: 11px;
+  }
+
+  .control-btn {
+    width: 28px;
+    height: 28px;
+  }
+
+  .control-btn svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .control-btn.play-main svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .volume-bar {
+    width: 40px;
+  }
+
+  .lyrics-preview {
+    display: none;
+  }
+}
+
+.lyrics-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.lyrics-panel-cover {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.lyrics-panel-cover.rotating {
+  animation: rotate 8s linear infinite;
+}
+
+.lyrics-panel-info {
+  flex: 1;
+}
+
+.lyrics-panel-info h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.lyrics-panel-info p {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+</style>

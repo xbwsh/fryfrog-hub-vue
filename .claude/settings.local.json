@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm audit --audit-level=moderate)",
+      "WebFetch(domain:github.com)",
+      "Bash(git ls-remote \"https://github.com/peguerosdc/subplayer.git\" HEAD)",
+      "Read(//private/tmp/**)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
