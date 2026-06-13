@@ -1,11 +1,15 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Track } from '@/types/navidrome'
-import { streamTrack } from '@/api/navidrome'
+import type { MusicTrack } from '@/types/backend'
+import { streamTrack, getCoverArt } from '@/api/navidrome'
+import { getStreamUrl, getMusicCoverArtUrl } from '@/api/backend'
+
+type AnyTrack = Track | MusicTrack
 
 export const usePlayerStore = defineStore('player', () => {
-  const currentTrack = ref<Track | null>(null)
-  const queue = ref<Track[]>([])
+  const currentTrack = ref<AnyTrack | null>(null)
+  const queue = ref<AnyTrack[]>([])
   const currentIndex = ref(-1)
   const isPlaying = ref(false)
   const volume = ref(0.8)
@@ -41,7 +45,6 @@ export const usePlayerStore = defineStore('player', () => {
     if (!audio.value) {
       audio.value = new Audio()
       audio.value.volume = volume.value
-      audio.value.crossOrigin = 'anonymous'
 
       audio.value.addEventListener('loadedmetadata', () => {
         duration.value = audio.value?.duration || 0
@@ -82,7 +85,7 @@ export const usePlayerStore = defineStore('player', () => {
     }
   }
 
-  async function playTrack(track: Track, trackList?: Track[]) {
+  async function playTrack(track: AnyTrack, trackList?: AnyTrack[]) {
     initAudio()
     isLoading.value = true
     error.value = ''
@@ -91,7 +94,7 @@ export const usePlayerStore = defineStore('player', () => {
 
     if (trackList) {
       queue.value = trackList
-      currentIndex.value = trackList.findIndex(t => t.id === track.id)
+      currentIndex.value = trackList.findIndex(t => String(t.id) === String(track.id))
     }
 
     currentTrack.value = track
@@ -106,30 +109,15 @@ export const usePlayerStore = defineStore('player', () => {
           currentObjectUrl.value = null
         }
         
-        let blob: Blob
-        
-        if (downloadEnabled.value && downloadedTracks.value.has(track.id)) {
-          const cachedBase64 = downloadedTracks.value.get(track.id)
-          if (cachedBase64) {
-            const byteString = atob(cachedBase64.split(',')[1])
-            const mimeType = cachedBase64.split(',')[0].split(':')[1].split(';')[0]
-            const ab = new ArrayBuffer(byteString.length)
-            const ia = new Uint8Array(ab)
-            for (let i = 0; i < byteString.length; i++) {
-              ia[i] = byteString.charCodeAt(i)
-            }
-            blob = new Blob([ab], { type: mimeType })
-            console.log('Loaded track from cache:', track.id)
-          } else {
-            blob = await fetchAndCacheTrack(track)
-          }
+        let streamUrl: string
+        if ('coverArt' in track) {
+          streamUrl = streamTrack(String(track.id), 'raw')
         } else {
-          blob = await fetchAndCacheTrack(track)
+          streamUrl = getStreamUrl(track.id as number)
         }
 
-        const objectUrl = URL.createObjectURL(blob)
-        currentObjectUrl.value = objectUrl
-        audio.value.src = objectUrl
+        audio.value.src = streamUrl
+        audio.value.load()
         isPlaying.value = true
         await audio.value.play()
         startTrackingTime()
@@ -142,55 +130,9 @@ export const usePlayerStore = defineStore('player', () => {
     isLoading.value = false
   }
 
-  async function fetchAndCacheTrack(track: Track): Promise<Blob> {
-    const streamUrl = streamTrack(track.id, 'raw')
-    const response = await fetch(streamUrl)
-    console.log('Response status:', response.status)
-    console.log('Content-Type:', response.headers.get('content-type'))
-    console.log('Content-Length:', response.headers.get('content-length'))
-    
-    if (!response.ok) {
-      throw new Error(`Server returned ${response.status}`)
-    }
-    
-    const contentType = response.headers.get('content-type')
-    if (!contentType || !contentType.includes('audio/')) {
-      const text = await response.text()
-      console.error('Server error response:', text)
-      throw new Error(`Unexpected content type: ${contentType}`)
-    }
-
-    const blob = await response.blob()
-    
-    if (downloadEnabled.value && !downloadedTracks.value.has(track.id)) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const base64data = reader.result as string
-        downloadedTracks.value.set(track.id, base64data)
-        saveDownloadedTracks()
-        console.log('Cached track:', track.id)
-      }
-      reader.readAsDataURL(blob)
-    }
-    
-    return blob
-  }
-
   function setDownloadEnabled(val: boolean) {
     downloadEnabled.value = val
     localStorage.setItem('downloadEnabled', String(val))
-  }
-
-  function saveDownloadedTracks() {
-    const data: Record<string, string> = {}
-    downloadedTracks.value.forEach((value, key) => {
-      data[key] = value
-    })
-    try {
-      localStorage.setItem('downloadedTracks', JSON.stringify(data))
-    } catch (e) {
-      console.warn('Failed to save downloaded tracks to localStorage:', e)
-    }
   }
 
   function loadDownloadedTracks() {
@@ -332,9 +274,20 @@ export const usePlayerStore = defineStore('player', () => {
 
   function cyclePlayMode() {
     const modes: ('order' | 'shuffle' | 'repeat_all' | 'repeat_one')[] = ['order', 'shuffle', 'repeat_all', 'repeat_one']
-    const currentIndex = modes.indexOf(playMode.value)
-    playMode.value = modes[(currentIndex + 1) % modes.length]
+    const modeIndex = modes.indexOf(playMode.value)
+    playMode.value = modes[(modeIndex + 1) % modes.length]
     localStorage.setItem('playMode', playMode.value)
+  }
+
+  function getTrackCoverArt(track: AnyTrack, size = 300): string {
+    if ('coverArt' in track) {
+      return getCoverArt(track.coverArt, size)
+    }
+    return getMusicCoverArtUrl(track.id as number)
+  }
+
+  function getTrackId(track: AnyTrack): string {
+    return String(track.id)
   }
 
   return {
@@ -360,5 +313,7 @@ export const usePlayerStore = defineStore('player', () => {
     cyclePlayMode,
     setDownloadEnabled,
     loadDownloadedTracks,
+    getTrackCoverArt,
+    getTrackId,
   }
 })

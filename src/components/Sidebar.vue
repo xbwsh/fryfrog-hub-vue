@@ -1,71 +1,61 @@
 <template>
-  <nav class="sidebar" :class="{ 'mobile': mobile }" :style="mobile && show === false ? { display: 'none' } : {}">
+  <nav class="sidebar" :class="{ mobile }" :style="mobile && show === false ? { display: 'none' } : {}">
     <div class="sidebar-header">
-      <div class="logo" v-show="!mobile">{{ isKomga ? '📚' : '♪' }}</div>
-      <span class="logo-text" v-show="!mobile">{{ isKomga ? 'Komga' : 'Navidrome' }}</span>
+      <div class="logo">🐸</div>
+      <div class="header-info" v-show="!mobile">
+        <span class="logo-text">Fryfrog Hub</span>
+        <span class="user-name">{{ connectionStore.username }}</span>
+      </div>
     </div>
 
-    <div v-if="isNavidrome" class="nav-section">
-      <h3 class="nav-label">发现</h3>
-      <router-link to="/navidrome" class="nav-item" active-class="active">
+    <div class="nav-section">
+      <h3 class="nav-label">内容</h3>
+      <router-link to="/" class="nav-item" active-class="active" :exact="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        首页
+      </router-link>
+      <router-link to="/music" class="nav-item" active-class="active">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"/>
           <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/>
         </svg>
-        推荐
+        音乐
       </router-link>
-      <router-link to="/navidrome/albums" class="nav-item" active-class="active">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="2"/>
-          <path d="M4.5 9.5a5 5 0 0 1 15 0"/>
-          <circle cx="12" cy="12" r="8"/>
-          <path d="M12 4v2M12 18v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M4 12h2M18 12h2"/>
-        </svg>
-        专辑
-      </router-link>
-      <router-link to="/navidrome/artists" class="nav-item" active-class="active">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        艺术家
-      </router-link>
-    </div>
-
-    <div v-if="isNavidrome" class="nav-section">
-      <h3 class="nav-label">收藏</h3>
-      <router-link to="/navidrome/starred" class="nav-item" active-class="active">
+      <router-link to="/favorites" class="nav-item" active-class="active">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
         </svg>
-        收藏歌曲
+        收藏
       </router-link>
-    </div>
-
-    <div v-if="isNavidrome" class="nav-section">
-      <h3 class="nav-label">播放列表</h3>
-      <router-link to="/navidrome/playlists" class="nav-item" active-class="active">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10"/>
-          <polygon points="8 6 8 8 11 8 11 6"/>
-          <polygon points="8 12 8 14 11 14 11 12"/>
-          <polygon points="15 6 15 8 18 8 18 6"/>
-          <polygon points="15 12 15 14 18 14 18 12"/>
-        </svg>
-        所有列表
-      </router-link>
-    </div>
-
-    <div v-if="isKomga" class="nav-section">
-      <h3 class="nav-label">漫画</h3>
-      <router-link to="/komga" class="nav-item" active-class="active">
+      <router-link to="/comics" class="nav-item" active-class="active">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
           <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
         </svg>
-        漫画库
+        漫画
+      </router-link>
+      <router-link to="/novels" class="nav-item" active-class="active">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+          <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        小说
+      </router-link>
+      <router-link to="/movies" class="nav-item" active-class="active">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+          <line x1="7" y1="2" x2="7" y2="22"/>
+          <line x1="17" y1="2" x2="17" y2="22"/>
+          <line x1="2" y1="12" x2="22" y2="12"/>
+          <line x1="2" y1="7" x2="7" y2="7"/>
+          <line x1="2" y1="17" x2="7" y2="17"/>
+          <line x1="17" y1="17" x2="22" y2="17"/>
+          <line x1="17" y1="7" x2="22" y2="7"/>
+        </svg>
+        影视
       </router-link>
     </div>
 
@@ -81,23 +71,24 @@
     </div>
 
     <div class="sidebar-footer">
-      <button class="btn-disconnect" @click="$emit('disconnect')">
+      <button class="btn-disconnect" @click="handleDisconnect">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
           <polyline points="16 17 21 12 16 7"/>
           <line x1="21" y1="12" x2="9" y2="12"/>
         </svg>
-        断开连接
+        退出登录
       </button>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useConnectionStore } from '@/stores/connection'
+import { useRouter } from 'vue-router'
 
 const connectionStore = useConnectionStore()
+const router = useRouter()
 
 defineProps<{
   show?: boolean
@@ -105,12 +96,13 @@ defineProps<{
 }>()
 
 defineEmits<{
-  disconnect: []
   close: []
 }>()
 
-const isNavidrome = computed(() => connectionStore.serviceType === 'navidrome')
-const isKomga = computed(() => connectionStore.serviceType === 'komga')
+function handleDisconnect() {
+  connectionStore.disconnect()
+  router.push('/')
+}
 </script>
 
 <style scoped>
@@ -128,68 +120,69 @@ const isKomga = computed(() => connectionStore.serviceType === 'komga')
 
 .sidebar.mobile {
   position: fixed;
-  top: 56px;
+  top: 0;
   left: 0;
   z-index: 30;
-  height: calc(100dvh - 56px - env(safe-area-inset-bottom));
+  height: 100%;
   transform: translateX(-100%);
-  padding-bottom: env(safe-area-inset-bottom);
-  box-sizing: border-box;
 }
 
-.sidebar.mobile:not([style*="display: none"]) {
-  transform: translateX(0);
+.sidebar.mobile[style*="display: none"] {
+  transform: translateX(-100%);
 }
 
 .sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: center;
   gap: 12px;
-  padding: 24px 20px 20px;
+  padding: 20px 16px;
   border-bottom: 1px solid var(--border);
 }
 
-.sidebar.mobile .sidebar-header {
-  display: none;
-}
-
 .logo {
-  font-size: 28px;
-  color: var(--accent);
-  font-family: var(--font-display);
-  text-shadow: 0 0 20px var(--accent-glow);
+  font-size: 24px;
 }
 
 .logo-text {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
+  color: var(--text-primary);
+}
+
+.header-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-name {
+  font-size: 11px;
+  color: var(--text-muted);
 }
 
 .nav-section {
-  padding: 16px 12px;
+  padding: 12px 8px;
 }
 
 .nav-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-muted);
-  padding: 0 12px;
-  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 0 8px 8px;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 10px 12px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
+  text-decoration: none;
   transition: var(--transition);
 }
 
@@ -199,66 +192,29 @@ const isKomga = computed(() => connectionStore.serviceType === 'komga')
 }
 
 .nav-item.active {
-  background: rgba(232, 93, 74, 0.12);
-  color: var(--accent);
-}
-
-.nav-item svg {
-  opacity: 0.7;
-  flex-shrink: 0;
-}
-
-.nav-item.active svg {
-  opacity: 1;
+  background: var(--accent);
+  color: white;
 }
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 24px 12px;
-}
-
-.theme-switcher {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-  padding: 0 12px;
-}
-
-.theme-label {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1.5px;
-  color: var(--text-muted);
-}
-
-.theme-select {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  padding: 8px 10px;
-  font-family: var(--font-body);
-  font-size: 13px;
-  outline: none;
-}
-
-.theme-select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
+  padding: 16px 8px;
+  border-top: 1px solid var(--border);
 }
 
 .btn-disconnect {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  font-size: 13px;
   width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  cursor: pointer;
   transition: var(--transition);
 }
 

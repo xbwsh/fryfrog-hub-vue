@@ -1,6 +1,6 @@
 <template>
   <div class="lyrics-panel">
-    <img v-if="playerStore.currentTrack?.coverArt" :src="getCoverArt(playerStore.currentTrack.coverArt, 600)"
+    <img v-if="playerStore.currentTrack" :src="playerStore.getTrackCoverArt(playerStore.currentTrack, 600)"
       class="lyrics-bg-image" alt="" />
     <div class="lyrics-bg-overlay" ref="bgOverlay"></div>
     <div class="lyrics-header">
@@ -45,12 +45,9 @@
 
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
-import { useLibraryStore } from '@/stores/library'
-import { getCoverArt } from '@/api/navidrome'
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 
 const playerStore = usePlayerStore()
-const libraryStore = useLibraryStore()
 
 defineEmits(['close'])
 
@@ -97,9 +94,17 @@ onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown)
 })
 
+const currentLyrics = computed(() => {
+  if (!playerStore.currentTrack) return ''
+  if ('lyrics' in playerStore.currentTrack) {
+    return playerStore.currentTrack.lyrics || ''
+  }
+  return ''
+})
+
 const parsedLyrics = computed(() => {
-  if (!libraryStore.currentLyrics) return []
-  const lines = libraryStore.currentLyrics.split('\n')
+  if (!currentLyrics.value) return []
+  const lines = currentLyrics.value.split('\n')
   const result: { time: number; text: string }[] = []
   const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/
 

@@ -1,115 +1,200 @@
 <template>
   <div class="home-view">
-    <section class="section">
+    <div class="welcome-section">
+      <h1 class="welcome-title">欢迎回来，{{ connectionStore.username }}</h1>
+      <p class="welcome-subtitle">探索你的媒体库</p>
+    </div>
+
+    <section class="content-section">
       <div class="section-header">
-        <h2>为你推荐</h2>
-        <button class="refresh-btn" @click="loadFeatured">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-          </svg>
-          刷新
-        </button>
-      </div>
-      <div class="featured-playlist" v-if="featuredTracks.length > 0">
-        <div class="featured-card" @click="playFeatured">
-          <div class="featured-cover">
-            <img
-              v-if="featuredTracks[0]?.coverArt"
-              :src="getCoverArt(featuredTracks[0].coverArt, 400)"
-              alt="推荐封面"
-            />
-          </div>
-          <div class="featured-info">
-            <span class="featured-label">精选播放</span>
-            <h3>随机推荐</h3>
-            <p>{{ featuredTracks.length }} 首歌曲</p>
-          </div>
+        <div class="section-title">
+          <span class="section-icon">🎵</span>
+          <h2>音乐</h2>
         </div>
-        <button class="show-tracks-btn" @click="showTracks = !showTracks">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" :class="{ rotated: showTracks }">
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-          {{ showTracks ? '收起列表' : '查看歌曲列表' }}
-        </button>
-        <div v-if="showTracks" class="featured-tracks-list">
-          <div
-            v-for="(track, index) in featuredTracks"
-            :key="track.id"
-            class="featured-track-item"
-            @click="playTrack(track)"
-          >
-            <span class="track-index">{{ index + 1 }}</span>
-            <div class="track-info">
-              <span class="track-title">{{ track.title }}</span>
-              <span class="track-artist">{{ track.artist }}</span>
-            </div>
-            <span class="track-duration">{{ formatDuration(track.duration) }}</span>
+        <router-link to="/music" class="see-all">查看全部</router-link>
+      </div>
+      <div class="content-grid" v-if="musicTracks.length > 0">
+        <div v-for="track in musicTracks.slice(0, 6)" :key="track.id" class="content-card">
+          <div class="card-cover music-cover">
+            <img :src="getMusicCoverArtUrl(track.id)" alt="封面" />
+          </div>
+          <div class="card-info">
+            <span class="card-title">{{ track.title }}</span>
+            <span class="card-subtitle">{{ track.artist }}</span>
           </div>
         </div>
       </div>
-      <div v-else class="loading-placeholder">加载中...</div>
+      <div class="content-grid" v-else>
+        <div v-for="i in 6" :key="'music-' + i" class="content-card">
+          <div class="card-cover music-cover">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"/>
+              <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <span class="card-title">示例音乐 {{ i }}</span>
+            <span class="card-subtitle">艺术家 {{ i }}</span>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <section class="section">
+    <section class="content-section">
       <div class="section-header">
-        <h2>最近添加</h2>
-        <router-link to="/navidrome/albums" class="see-all">查看全部</router-link>
+        <div class="section-title">
+          <span class="section-icon">📚</span>
+          <h2>漫画</h2>
+        </div>
+        <router-link to="/comics" class="see-all">查看全部</router-link>
       </div>
-      <AlbumGrid
-        :albums="recentAlbums"
-        @select="selectAlbum"
-      />
+      <div class="content-grid" v-if="comics.length > 0">
+        <div v-for="comic in comics.slice(0, 6)" :key="comic.id" class="content-card">
+          <div class="card-cover comic-cover">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <span class="card-title">{{ comic.title }}</span>
+            <span class="card-subtitle">{{ comic.author }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="content-grid" v-else>
+        <div v-for="i in 6" :key="'comic-' + i" class="content-card">
+          <div class="card-cover comic-cover">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <span class="card-title">示例漫画 {{ i }}</span>
+            <span class="card-subtitle">作者 {{ i }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-icon">📖</span>
+          <h2>小说</h2>
+        </div>
+        <router-link to="/novels" class="see-all">查看全部</router-link>
+      </div>
+      <div class="content-grid" v-if="novels.length > 0">
+        <div v-for="novel in novels.slice(0, 6)" :key="novel.id" class="content-card">
+          <div class="card-cover novel-cover">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <span class="card-title">{{ novel.title }}</span>
+            <span class="card-subtitle">{{ novel.author }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="content-grid" v-else>
+        <div v-for="i in 6" :key="'novel-' + i" class="content-card">
+          <div class="card-cover novel-cover">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <span class="card-title">示例小说 {{ i }}</span>
+            <span class="card-subtitle">作者 {{ i }}</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="content-section">
+      <div class="section-header">
+        <div class="section-title">
+          <span class="section-icon">🎬</span>
+          <h2>影视</h2>
+        </div>
+        <router-link to="/movies" class="see-all">查看全部</router-link>
+      </div>
+      <div class="content-grid" v-if="movies.length > 0">
+        <div v-for="movie in movies.slice(0, 6)" :key="movie.id" class="content-card">
+          <div class="card-cover movie-cover">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+              <line x1="7" y1="2" x2="7" y2="22"/>
+              <line x1="17" y1="2" x2="17" y2="22"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <span class="card-title">{{ movie.title }}</span>
+            <span class="card-subtitle">{{ movie.year }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="content-grid" v-else>
+        <div v-for="i in 6" :key="'movie-' + i" class="content-card">
+          <div class="card-cover movie-cover">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+              <line x1="7" y1="2" x2="7" y2="22"/>
+              <line x1="17" y1="2" x2="17" y2="22"/>
+              <line x1="2" y1="12" x2="22" y2="12"/>
+            </svg>
+          </div>
+          <div class="card-info">
+            <span class="card-title">示例影视 {{ i }}</span>
+            <span class="card-subtitle">2024</span>
+          </div>
+        </div>
+      </div>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
-import type { Album as AlbumType, Track } from '@/types/navidrome'
-import { useLibraryStore } from '@/stores/library'
-import { usePlayerStore } from '@/stores/player'
-import AlbumGrid from '@/components/AlbumGrid.vue'
-import { useRouter } from 'vue-router'
-import { getCoverArt } from '@/api/navidrome'
+import { ref, onMounted } from 'vue'
+import { useConnectionStore } from '@/stores/connection'
+import {
+  getAllTracks,
+  getAllComics,
+  getAllNovels,
+  getAllMovies,
+  getMusicCoverArtUrl,
+} from '@/api/backend'
+import type { MusicTrack, Comic, Novel, Movie } from '@/types/backend'
 
-const libraryStore = useLibraryStore()
-const playerStore = usePlayerStore()
-const router = useRouter()
+const connectionStore = useConnectionStore()
 
-const featuredTracks = computed(() => libraryStore.featuredTracks)
-const showTracks = ref(false)
+const musicTracks = ref<MusicTrack[]>([])
+const comics = ref<Comic[]>([])
+const novels = ref<Novel[]>([])
+const movies = ref<Movie[]>([])
 
-const recentAlbums = computed(() => libraryStore.albums.slice(0, 10))
+onMounted(async () => {
+  try {
+    const [tracks, comicsData, novelsData, moviesData] = await Promise.allSettled([
+      getAllTracks(),
+      getAllComics(),
+      getAllNovels(),
+      getAllMovies(),
+    ])
 
-function loadFeatured() {
-  libraryStore.loadFeatured()
-}
-
-function playFeatured() {
-  if (featuredTracks.value.length > 0) {
-    playerStore.playTrack(featuredTracks.value[0], featuredTracks.value)
+    if (tracks.status === 'fulfilled') musicTracks.value = tracks.value
+    if (comicsData.status === 'fulfilled') comics.value = comicsData.value
+    if (novelsData.status === 'fulfilled') novels.value = novelsData.value
+    if (moviesData.status === 'fulfilled') movies.value = moviesData.value
+  } catch (error) {
+    console.error('Failed to load home data:', error)
   }
-}
-
-function playTrack(track: Track) {
-  playerStore.playTrack(track, featuredTracks.value)
-}
-
-function formatDuration(seconds?: number): string {
-  if (!seconds) return '0:00'
-  const mins = Math.floor(seconds / 60)
-  const secs = Math.floor(seconds % 60)
-  return `${mins}:${secs.toString().padStart(2, '0')}`
-}
-
-function selectAlbum(album: AlbumType) {
-  router.push({ name: 'album-detail', params: { id: album.id }, query: { name: album.name, artist: album.artist } })
-}
-
-onMounted(() => {
-  libraryStore.loadAlbums()
-  libraryStore.loadFeatured()
 })
 </script>
 
@@ -120,7 +205,23 @@ onMounted(() => {
   height: 100%;
 }
 
-.section {
+.welcome-section {
+  margin-bottom: 32px;
+}
+
+.welcome-title {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.welcome-subtitle {
+  color: var(--text-secondary);
+  font-size: 15px;
+}
+
+.content-section {
   margin-bottom: 40px;
 }
 
@@ -128,18 +229,30 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-icon {
+  font-size: 20px;
 }
 
 .section-header h2 {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
+  margin: 0;
 }
 
 .see-all {
   font-size: 13px;
   color: var(--text-muted);
+  text-decoration: none;
   transition: var(--transition);
 }
 
@@ -147,174 +260,77 @@ onMounted(() => {
   color: var(--accent);
 }
 
-.refresh-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-muted);
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  transition: var(--transition);
-}
-
-.refresh-btn:hover {
-  color: var(--text-primary);
-  background: var(--bg-hover);
-}
-
-.featured-playlist {
-  margin: 0 -8px;
-}
-
-.featured-card {
-  display: flex;
-  align-items: flex-end;
+.content-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 16px;
-  padding: 20px;
-  background: linear-gradient(135deg, var(--accent) 0%, #c0392b 100%);
+}
+
+.content-card {
+  background: var(--bg-secondary);
   border-radius: var(--radius-lg);
+  overflow: hidden;
   cursor: pointer;
   transition: var(--transition);
 }
 
-.featured-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(232, 93, 74, 0.3);
+.content-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-.featured-cover {
-  width: 120px;
-  height: 120px;
-  border-radius: var(--radius-md);
+.card-cover {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.6);
   overflow: hidden;
-  flex-shrink: 0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
-.featured-cover img {
+.card-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.featured-info {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.music-cover {
+  background: linear-gradient(135deg, #e85d4a, #c0392b);
 }
 
-.featured-label {
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  opacity: 0.7;
+.comic-cover {
+  background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
-.featured-info h3 {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 900;
+.novel-cover {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
 }
 
-.featured-info p {
-  font-size: 14px;
-  opacity: 0.8;
+.movie-cover {
+  background: linear-gradient(135deg, #9b59b6, #8e44ad);
 }
 
-.loading-placeholder {
-  color: var(--text-muted);
-  padding: 40px;
-  text-align: center;
-}
-
-.show-tracks-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  margin-top: 12px;
+.card-info {
   padding: 12px;
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 13px;
-  cursor: pointer;
-  transition: var(--transition);
 }
 
-.show-tracks-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.show-tracks-btn svg {
-  transition: transform 0.2s ease;
-}
-
-.show-tracks-btn svg.rotated {
-  transform: rotate(180deg);
-}
-
-.featured-tracks-list {
-  margin-top: 12px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.featured-track-item {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.featured-track-item:hover {
-  background: var(--bg-hover);
-}
-
-.track-index {
-  width: 24px;
-  font-size: 13px;
-  color: var(--text-muted);
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.featured-track-item:hover .track-index {
-  color: var(--accent);
-}
-
-.featured-track-item .track-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.featured-track-item .track-title {
+.card-title {
   display: block;
   font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.featured-track-item .track-artist {
+.card-subtitle {
   display: block;
   font-size: 12px;
   color: var(--text-muted);
-  margin-top: 2px;
-}
-
-.track-duration {
-  font-size: 13px;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  flex-shrink: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 </style>
