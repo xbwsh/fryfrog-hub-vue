@@ -51,10 +51,7 @@
       <div class="content-grid" v-if="comics.length > 0">
         <div v-for="comic in comics.slice(0, 6)" :key="comic.id" class="content-card">
           <div class="card-cover comic-cover">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-            </svg>
+            <img :src="getComicCoverUrl(comic.id)" alt="封面" @error="onImageError" />
           </div>
           <div class="card-info">
             <span class="card-title">{{ comic.title }}</span>
@@ -82,34 +79,31 @@
       <div class="section-header">
         <div class="section-title">
           <span class="section-icon">📖</span>
-          <h2>小说</h2>
+          <h2>电子书</h2>
         </div>
-        <router-link to="/novels" class="see-all">查看全部</router-link>
+        <router-link to="/ebooks" class="see-all">查看全部</router-link>
       </div>
-      <div class="content-grid" v-if="novels.length > 0">
-        <div v-for="novel in novels.slice(0, 6)" :key="novel.id" class="content-card">
-          <div class="card-cover novel-cover">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
+      <div class="content-grid" v-if="ebooks.length > 0">
+        <div v-for="book in ebooks.slice(0, 6)" :key="book.id" class="content-card">
+          <div class="card-cover ebook-cover">
+            <img :src="getEbookCoverUrl(book.id)" alt="封面" @error="onImageError" />
           </div>
           <div class="card-info">
-            <span class="card-title">{{ novel.title }}</span>
-            <span class="card-subtitle">{{ novel.author }}</span>
+            <span class="card-title">{{ book.title }}</span>
+            <span class="card-subtitle">{{ book.author }}</span>
           </div>
         </div>
       </div>
       <div class="content-grid" v-else>
-        <div v-for="i in 6" :key="'novel-' + i" class="content-card">
-          <div class="card-cover novel-cover">
+        <div v-for="i in 6" :key="'ebook-' + i" class="content-card">
+          <div class="card-cover ebook-cover">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
               <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
             </svg>
           </div>
           <div class="card-info">
-            <span class="card-title">示例小说 {{ i }}</span>
+            <span class="card-title">示例电子书 {{ i }}</span>
             <span class="card-subtitle">作者 {{ i }}</span>
           </div>
         </div>
@@ -120,29 +114,24 @@
       <div class="section-header">
         <div class="section-title">
           <span class="section-icon">🎬</span>
-          <h2>影视</h2>
+          <h2>视频</h2>
         </div>
-        <router-link to="/movies" class="see-all">查看全部</router-link>
+        <router-link to="/videos" class="see-all">查看全部</router-link>
       </div>
-      <div class="content-grid" v-if="movies.length > 0">
-        <div v-for="movie in movies.slice(0, 6)" :key="movie.id" class="content-card">
-          <div class="card-cover movie-cover">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
-              <line x1="7" y1="2" x2="7" y2="22"/>
-              <line x1="17" y1="2" x2="17" y2="22"/>
-              <line x1="2" y1="12" x2="22" y2="12"/>
-            </svg>
+      <div class="content-grid" v-if="seriesList.length > 0">
+        <router-link v-for="series in seriesList.slice(0, 6)" :key="series.id" class="content-card" :to="{ name: 'video-detail', params: { id: series.episodes && series.episodes.length > 0 ? series.episodes[0].id : 0 } }">
+          <div class="card-cover video-cover">
+            <img :src="series.posterUrl || getSeriesPosterUrl(series.id)" alt="封面" @error="onImageError" />
           </div>
           <div class="card-info">
-            <span class="card-title">{{ movie.title }}</span>
-            <span class="card-subtitle">{{ movie.year }}</span>
+            <span class="card-title">{{ series.title }}</span>
+            <span class="card-subtitle">{{ series.year }} · {{ series.episodes ? series.episodes.length : 0 }} 集</span>
           </div>
-        </div>
+        </router-link>
       </div>
       <div class="content-grid" v-else>
-        <div v-for="i in 6" :key="'movie-' + i" class="content-card">
-          <div class="card-cover movie-cover">
+        <div v-for="i in 6" :key="'video-' + i" class="content-card">
+          <div class="card-cover video-cover">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
               <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
               <line x1="7" y1="2" x2="7" y2="22"/>
@@ -151,7 +140,7 @@
             </svg>
           </div>
           <div class="card-info">
-            <span class="card-title">示例影视 {{ i }}</span>
+            <span class="card-title">示例视频 {{ i }}</span>
             <span class="card-subtitle">2024</span>
           </div>
         </div>
@@ -166,36 +155,44 @@ import { useConnectionStore } from '@/stores/connection'
 import {
   getAllTracks,
   getAllComics,
-  getAllNovels,
-  getAllMovies,
+  getAllEbooks,
+  getAllSeries,
   getMusicCoverArtUrl,
+  getComicCoverUrl,
+  getEbookCoverUrl,
+  getSeriesPosterUrl,
 } from '@/api/backend'
-import type { MusicTrack, Comic, Novel, Movie } from '@/types/backend'
+import type { MusicTrack, Comic, Ebook, SeriesDTO } from '@/types/backend'
 
 const connectionStore = useConnectionStore()
 
 const musicTracks = ref<MusicTrack[]>([])
 const comics = ref<Comic[]>([])
-const novels = ref<Novel[]>([])
-const movies = ref<Movie[]>([])
+const ebooks = ref<Ebook[]>([])
+const seriesList = ref<SeriesDTO[]>([])
 
 onMounted(async () => {
   try {
-    const [tracks, comicsData, novelsData, moviesData] = await Promise.allSettled([
+    const [tracks, comicsData, ebooksData, seriesData] = await Promise.allSettled([
       getAllTracks(),
       getAllComics(),
-      getAllNovels(),
-      getAllMovies(),
+      getAllEbooks(),
+      getAllSeries(),
     ])
 
-    if (tracks.status === 'fulfilled') musicTracks.value = tracks.value
-    if (comicsData.status === 'fulfilled') comics.value = comicsData.value
-    if (novelsData.status === 'fulfilled') novels.value = novelsData.value
-    if (moviesData.status === 'fulfilled') movies.value = moviesData.value
+    if (tracks.status === 'fulfilled') musicTracks.value = tracks.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    if (comicsData.status === 'fulfilled') comics.value = comicsData.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    if (ebooksData.status === 'fulfilled') ebooks.value = ebooksData.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    if (seriesData.status === 'fulfilled') seriesList.value = seriesData.value.sort((a, b) => (b.year || 0) - (a.year || 0))
   } catch (error) {
     console.error('Failed to load home data:', error)
   }
 })
+
+function onImageError(e: Event) {
+  const img = e.target as HTMLImageElement
+  img.style.display = 'none'
+}
 </script>
 
 <style scoped>
@@ -263,6 +260,7 @@ onMounted(async () => {
 .content-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-auto-rows: max-content;
   gap: 16px;
 }
 
@@ -302,11 +300,11 @@ onMounted(async () => {
   background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
-.novel-cover {
+.ebook-cover {
   background: linear-gradient(135deg, #2ecc71, #27ae60);
 }
 
-.movie-cover {
+.video-cover {
   background: linear-gradient(135deg, #9b59b6, #8e44ad);
 }
 

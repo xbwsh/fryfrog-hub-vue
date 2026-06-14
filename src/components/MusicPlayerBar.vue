@@ -133,7 +133,7 @@ async function toggleFavoriteStatus() {
   if (!playerStore.currentTrack || !('favorite' in playerStore.currentTrack)) return
   const track = playerStore.currentTrack
   try {
-    const updated = await toggleFavorite(track.id as number)
+    const updated = await toggleFavorite(track.id as number, !track.favorite)
     if (updated) {
       isFavorite.value = updated.favorite
       track.favorite = updated.favorite

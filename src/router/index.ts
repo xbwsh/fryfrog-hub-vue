@@ -24,14 +24,24 @@ const router = createRouter({
       component: () => import('@/views/ComicsView.vue'),
     },
     {
-      path: '/novels',
-      name: 'novels',
+      path: '/comics/:id',
+      name: 'comic-detail',
+      component: () => import('@/views/ComicDetailView.vue'),
+    },
+    {
+      path: '/ebooks',
+      name: 'ebooks',
       component: () => import('@/views/NovelsView.vue'),
     },
     {
-      path: '/movies',
-      name: 'movies',
+      path: '/videos',
+      name: 'videos',
       component: () => import('@/views/MoviesView.vue'),
+    },
+    {
+      path: '/videos/:id',
+      name: 'video-detail',
+      component: () => import('@/views/VideoDetailView.vue'),
     },
     {
       path: '/settings',
