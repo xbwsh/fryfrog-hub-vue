@@ -81,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import type { PageInfo } from '@/types/backend'
 import { getComicPages, getComicPageImageUrl } from '@/api/backend'
 
