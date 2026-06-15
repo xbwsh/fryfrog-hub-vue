@@ -2,7 +2,7 @@
   <div class="player-bar">
     <div class="player-left">
       <div class="cover-wrapper" @click="toggleLyricsPanel">
-        <img v-if="playerStore.currentTrack?.coverArt" :src="getCoverArt(playerStore.currentTrack.coverArt, 60)"
+        <img v-if="playerStore.currentTrack" :src="playerStore.getTrackCoverArt(playerStore.currentTrack, 60)"
           class="player-cover" :class="{ rotating: playerStore.isPlaying }" alt="封面" />
         <div class="cover-overlay" v-if="currentLyrics">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -122,7 +122,6 @@
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
 import { useLibraryStore } from '@/stores/library'
-import { getCoverArt } from '@/api/navidrome'
 import { computed, ref, watch } from 'vue'
 
 const playerStore = usePlayerStore()
@@ -135,7 +134,7 @@ const showLyrics = ref(false)
 
 const isStarred = computed(() => {
   if (!playerStore.currentTrack) return false
-  return libraryStore.isTrackStarred(playerStore.currentTrack.id)
+  return libraryStore.isTrackStarred(String(playerStore.currentTrack.id))
 })
 
 const playModeTitle = computed(() => {
@@ -194,7 +193,7 @@ async function loadLyrics() {
     const lyrics = await libraryStore.fetchLyrics(
       playerStore.currentTrack.artist || '',
       playerStore.currentTrack.title || '',
-      playerStore.currentTrack.id
+      String(playerStore.currentTrack.id)
     )
     currentLyrics.value = lyrics
     showLyrics.value = currentLyrics.value.length > 0
@@ -205,7 +204,9 @@ async function loadLyrics() {
 
 async function toggleStarred() {
   if (!playerStore.currentTrack) return
-  await libraryStore.toggleStar(playerStore.currentTrack.id, isStarred.value, playerStore.currentTrack)
+  if (playerStore.currentTrack && 'coverArt' in playerStore.currentTrack) {
+    await libraryStore.toggleStar(String(playerStore.currentTrack.id), isStarred.value, playerStore.currentTrack)
+  }
 }
 
 function toggleLyricsPanel() {

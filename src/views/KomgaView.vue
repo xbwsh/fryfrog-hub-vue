@@ -66,17 +66,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getSeries, getBooks, getSeriesThumbnailBlob, getBookThumbnailBlob } from '@/api/komga'
-import { useConnectionStore } from '@/stores/connection'
 
 const router = useRouter()
-const connectionStore = useConnectionStore()
 const seriesList = ref<any[]>([])
 const booksList = ref<any[]>([])
 const selectedSeries = ref<any>(null)
 const seriesCovers = ref<Record<string, string>>({})
 const bookCovers = ref<Record<string, string>>({})
-
-const DEFAULT_COVER = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"%3E%3Crect fill="%233a3a3a" width="200" height="200"/%3E%3Ctext fill="%23666" font-family="sans-serif" font-size="14" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3E📚%3C/text%3E%3C/svg%3E'
 
 async function loadSeries() {
   seriesList.value = await getSeries()
@@ -108,29 +104,15 @@ async function loadBookCovers() {
 }
 
 function getSeriesCover(seriesId: string): string {
-  if (connectionStore.privacyMode) {
-    return DEFAULT_COVER
-  }
   return seriesCovers.value[seriesId] || ''
 }
 
 function getBookCover(bookId: string): string {
-  if (connectionStore.privacyMode) {
-    return DEFAULT_COVER
-  }
   return bookCovers.value[bookId] || ''
 }
 
-function blurTitle(title: string, keepLength: number = 2): string {
-  if (!connectionStore.privacyMode) {
-    return title
-  }
-  
-  if (title.length <= keepLength) {
-    return title
-  }
-  
-  return title.slice(0, keepLength) + '******'
+function blurTitle(title: string): string {
+  return title
 }
 
 function openReader(book: any) {
