@@ -1,9 +1,7 @@
 import axios from 'axios'
 import type {
   MusicTrack,
-  MusicTrackUpdateRequest,
   Comic,
-  ComicUpdateRequest,
   PageInfo,
   Ebook,
   VideoDTO,
@@ -29,9 +27,7 @@ export function setBackendConfig(newConfig: BackendConfig) {
 
 export async function testConnection(): Promise<boolean> {
   try {
-    const response = await client.get<ApiResponse<any[]>>('/api/v1/music', {
-      params: { page: 0, size: 1 },
-    })
+    const response = await client.get<ApiResponse<any[]>>('/api/v1/music')
     if (response.data.success) {
       config = {
         url: config.url,
@@ -56,34 +52,9 @@ export async function getTrackById(id: number): Promise<MusicTrack | undefined> 
   return response.data.data
 }
 
-export async function updateTrack(id: number, data: MusicTrackUpdateRequest): Promise<boolean> {
-  try {
-    const response = await client.put<ApiResponse<MusicTrack>>(`/api/v1/music/${id}`, data)
-    return response.data.success
-  } catch {
-    return false
-  }
-}
-
-export async function deleteTrack(id: number): Promise<boolean> {
-  try {
-    const response = await client.delete<ApiResponse<void>>(`/api/v1/music/${id}`)
-    return response.data.success
-  } catch {
-    return false
-  }
-}
-
 export async function scanDirectory(path: string): Promise<string> {
   const response = await client.post<ApiResponse<string>>('/api/v1/music/scan', null, {
     params: { path },
-  })
-  return response.data.data
-}
-
-export async function extractMetadata(filePath: string): Promise<MusicTrack | undefined> {
-  const response = await client.post<ApiResponse<MusicTrack>>('/api/v1/music/metadata', null, {
-    params: { filePath },
   })
   return response.data.data
 }
@@ -129,10 +100,6 @@ export function getMusicCoverArtUrl(id: number): string {
   return `${config.url}/api/v1/music/${id}/cover`
 }
 
-export function getLyrics(id: number): string {
-  return `${config.url}/api/v1/music/${id}/lyrics`
-}
-
 export async function getAllComics(): Promise<Comic[]> {
   const response = await client.get<ApiResponse<Comic[]>>('/api/v1/comic')
   return response.data.data || []
@@ -141,24 +108,6 @@ export async function getAllComics(): Promise<Comic[]> {
 export async function getComicById(id: number): Promise<Comic | undefined> {
   const response = await client.get<ApiResponse<Comic>>(`/api/v1/comic/${id}`)
   return response.data.data
-}
-
-export async function updateComic(id: number, data: ComicUpdateRequest): Promise<boolean> {
-  try {
-    const response = await client.put<ApiResponse<Comic>>(`/api/v1/comic/${id}`, data)
-    return response.data.success
-  } catch {
-    return false
-  }
-}
-
-export async function deleteComic(id: number): Promise<boolean> {
-  try {
-    const response = await client.delete<ApiResponse<void>>(`/api/v1/comic/${id}`)
-    return response.data.success
-  } catch {
-    return false
-  }
 }
 
 export async function toggleComicFavorite(id: number, status: boolean): Promise<Comic | undefined> {
@@ -176,13 +125,6 @@ export async function getComicFavorites(): Promise<Comic[]> {
 export async function scanComicDirectory(path: string): Promise<string> {
   const response = await client.post<ApiResponse<string>>('/api/v1/comic/scan', null, {
     params: { path },
-  })
-  return response.data.data
-}
-
-export async function extractComicMetadata(filePath: string): Promise<Comic | undefined> {
-  const response = await client.post<ApiResponse<Comic>>('/api/v1/comic/metadata', null, {
-    params: { filePath },
   })
   return response.data.data
 }
@@ -479,3 +421,5 @@ export async function getFavorites(): Promise<MusicTrack[]> {
   const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/favorites')
   return response.data.data || []
 }
+
+

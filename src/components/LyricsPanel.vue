@@ -399,7 +399,6 @@ function seekToLyric(time: number) {
   justify-content: center;
   gap: 20px;
   padding: 32px;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .vinyl-wrapper {
@@ -704,7 +703,7 @@ function seekToLyric(time: number) {
   .left-panel {
     flex: none;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
     padding: 20px;
     gap: 12px;
   }

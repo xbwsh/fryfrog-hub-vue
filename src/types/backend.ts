@@ -21,17 +21,6 @@ export interface MusicTrack {
   favorite: boolean
 }
 
-export interface MusicTrackUpdateRequest {
-  title: string
-  artist?: string
-  album?: string
-  albumArtist?: string
-  trackNumber?: number
-  discNumber?: number
-  year?: number
-  genre?: string
-}
-
 export interface Comic {
   id: number
   createdAt: string
@@ -51,16 +40,6 @@ export interface Comic {
   coverArtPath: string
   thumbnailDirPath: string
   favorite: boolean
-}
-
-export interface ComicUpdateRequest {
-  title: string
-  author?: string
-  series?: string
-  volume?: number
-  year?: number
-  genre?: string
-  summary?: string
 }
 
 export interface PageInfo {
@@ -133,10 +112,12 @@ export interface VideoDTO {
 }
 
 export interface VideoProgress {
-  watchPosition: number
-  duration: number
-  watchProgressPercent: number
-  watched: boolean
+  videoId: number
+  positionSeconds: number
+  durationSeconds: number
+  completed: boolean
+  progressPercent: number
+  updatedAt: string
 }
 
 export interface SeriesDTO {
