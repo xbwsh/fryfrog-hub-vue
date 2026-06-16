@@ -256,7 +256,7 @@ function rewriteEpubImages(html: string): string {
   const fp = props.ebookFilePath
   if (!fp) return html
   return html.replace(/<img\s+([^>]*?)src="([^"]+)"([^>]*)>/gi, (match, before, src, after) => {
-    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:') || src.startsWith('/api/')) {
       return match
     }
     const imageUrl = getEpubImageUrl(fp, src)

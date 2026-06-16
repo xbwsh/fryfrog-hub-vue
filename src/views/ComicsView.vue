@@ -26,7 +26,7 @@
       <button @click="loadComics">重试</button>
     </div>
 
-    <div v-else-if="comics.length === 0" class="empty-state">
+    <div v-else-if="seriesList.length === 0" class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
         <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
@@ -34,37 +34,31 @@
       <p>暂无漫画</p>
     </div>
 
-    <div v-else class="content-grid">
+    <div v-else class="series-list">
       <div
-        v-for="comic in comics"
-        :key="comic.id"
-        class="content-card"
-        @click="viewComic(comic)"
+        v-for="series in seriesList"
+        :key="series.name"
+        class="series-group"
       >
-        <div class="card-cover comic-cover">
-          <img
-            :src="getComicCoverUrl(comic.id)"
-            :alt="comic.title"
-            @error="onImageError"
-          />
-          <button
-            class="favorite-btn"
-            :class="{ active: comic.favorite }"
-            @click.stop="handleToggleFavorite(comic)"
-            :title="comic.favorite ? '取消收藏' : '收藏'"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" :fill="comic.favorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        <div
+          class="series-header"
+          @click="viewSeries(series)"
+        >
+          <div class="series-cover">
+            <img
+              :src="getSeriesCoverUrl(series.coverArtPath)"
+              :alt="series.name"
+              @error="onImageError"
+            />
+          </div>
+          <div class="series-info">
+            <h3 class="series-name">{{ series.name }}</h3>
+            <p class="series-meta">{{ series.author }} · {{ series.volumeCount }} 卷</p>
+          </div>
+          <div class="series-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
             </svg>
-          </button>
-          <div class="card-badge" v-if="comic.series">{{ comic.series }}</div>
-        </div>
-        <div class="card-info">
-          <div class="card-title">{{ comic.title }}</div>
-          <div class="card-meta">
-            <span v-if="comic.author">{{ comic.author }}</span>
-            <span v-if="comic.volume" class="meta-sep">·</span>
-            <span v-if="comic.volume">Vol.{{ comic.volume }}</span>
           </div>
         </div>
       </div>
@@ -75,11 +69,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import type { Comic } from '@/types/backend'
-import { getAllComics, searchComics, toggleComicFavorite, getComicCoverUrl } from '@/api/backend'
+import type { ComicSeries } from '@/types/backend'
+import { getComicSeries } from '@/api/backend'
 
 const router = useRouter()
-const comics = ref<Comic[]>([])
+const seriesList = ref<ComicSeries[]>([])
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
@@ -88,7 +82,7 @@ async function loadComics() {
   loading.value = true
   error.value = ''
   try {
-    comics.value = await getAllComics()
+    seriesList.value = await getComicSeries()
   } catch (e) {
     error.value = '加载漫画失败'
     console.error('Failed to load comics:', e)
@@ -102,11 +96,15 @@ async function handleSearch() {
     await loadComics()
     return
   }
-
   loading.value = true
   error.value = ''
   try {
-    comics.value = await searchComics(searchQuery.value)
+    const allSeries = await getComicSeries()
+    const query = searchQuery.value.toLowerCase()
+    seriesList.value = allSeries.filter(s =>
+      s.name.toLowerCase().includes(query) ||
+      s.author.toLowerCase().includes(query)
+    )
   } catch (e) {
     error.value = '搜索失败'
     console.error('Search failed:', e)
@@ -115,22 +113,14 @@ async function handleSearch() {
   }
 }
 
-async function handleToggleFavorite(comic: Comic) {
-  try {
-    const updated = await toggleComicFavorite(comic.id, !comic.favorite)
-    if (updated) {
-      const index = comics.value.findIndex(c => c.id === comic.id)
-      if (index !== -1) {
-        comics.value[index] = updated
-      }
-    }
-  } catch (e) {
-    console.error('Failed to toggle favorite:', e)
-  }
+function viewSeries(series: ComicSeries) {
+  router.push({ name: 'comic-series', params: { name: series.name } })
 }
 
-function viewComic(comic: Comic) {
-  router.push({ name: 'comic-detail', params: { id: comic.id } })
+function getSeriesCoverUrl(coverPath: string): string {
+  if (!coverPath) return ''
+  if (coverPath.startsWith('http')) return coverPath
+  return `/api/v1/comic/cover-image?path=${encodeURIComponent(coverPath)}`
 }
 
 function onImageError(e: Event) {
@@ -249,117 +239,75 @@ onMounted(loadComics)
   background: var(--accent-hover);
 }
 
-.content-grid {
+.series-list {
   flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  grid-auto-rows: max-content;
-  gap: 16px;
-  padding: 0 32px 32px;
   overflow-y: auto;
+  padding: 0 32px 32px;
 }
 
-.content-card {
+.series-group {
+  margin-bottom: 24px;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   overflow: hidden;
+}
+
+.series-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
   cursor: pointer;
   transition: var(--transition);
 }
 
-.content-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+.series-header:hover {
+  background: var(--bg-hover);
 }
 
-.card-cover {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
+.series-header:hover .series-arrow {
+  color: var(--accent);
+}
+
+.series-cover {
+  width: 50px;
+  height: 68px;
+  border-radius: var(--radius-md);
   overflow: hidden;
-  position: relative;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
-.card-cover img {
+.series-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.comic-cover {
-  background: linear-gradient(135deg, #3498db, #2980b9);
+.series-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.favorite-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.content-card:hover .favorite-btn {
-  opacity: 1;
-}
-
-.favorite-btn.active {
-  opacity: 1;
-  color: #ff6b6b;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.favorite-btn:hover {
-  transform: scale(1.1);
-}
-
-.card-badge {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.card-info {
-  padding: 12px;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 500;
+.series-name {
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin: 0 0 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-meta {
+.series-meta {
   font-size: 12px;
   color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 0;
 }
 
-.meta-sep {
-  margin: 0 4px;
+.series-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 @media screen and (max-width: 767px) {
@@ -372,9 +320,7 @@ onMounted(loadComics)
     width: 100%;
   }
 
-  .content-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 12px;
+  .series-list {
     padding: 0 16px 16px;
   }
 }

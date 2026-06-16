@@ -33,7 +33,7 @@
       <button @click="loadEbooks">重试</button>
     </div>
 
-    <div v-else-if="ebooks.length === 0" class="empty-state">
+    <div v-else-if="seriesList.length === 0" class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -41,48 +41,32 @@
       <p>暂无电子书</p>
     </div>
 
-    <div v-else class="content-grid">
-      <div v-for="book in ebooks" :key="book.id" class="content-card">
-        <div class="card-cover ebook-cover">
-          <img :src="getEbookCoverUrl(book.id)" :alt="book.title" @error="onImageError" />
-          <div class="card-actions">
-            <button
-              class="action-btn read-btn"
-              @click.stop="readEbook(book)"
-              title="在线阅读"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-              </svg>
-            </button>
-            <button
-              class="action-btn download-btn"
-              @click.stop="downloadEbook(book)"
-              title="下载"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-            </button>
-            <button
-              class="action-btn favorite-btn"
-              :class="{ active: book.favorite }"
-              @click.stop="handleToggleFavorite(book)"
-              :title="book.favorite ? '取消收藏' : '收藏'"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" :fill="book.favorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            </button>
+    <div v-else class="series-list">
+      <div
+        v-for="series in seriesList"
+        :key="series.name"
+        class="series-group"
+      >
+        <div
+          class="series-header"
+          @click="viewSeries(series)"
+        >
+          <div class="series-cover">
+            <img
+              :src="getSeriesCoverUrl(series.coverArtPath)"
+              :alt="series.name"
+              @error="onImageError"
+            />
           </div>
-          <div class="card-badge" v-if="book.format">{{ book.format }}</div>
-        </div>
-        <div class="card-info">
-          <div class="card-title">{{ book.title }}</div>
-          <div class="card-meta">{{ book.author }}</div>
+          <div class="series-info">
+            <h3 class="series-name">{{ series.name }}</h3>
+            <p class="series-meta">{{ series.author }} · {{ series.volumeCount }} 卷</p>
+          </div>
+          <div class="series-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
         </div>
       </div>
     </div>
@@ -120,12 +104,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import type { Ebook } from '@/types/backend'
-import { getAllEbooks, searchEbooks, toggleEbookFavorite, getEbookCoverUrl, getEbookDownloadUrl, scanEbookDirectory } from '@/api/backend'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import type { Ebook, EbookSeries } from '@/types/backend'
+import { getEbookSeries, scanEbookDirectory, getEbookCoverUrl } from '@/api/backend'
 import EbookReader from '@/views/EbookReader.vue'
 
-const ebooks = ref<Ebook[]>([])
+const route = useRoute()
+const router = useRouter()
+const seriesList = ref<EbookSeries[]>([])
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
@@ -138,12 +125,25 @@ async function loadEbooks() {
   loading.value = true
   error.value = ''
   try {
-    ebooks.value = await getAllEbooks()
+    seriesList.value = await getEbookSeries()
   } catch (e) {
     error.value = '加载电子书失败'
     console.error('Failed to load ebooks:', e)
   } finally {
     loading.value = false
+  }
+}
+
+async function checkAutoOpen() {
+  const readId = route.query.read
+  if (readId && !readingBook.value) {
+    for (const series of seriesList.value) {
+      const book = series.books.find(b => b.id === parseInt(String(readId)))
+      if (book) {
+        readingBook.value = book
+        break
+      }
+    }
   }
 }
 
@@ -155,7 +155,12 @@ async function handleSearch() {
   loading.value = true
   error.value = ''
   try {
-    ebooks.value = await searchEbooks(searchQuery.value)
+    const allSeries = await getEbookSeries()
+    const query = searchQuery.value.toLowerCase()
+    seriesList.value = allSeries.filter(s =>
+      s.name.toLowerCase().includes(query) ||
+      s.author.toLowerCase().includes(query)
+    )
   } catch (e) {
     error.value = '搜索失败'
     console.error('Search failed:', e)
@@ -164,33 +169,19 @@ async function handleSearch() {
   }
 }
 
-async function handleToggleFavorite(book: Ebook) {
-  try {
-    const updated = await toggleEbookFavorite(book.id, !book.favorite)
-    if (updated) {
-      const index = ebooks.value.findIndex(b => b.id === book.id)
-      if (index !== -1) ebooks.value[index] = updated
-    }
-  } catch (e) {
-    console.error('Failed to toggle favorite:', e)
-  }
+function viewSeries(series: EbookSeries) {
+  router.push({ name: 'ebook-series', params: { name: series.name } })
+}
+
+function getSeriesCoverUrl(coverPath: string): string {
+  if (!coverPath) return ''
+  if (coverPath.startsWith('http')) return coverPath
+  return `/api/v1/ebook/cover-image?path=${encodeURIComponent(coverPath)}`
 }
 
 function onImageError(e: Event) {
   const img = e.target as HTMLImageElement
   img.style.display = 'none'
-}
-
-function downloadEbook(book: Ebook) {
-  const url = getEbookDownloadUrl(book.id)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = book.fileName
-  a.click()
-}
-
-function readEbook(book: Ebook) {
-  readingBook.value = book
 }
 
 async function handleScan() {
@@ -209,7 +200,16 @@ async function handleScan() {
   }
 }
 
-onMounted(loadEbooks)
+onMounted(async () => {
+  await loadEbooks()
+  checkAutoOpen()
+})
+
+watch(() => route.query.read, () => {
+  if (!loading.value) {
+    checkAutoOpen()
+  }
+})
 </script>
 
 <style scoped>
@@ -342,132 +342,75 @@ onMounted(loadEbooks)
   background: var(--accent-hover);
 }
 
-.content-grid {
+.series-list {
   flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  grid-auto-rows: max-content;
-  gap: 16px;
-  padding: 0 32px 32px;
   overflow-y: auto;
+  padding: 0 32px 32px;
 }
 
-.content-card {
+.series-group {
+  margin-bottom: 24px;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   overflow: hidden;
+}
+
+.series-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
   cursor: pointer;
   transition: var(--transition);
 }
 
-.content-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+.series-header:hover {
+  background: var(--bg-hover);
 }
 
-.card-cover {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
+.series-header:hover .series-arrow {
+  color: var(--accent);
+}
+
+.series-cover {
+  width: 50px;
+  height: 68px;
+  border-radius: var(--radius-md);
   overflow: hidden;
-  position: relative;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
 }
 
-.card-cover img {
+.series-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.ebook-cover {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
+.series-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.favorite-btn {
-  position: static;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--transition);
-}
-
-.card-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 6px;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.content-card:hover .card-actions {
-  opacity: 1;
-}
-
-.action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--transition);
-}
-
-.action-btn:hover {
-  transform: scale(1.1);
-}
-
-.favorite-btn.active {
-  color: #ff6b6b;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.card-badge {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.card-info {
-  padding: 12px;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 500;
+.series-name {
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin: 0 0 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-meta {
+.series-meta {
   font-size: 12px;
   color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  margin: 0;
+}
+
+.series-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .dialog-overlay {
@@ -568,9 +511,7 @@ onMounted(loadEbooks)
     width: 100%;
   }
 
-  .content-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 12px;
+  .series-list {
     padding: 0 16px 16px;
   }
 }

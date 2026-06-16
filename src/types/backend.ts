@@ -42,9 +42,39 @@ export interface Comic {
   favorite: boolean
 }
 
+export interface ComicVolume {
+  id: number
+  volume: number
+  title: string
+  author: string
+  series: string
+  year: number
+  pageCount: number
+  coverArtPath: string
+  filePath: string
+  fileName: string
+  favorite: boolean
+}
+
+export interface ComicSeries {
+  name: string
+  author: string
+  coverArtPath: string
+  volumeCount: number
+  comics: ComicVolume[]
+}
+
 export interface PageInfo {
   pageNum: number
   fileName: string
+}
+
+export interface EbookSeries {
+  name: string
+  author: string
+  coverArtPath: string
+  volumeCount: number
+  books: Ebook[]
 }
 
 export interface Ebook {
@@ -56,7 +86,7 @@ export interface Ebook {
   publisher: string
   isbn: string
   year: number
-  genre: string
+  genre: string | null
   description: string
   filePath: string
   fileName: string

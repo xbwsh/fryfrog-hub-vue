@@ -2,6 +2,8 @@ import axios from 'axios'
 import type {
   MusicTrack,
   Comic,
+  ComicSeries,
+  ComicVolume,
   PageInfo,
   Ebook,
   VideoDTO,
@@ -107,6 +109,11 @@ export async function getLyrics(id: number): Promise<string> {
 
 export async function getAllComics(): Promise<Comic[]> {
   const response = await client.get<ApiResponse<Comic[]>>('/api/v1/comic')
+  return response.data.data || []
+}
+
+export async function getComicSeries(): Promise<ComicSeries[]> {
+  const response = await client.get<ApiResponse<ComicSeries[]>>('/api/v1/comic/series')
   return response.data.data || []
 }
 
@@ -234,6 +241,15 @@ export async function searchEbooks(query: string): Promise<Ebook[]> {
 
 export function getEbookCoverUrl(id: number): string {
   return `${config.url}/api/v1/ebook/${id}/cover`
+}
+
+export function getEbookCoverImageUrl(path: string): string {
+  return `${config.url}/api/v1/ebook/cover-image?path=${encodeURIComponent(path)}`
+}
+
+export async function getEbookSeries(): Promise<EbookSeries[]> {
+  const response = await client.get<ApiResponse<EbookSeries[]>>('/api/v1/ebook/series')
+  return response.data.data || []
 }
 
 export function getEbookDownloadUrl(id: number): string {
