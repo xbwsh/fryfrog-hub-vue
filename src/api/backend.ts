@@ -100,6 +100,11 @@ export function getMusicCoverArtUrl(id: number): string {
   return `${config.url}/api/v1/music/${id}/cover`
 }
 
+export async function getLyrics(id: number): Promise<string> {
+  const response = await client.get<ApiResponse<string>>(`/api/v1/music/${id}/lyrics`)
+  return response.data.data || ''
+}
+
 export async function getAllComics(): Promise<Comic[]> {
   const response = await client.get<ApiResponse<Comic[]>>('/api/v1/comic')
   return response.data.data || []
@@ -248,6 +253,10 @@ export async function getEbookChapters(id: number): Promise<ChapterInfo[]> {
 export async function getEbookChapterContent(id: number, chapterNum: number): Promise<string> {
   const response = await client.get<string>(`/api/v1/ebook/${id}/chapters/${chapterNum}`)
   return response.data
+}
+
+export function getEpubImageUrl(filePath: string, file: string): string {
+  return `${config.url}/api/v1/ebook/epub-image?filePath=${encodeURIComponent(filePath)}&file=${encodeURIComponent(file)}`
 }
 
 export async function scanEbookDirectory(path: string): Promise<string> {

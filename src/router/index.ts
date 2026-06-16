@@ -48,6 +48,11 @@ const router = createRouter({
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),
     },
+    {
+      path: '/icons',
+      name: 'icons',
+      component: () => import('@/components/IconLibrary.vue'),
+    },
   ],
 })
 

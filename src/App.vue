@@ -8,15 +8,7 @@
     <div class="main-area">
       <header class="mobile-header" v-show="showMobileMenuBtn">
         <button class="mobile-menu-btn" @click="toggleSidebar">
-          <svg v-if="!showMobileSidebar" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-          <svg v-else width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
-          </svg>
+          <AppIcon :name="showMobileSidebar ? 'close' : 'menu'" :size="24" />
         </button>
         <h1 class="mobile-title">Fryfrog Hub</h1>
       </header>
@@ -43,6 +35,7 @@ import { computed, onMounted, ref, watch, nextTick } from 'vue'
 import { useConnectionStore } from '@/stores/connection'
 import ServerConnect from '@/components/ServerConnect.vue'
 import Sidebar from '@/components/Sidebar.vue'
+import AppIcon from '@/components/AppIcon.vue'
 import { useRouter } from 'vue-router'
 
 const connectionStore = useConnectionStore()

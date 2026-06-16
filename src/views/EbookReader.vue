@@ -106,12 +106,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { readEbook, getEbookChapters, getEbookChapterContent } from '@/api/backend'
+import { readEbook, getEbookChapters, getEbookChapterContent, getEpubImageUrl } from '@/api/backend'
 import type { ChapterInfo } from '@/types/backend'
 
 const props = defineProps<{
   ebookId: number
   ebookTitle: string
+  ebookFilePath?: string
 }>()
 
 defineEmits<{
@@ -251,8 +252,24 @@ const currentChapterTitle = computed(() => {
   return chapter?.title || ''
 })
 
+function rewriteEpubImages(html: string): string {
+  const fp = props.ebookFilePath
+  if (!fp) return html
+  return html.replace(/<img\s+([^>]*?)src="([^"]+)"([^>]*)>/gi, (match, before, src, after) => {
+    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:')) {
+      return match
+    }
+    const imageUrl = getEpubImageUrl(fp, src)
+    return `<img ${before}src="${imageUrl}"${after}>`
+  })
+}
+
 const formattedContent = computed(() => {
-  return content.value
+  const raw = content.value
+  if (raw.includes('<') && (raw.includes('</p>') || raw.includes('</div>') || raw.includes('<img'))) {
+    return rewriteEpubImages(raw)
+  }
+  return raw
     .split('\n')
     .map(line => `<p>${line || '&nbsp;'}</p>`)
     .join('')

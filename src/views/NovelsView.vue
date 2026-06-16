@@ -6,6 +6,13 @@
         <p class="view-subtitle">管理你的电子书库</p>
       </div>
       <div class="header-actions">
+        <button class="scan-btn" @click="showScanDialog = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          扫描目录
+        </button>
         <div class="search-bar">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/>
@@ -84,15 +91,38 @@
       v-if="readingBook"
       :ebook-id="readingBook.id"
       :ebook-title="readingBook.title"
+      :ebook-file-path="readingBook.filePath"
       @close="readingBook = null"
     />
+
+    <Teleport to="body">
+      <div v-if="showScanDialog" class="dialog-overlay" @click.self="showScanDialog = false">
+        <div class="dialog">
+          <h3>扫描电子书目录</h3>
+          <p class="dialog-desc">输入要扫描的目录路径，支持 .epub、.txt 等格式</p>
+          <input
+            v-model="scanPath"
+            type="text"
+            class="dialog-input"
+            placeholder="例如: /media/books"
+            @keyup.enter="handleScan"
+          />
+          <div class="dialog-actions">
+            <button class="dialog-btn cancel" @click="showScanDialog = false">取消</button>
+            <button class="dialog-btn confirm" :disabled="!scanPath.trim() || scanning" @click="handleScan">
+              {{ scanning ? '扫描中...' : '开始扫描' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { Ebook } from '@/types/backend'
-import { getAllEbooks, searchEbooks, toggleEbookFavorite, getEbookCoverUrl, getEbookDownloadUrl } from '@/api/backend'
+import { getAllEbooks, searchEbooks, toggleEbookFavorite, getEbookCoverUrl, getEbookDownloadUrl, scanEbookDirectory } from '@/api/backend'
 import EbookReader from '@/views/EbookReader.vue'
 
 const ebooks = ref<Ebook[]>([])
@@ -100,6 +130,9 @@ const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
 const readingBook = ref<Ebook | null>(null)
+const showScanDialog = ref(false)
+const scanPath = ref('')
+const scanning = ref(false)
 
 async function loadEbooks() {
   loading.value = true
@@ -160,6 +193,22 @@ function readEbook(book: Ebook) {
   readingBook.value = book
 }
 
+async function handleScan() {
+  if (!scanPath.value.trim()) return
+  scanning.value = true
+  try {
+    await scanEbookDirectory(scanPath.value)
+    showScanDialog.value = false
+    scanPath.value = ''
+    await loadEbooks()
+  } catch (e) {
+    error.value = '扫描失败'
+    console.error('Failed to scan directory:', e)
+  } finally {
+    scanning.value = false
+  }
+}
+
 onMounted(loadEbooks)
 </script>
 
@@ -193,6 +242,28 @@ onMounted(loadEbooks)
 
 .header-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scan-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.scan-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .search-bar {
@@ -397,6 +468,94 @@ onMounted(loadEbooks)
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 400px;
+  max-width: 90vw;
+}
+
+.dialog h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dialog-desc {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.dialog-input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.dialog-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.dialog-btn.cancel {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.dialog-btn.cancel:hover {
+  background: var(--bg-hover);
+}
+
+.dialog-btn.confirm {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.dialog-btn.confirm:hover {
+  background: var(--accent-hover);
+}
+
+.dialog-btn.confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media screen and (max-width: 767px) {

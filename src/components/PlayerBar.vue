@@ -5,9 +5,7 @@
         <img v-if="playerStore.currentTrack" :src="playerStore.getTrackCoverArt(playerStore.currentTrack, 60)"
           class="player-cover" :class="{ rotating: playerStore.isPlaying }" alt="封面" />
         <div class="cover-overlay" v-if="currentLyrics">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-          </svg>
+          <AppIcon name="edit" :size="20" />
         </div>
       </div>
       <div class="track-info">
@@ -27,68 +25,22 @@
     <div class="player-center">
       <div class="player-controls">
         <button class="control-btn star-btn" :class="{ starred: isStarred }" @click="toggleStarred" title="收藏">
-          <svg width="16" height="16" viewBox="0 0 24 24" :fill="isStarred ? 'currentColor' : 'none'"
-            stroke="currentColor" stroke-width="2">
-            <polygon
-              points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-          </svg>
+          <AppIcon name="star" :size="16" :filled="isStarred" />
         </button>
         <button class="control-btn" @click="playerStore.prevTrack" title="上一首">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-          </svg>
+          <AppIcon name="previous" :size="18" />
         </button>
 
         <button class="control-btn play-main" @click="playerStore.togglePlay" :disabled="!playerStore.currentTrack">
-          <svg v-if="!playerStore.isPlaying" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M8 5v14l11-7z" />
-          </svg>
-          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-          </svg>
+          <AppIcon :name="playerStore.isPlaying ? 'pause' : 'play'" :size="20" />
         </button>
 
         <button class="control-btn" @click="playerStore.nextTrack" title="下一首">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-          </svg>
+          <AppIcon name="next" :size="18" />
         </button>
 
         <button class="control-btn active" @click="playerStore.cyclePlayMode" :title="playModeTitle">
-          <!-- 顺序播放 -->
-          <svg v-if="playerStore.playMode === 'order'" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <!-- 第一行，中心 y=4 -->
-            <line x1="4" y1="4" x2="17" y2="4" />
-            <polyline points="17 1, 21 4, 17 7" />
-            <!-- 第二行，中心 y=12 -->
-            <line x1="4" y1="12" x2="17" y2="12" />
-            <polyline points="17 9, 21 12, 17 15" />
-            <!-- 第三行，中心 y=20 -->
-            <line x1="4" y1="20" x2="17" y2="20" />
-            <polyline points="17 17, 21 20, 17 23" />
-          </svg>
-          <svg v-else-if="playerStore.playMode === 'shuffle'" width="16" height="16" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" stroke-width="2">
-            <polyline points="16 3 21 3 21 8" />
-            <line x1="4" y1="20" x2="21" y2="3" />
-            <polyline points="21 16 21 21 16 21" />
-            <line x1="15" y1="15" x2="21" y2="21" />
-            <line x1="4" y1="4" x2="9" y2="9" />
-          </svg>
-          <!-- 循环播放（列表循环 / 单曲循环） -->
-          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <!-- 原有的循环箭头路径 -->
-            <polyline points="17 1 21 5 17 9" />
-            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-            <polyline points="7 23 3 19 7 15" />
-            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-
-            <!-- 单曲循环时在中心显示数字 1 -->
-            <text v-if="playerStore.playMode === 'repeat_one'" x="12" y="12" text-anchor="middle"
-              dominant-baseline="central" font-size="10" font-weight="bold" fill="currentColor" stroke="none">1</text>
-          </svg>
+          <AppIcon :name="playerStore.playMode === 'shuffle' ? 'shuffle' : playerStore.playMode === 'repeat_one' ? 'repeat-one' : playerStore.playMode === 'order' ? 'order' : 'repeat'" :size="16" />
         </button>
 
       </div>
@@ -104,11 +56,7 @@
     </div>
 
     <div class="player-volume">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-        <path v-if="playerStore.volume > 0" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-        <path v-if="playerStore.volume > 0.5" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-      </svg>
+      <AppIcon :name="playerStore.volume === 0 ? 'volume-mute' : playerStore.volume > 0.5 ? 'volume' : 'volume-low'" :size="16" />
       <div class="volume-bar" @mousedown="onVolumeMouseDown" @click="onVolumeBarClick">
         <div class="volume-fill" :style="{ width: (playerStore.volume * 100) + '%' }"></div>
         <div class="volume-thumb" :style="{ left: (playerStore.volume * 100) + '%' }"></div>
@@ -123,6 +71,7 @@
 import { usePlayerStore } from '@/stores/player'
 import { useLibraryStore } from '@/stores/library'
 import { computed, ref, watch } from 'vue'
+import AppIcon from '@/components/AppIcon.vue'
 
 const playerStore = usePlayerStore()
 const libraryStore = useLibraryStore()
