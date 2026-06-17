@@ -1,11 +1,9 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import type { Track } from '@/types/navidrome'
 import type { MusicTrack } from '@/types/backend'
-import { streamTrack, getCoverArt } from '@/api/navidrome'
 import { getStreamUrl, getMusicCoverArtUrl } from '@/api/backend'
 
-type AnyTrack = Track | MusicTrack
+type AnyTrack = MusicTrack
 
 export const usePlayerStore = defineStore('player', () => {
   const currentTrack = ref<AnyTrack | null>(null)
@@ -110,11 +108,7 @@ export const usePlayerStore = defineStore('player', () => {
         }
         
         let streamUrl: string
-        if ('coverArt' in track) {
-          streamUrl = streamTrack(String(track.id), 'raw')
-        } else {
-          streamUrl = getStreamUrl(track.id as number)
-        }
+        streamUrl = getStreamUrl(track.id as number)
 
         audio.value.src = streamUrl
         audio.value.load()
@@ -280,9 +274,6 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function getTrackCoverArt(track: AnyTrack, size = 300): string {
-    if ('coverArt' in track) {
-      return getCoverArt(track.coverArt, size)
-    }
     return getMusicCoverArtUrl(track.id as number)
   }
 

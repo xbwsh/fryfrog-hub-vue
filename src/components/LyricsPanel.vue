@@ -111,7 +111,6 @@
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
 import { useLibraryStore } from '@/stores/library'
-import { getLyricsBySongId } from '@/api/navidrome'
 import { getLyrics, toggleFavorite } from '@/api/backend'
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
@@ -132,8 +131,7 @@ const isStarred = computed(() => {
   if (!playerStore.currentTrack) return false
   const track = playerStore.currentTrack
   if ('favorite' in track) return track.favorite
-  if ('coverArt' in track) return libraryStore.isTrackStarred(String(track.id))
-  return false
+  return libraryStore.isTrackStarred(String(track.id))
 })
 
 async function toggleStarred() {
@@ -146,7 +144,7 @@ async function toggleStarred() {
     } catch {
       // silent
     }
-  } else if ('coverArt' in track) {
+  } else {
     await libraryStore.toggleStar(String(track.id), isStarred.value, track)
   }
 }

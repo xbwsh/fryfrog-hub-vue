@@ -55,4 +55,3 @@ npm run build        # vue-tsc -b && vite build
 - 开发服务器绑定 `0.0.0.0:3540` — 可通过局域网访问
 - 后端认证硬编码为 `666/666` — 不是真实的认证系统
 - `player.ts` 通过联合类型 `AnyTrack` 管理后端 `MusicTrack`
-- 项目包含 Navidrome/Komga 相关文件但当前仅支持自定义后端
