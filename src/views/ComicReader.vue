@@ -81,9 +81,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import type { PageInfo } from '@/types/backend'
-import { getComicPages, getComicPageImageUrl } from '@/api/backend'
+import { getComicPages, getComicPageImageUrl, getComicProgress, saveComicProgress } from '@/api/backend'
 
 const props = defineProps<{
   comicId: number
@@ -101,35 +101,65 @@ const pages = ref<PageInfo[]>([])
 const loading = ref(false)
 const currentPage = ref(props.startPage || 1)
 const totalPages = ref(0)
-const fitMode = ref<'width' | 'height'>('width')
+const fitMode = ref<'width' | 'height'>(
+  (localStorage.getItem(`comic-fitmode-${props.comicId}`) as 'width' | 'height') || 'width'
+)
 const direction = ref<'vertical' | 'horizontal'>('vertical')
+const initialScrollDone = ref(false)
 
 async function loadPages() {
   loading.value = true
   try {
     pages.value = await getComicPages(props.comicId)
     totalPages.value = pages.value.length
-    if (props.startPage && props.startPage > 1 && props.startPage <= totalPages.value) {
-      currentPage.value = props.startPage
-      await nextTick()
-      scrollToPage(currentPage.value)
+
+    let startPage = props.startPage || 1
+    if (!props.startPage) {
+      const progress = await getComicProgress(props.comicId)
+      if (progress && !progress.completed) {
+        startPage = progress.currentPage
+      }
     }
+
+    currentPage.value = Math.min(startPage, totalPages.value)
+    loading.value = false
+    await nextTick()
+    scrollToPage(currentPage.value)
   } catch (e) {
     console.error('Failed to load comic pages:', e)
-  } finally {
     loading.value = false
   }
+}
+
+async function saveProgress() {
+  if (totalPages.value > 0) {
+    try {
+      await saveComicProgress(props.comicId, currentPage.value, totalPages.value)
+    } catch (e) {
+      console.error('Failed to save comic progress:', e)
+    }
+  }
+}
+
+let progressTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleSave() {
+  if (progressTimer) clearTimeout(progressTimer)
+  progressTimer = setTimeout(saveProgress, 1000)
 }
 
 function scrollToPage(pageNum: number) {
   if (!scrollContainer.value) return
   const el = scrollContainer.value.querySelector(`[data-page="${pageNum}"]`)
   if (el) {
+    initialScrollDone.value = false
     el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setTimeout(() => { initialScrollDone.value = true }, 500)
   }
 }
 
 function handleScroll() {
+  if (!initialScrollDone.value) return
   if (!scrollContainer.value) return
   const container = scrollContainer.value
   const scrollTop = container.scrollTop
@@ -137,7 +167,11 @@ function handleScroll() {
 
   for (const child of children) {
     if (child.offsetTop + child.offsetHeight / 2 > scrollTop) {
-      currentPage.value = Number(child.dataset.page)
+      const pageNum = Number(child.dataset.page)
+      if (pageNum !== currentPage.value) {
+        currentPage.value = pageNum
+        scheduleSave()
+      }
       break
     }
   }
@@ -146,17 +180,20 @@ function handleScroll() {
 function prevPage() {
   if (currentPage.value > 1) {
     currentPage.value--
+    scheduleSave()
   }
 }
 
 function nextPage() {
   if (currentPage.value < totalPages.value) {
     currentPage.value++
+    scheduleSave()
   }
 }
 
 function toggleFitMode() {
   fitMode.value = fitMode.value === 'width' ? 'height' : 'width'
+  localStorage.setItem(`comic-fitmode-${props.comicId}`, fitMode.value)
 }
 
 function toggleDirection() {
@@ -190,6 +227,11 @@ function onImageLoad() {
 onMounted(() => {
   loadPages()
   readerRef.value?.focus()
+})
+
+onUnmounted(() => {
+  saveProgress()
+  if (progressTimer) clearTimeout(progressTimer)
 })
 </script>
 

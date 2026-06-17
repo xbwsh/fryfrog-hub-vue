@@ -54,6 +54,12 @@
           <div class="series-info">
             <h3 class="series-name">{{ series.name }}</h3>
             <p class="series-meta">{{ series.author }} · {{ series.volumeCount }} 卷</p>
+            <div v-if="getSeriesProgress(series)" class="series-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: getSeriesProgress(series)!.percent + '%' }"></div>
+              </div>
+              <span class="progress-text">{{ getSeriesProgress(series)!.text }}</span>
+            </div>
           </div>
           <div class="series-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -70,25 +76,59 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { ComicSeries } from '@/types/backend'
-import { getComicSeries } from '@/api/backend'
+import { getComicSeries, getComicProgress } from '@/api/backend'
 
 const router = useRouter()
 const seriesList = ref<ComicSeries[]>([])
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
+const seriesProgressMap = ref<Map<string, { percent: number; text: string }>>(new Map())
 
 async function loadComics() {
   loading.value = true
   error.value = ''
   try {
     seriesList.value = await getComicSeries()
+    await loadAllSeriesProgress()
   } catch (e) {
     error.value = '加载漫画失败'
     console.error('Failed to load comics:', e)
   } finally {
     loading.value = false
   }
+}
+
+async function loadAllSeriesProgress() {
+  const map = new Map<string, { percent: number; text: string }>()
+  for (const series of seriesList.value) {
+    let totalProgress = 0
+    let count = 0
+    let lastText = ''
+    for (const comic of series.comics) {
+      try {
+        const progress = await getComicProgress(comic.id)
+        if (progress && !progress.completed) {
+          totalProgress += progress.progressPercent
+          count++
+          lastText = `第${progress.currentPage}页 ${Math.round(progress.progressPercent)}%`
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (count > 0) {
+      map.set(series.name, {
+        percent: Math.round(totalProgress / count),
+        text: `${count}本阅读中 · ${lastText}`
+      })
+    }
+  }
+  seriesProgressMap.value = map
+}
+
+function getSeriesProgress(series: ComicSeries): { percent: number; text: string } | undefined {
+  return seriesProgressMap.value.get(series.name)
 }
 
 async function handleSearch() {
@@ -303,6 +343,30 @@ onMounted(loadComics)
   font-size: 12px;
   color: var(--text-muted);
   margin: 0;
+}
+
+.series-progress {
+  margin-top: 6px;
+}
+
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 .series-arrow {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { iconData, type IconItem } from '@/icons'
+import { useThemeStore } from '@/stores/theme'
 
 type CategoryKey = 'general' | 'music' | 'comic' | 'audiobook' | 'ebook' | 'video'
 
@@ -12,6 +13,39 @@ const accentColors: Record<CategoryKey, string> = {
   ebook: '#3dd6c8',
   video: '#7e8cf0',
 }
+
+const themeStore = useThemeStore()
+
+const isDark = computed(() => themeStore.resolvedTheme === 'dark')
+
+const colorVars = computed(() => {
+  if (isDark.value) {
+    return {
+      '--il-bg': '#0a0a0a',
+      '--il-surface': '#141414',
+      '--il-surface-hover': '#1e1e1e',
+      '--il-border': '#2a2a2a',
+      '--il-text': '#e8e4dc',
+      '--il-text-muted': '#6a6560',
+      '--il-icon-color': '#d4d0c8',
+      '--il-icon-id-color': '#3a3a3a',
+      '--il-tab-hover-border': '#555',
+      '--il-card-shadow': 'rgba(0, 0, 0, 0.4)',
+    }
+  }
+  return {
+    '--il-bg': '#f8f5ef',
+    '--il-surface': '#fffaf2',
+    '--il-surface-hover': '#f5ebe0',
+    '--il-border': 'rgba(33, 28, 26, 0.08)',
+    '--il-text': '#211c1a',
+    '--il-text-muted': '#958982',
+    '--il-icon-color': '#625853',
+    '--il-icon-id-color': '#c5bdb6',
+    '--il-tab-hover-border': '#c5bdb6',
+    '--il-card-shadow': 'rgba(80, 55, 35, 0.1)',
+  }
+})
 
 const tabLabels: Record<CategoryKey, string> = {
   general: 'General / System',
@@ -70,7 +104,7 @@ function showToast(msg: string) {
 </script>
 
 <template>
-  <div class="icon-library-page">
+  <div class="icon-library-page" :style="colorVars">
     <header class="il-header">
       <h1>SVG Icon <span>Library</span></h1>
       <p>Music · Comic · Audiobook · eBook · Video · System · 24×24 · stroke 1.5</p>
@@ -122,13 +156,6 @@ function showToast(msg: string) {
 
 <style scoped>
 .icon-library-page {
-  --il-bg: #0a0a0a;
-  --il-surface: #141414;
-  --il-surface-hover: #1e1e1e;
-  --il-border: #2a2a2a;
-  --il-text: #e8e4dc;
-  --il-text-muted: #6a6560;
-  --il-icon-color: #d4d0c8;
   --il-icon-hover: v-bind(currentAccent);
 
   position: relative;
@@ -191,7 +218,7 @@ function showToast(msg: string) {
 
 .il-tab-btn:hover {
   color: var(--il-text);
-  border-color: #555;
+  border-color: var(--il-tab-hover-border);
 }
 
 .il-tab-btn.active {
@@ -222,7 +249,7 @@ function showToast(msg: string) {
   background: var(--il-surface-hover);
   border-color: v-bind(currentAccent);
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(232, 197, 71, 0.12);
+  box-shadow: 0 8px 24px var(--il-card-shadow), 0 0 0 1px rgba(232, 197, 71, 0.12);
 }
 
 .il-icon-card:hover :deep(svg) {
@@ -282,7 +309,7 @@ function showToast(msg: string) {
 
 .il-icon-id {
   font-size: 0.55rem;
-  color: #3a3a3a;
+  color: var(--il-icon-id-color);
   letter-spacing: 0.06em;
 }
 

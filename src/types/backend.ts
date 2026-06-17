@@ -150,6 +150,23 @@ export interface VideoProgress {
   updatedAt: string
 }
 
+export interface ComicProgress {
+  comicId: number
+  currentPage: number
+  totalPages: number
+  completed: boolean
+  progressPercent: number
+  updatedAt: string
+}
+
+export interface EbookProgress {
+  ebookId: number
+  currentChapter: number
+  chapterProgressPercent: number
+  completed: boolean
+  updatedAt: string
+}
+
 export interface SeriesDTO {
   id: number
   title: string

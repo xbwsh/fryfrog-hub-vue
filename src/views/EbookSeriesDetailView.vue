@@ -36,6 +36,15 @@
           <h1 class="series-name">{{ series.name }}</h1>
           <p class="series-author">{{ series.author }}</p>
           <p class="series-count">{{ series.volumeCount }} 卷</p>
+          <div v-if="bestProgress" class="continue-section">
+            <button class="continue-btn" @click="readBook(bestProgress.book)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="14 10 20 10 20 4"/>
+                <path d="M4 20v-6h6"/>
+              </svg>
+              继续阅读 · {{ bestProgress.book.title }} ({{ Math.round(bestProgress.progress.chapterProgressPercent) }}%)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -57,9 +66,15 @@
               <div class="book-badge" v-if="book.format">{{ book.format }}</div>
             </div>
             <div class="book-info">
-              <div class="book-title">{{ book.title }}</div>
-              <div class="book-meta">{{ book.year }} · {{ book.pageCount }}页</div>
-            </div>
+                <div class="book-title">{{ book.title }}</div>
+                <div class="book-meta">{{ book.year }} · {{ book.pageCount }}页</div>
+                <div v-if="getBookProgress(book.id)" class="book-progress">
+                  <div class="progress-bar">
+                    <div class="progress-fill" :style="{ width: getBookProgress(book.id)!.chapterProgressPercent + '%' }"></div>
+                  </div>
+                  <span class="progress-text">第{{ getBookProgress(book.id)!.currentChapter }}章 {{ Math.round(getBookProgress(book.id)!.chapterProgressPercent) }}%</span>
+                </div>
+              </div>
           </div>
         </div>
       </div>
@@ -68,10 +83,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { EbookSeries, Ebook } from '@/types/backend'
-import { getEbookSeries, getEbookCoverUrl } from '@/api/backend'
+import type { EbookSeries, Ebook, EbookProgress } from '@/types/backend'
+import { getEbookSeries, getEbookCoverUrl, getEbookProgress } from '@/api/backend'
 
 const router = useRouter()
 const route = useRoute()
@@ -79,6 +94,7 @@ const route = useRoute()
 const series = ref<EbookSeries | null>(null)
 const loading = ref(false)
 const error = ref('')
+const ebookProgressMap = ref<Map<number, EbookProgress>>(new Map())
 
 async function loadSeries() {
   const name = route.params.name as string
@@ -94,7 +110,9 @@ async function loadSeries() {
     series.value = allSeries.find(s => s.name === name) || null
     if (!series.value) {
       error.value = '系列不存在'
+      return
     }
+    await loadAllProgress()
   } catch (e) {
     error.value = '加载系列失败'
     console.error('Failed to load series:', e)
@@ -102,6 +120,40 @@ async function loadSeries() {
     loading.value = false
   }
 }
+
+async function loadAllProgress() {
+  if (!series.value) return
+  const progressMap = new Map<number, EbookProgress>()
+  for (const book of series.value.books) {
+    try {
+      const progress = await getEbookProgress(book.id)
+      if (progress && !progress.completed) {
+        progressMap.set(book.id, progress)
+      }
+    } catch {
+      // ignore errors for individual books
+    }
+  }
+  ebookProgressMap.value = progressMap
+}
+
+function getBookProgress(bookId: number): EbookProgress | undefined {
+  return ebookProgressMap.value.get(bookId)
+}
+
+const bestProgress = computed(() => {
+  if (!series.value) return null
+  let best: { book: Ebook; progress: EbookProgress } | null = null
+  for (const book of series.value.books) {
+    const progress = ebookProgressMap.value.get(book.id)
+    if (progress && !progress.completed) {
+      if (!best || progress.chapterProgressPercent > best.progress.chapterProgressPercent) {
+        best = { book, progress }
+      }
+    }
+  }
+  return best
+})
 
 function readBook(book: Ebook) {
   router.push({ name: 'ebooks', query: { read: book.id } })
@@ -315,6 +367,55 @@ onMounted(loadSeries)
 .book-meta {
   font-size: 11px;
   color: var(--text-muted);
+}
+
+.book-progress {
+  margin-top: 8px;
+}
+
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.continue-section {
+  margin-top: 16px;
+}
+
+.continue-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+  cursor: pointer;
+}
+
+.continue-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 @media screen and (max-width: 767px) {

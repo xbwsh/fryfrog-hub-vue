@@ -59,6 +59,12 @@
             <div class="volume-info">
               <div class="volume-title">{{ comic.title || `第 ${comic.volume} 卷` }}</div>
               <div class="volume-meta" v-if="comic.pageCount">{{ comic.pageCount }} 页</div>
+              <div v-if="getComicProgressById(comic.id)" class="volume-progress">
+                <div class="progress-bar">
+                  <div class="progress-fill" :style="{ width: getComicProgressById(comic.id)!.progressPercent + '%' }"></div>
+                </div>
+                <span class="progress-text">第{{ getComicProgressById(comic.id)!.currentPage }}页 {{ Math.round(getComicProgressById(comic.id)!.progressPercent) }}%</span>
+              </div>
             </div>
           </div>
         </div>
@@ -70,8 +76,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { ComicSeries, ComicVolume } from '@/types/backend'
-import { getComicSeries, getComicCoverUrl } from '@/api/backend'
+import type { ComicSeries, ComicVolume, ComicProgress } from '@/types/backend'
+import { getComicSeries, getComicCoverUrl, getComicProgress } from '@/api/backend'
 
 const router = useRouter()
 const route = useRoute()
@@ -79,6 +85,7 @@ const route = useRoute()
 const series = ref<ComicSeries | null>(null)
 const loading = ref(false)
 const error = ref('')
+const comicProgressMap = ref<Map<number, ComicProgress>>(new Map())
 
 async function loadSeries() {
   const name = route.params.name as string
@@ -94,13 +101,35 @@ async function loadSeries() {
     series.value = allSeries.find(s => s.name === name) || null
     if (!series.value) {
       error.value = '系列不存在'
+      return
     }
+    await loadAllProgress()
   } catch (e) {
     error.value = '加载系列失败'
     console.error('Failed to load series:', e)
   } finally {
     loading.value = false
   }
+}
+
+async function loadAllProgress() {
+  if (!series.value) return
+  const progressMap = new Map<number, ComicProgress>()
+  for (const comic of series.value.comics) {
+    try {
+      const progress = await getComicProgress(comic.id)
+      if (progress && !progress.completed) {
+        progressMap.set(comic.id, progress)
+      }
+    } catch {
+      // ignore errors for individual comics
+    }
+  }
+  comicProgressMap.value = progressMap
+}
+
+function getComicProgressById(comicId: number): ComicProgress | undefined {
+  return comicProgressMap.value.get(comicId)
 }
 
 function viewComic(comic: ComicVolume) {
@@ -314,6 +343,30 @@ onMounted(loadSeries)
 
 .volume-meta {
   font-size: 11px;
+  color: var(--text-muted);
+}
+
+.volume-progress {
+  margin-top: 8px;
+}
+
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 10px;
   color: var(--text-muted);
 }
 

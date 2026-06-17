@@ -61,6 +61,12 @@
           <div class="series-info">
             <h3 class="series-name">{{ series.name }}</h3>
             <p class="series-meta">{{ series.author }} · {{ series.volumeCount }} 卷</p>
+            <div v-if="getSeriesProgress(series)" class="series-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: getSeriesProgress(series)!.percent + '%' }"></div>
+              </div>
+              <span class="progress-text">{{ getSeriesProgress(series)!.text }}</span>
+            </div>
           </div>
           <div class="series-arrow">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -107,7 +113,7 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { Ebook, EbookSeries } from '@/types/backend'
-import { getEbookSeries, scanEbookDirectory, getEbookCoverUrl } from '@/api/backend'
+import { getEbookSeries, scanEbookDirectory, getEbookProgress } from '@/api/backend'
 import EbookReader from '@/views/EbookReader.vue'
 
 const route = useRoute()
@@ -120,18 +126,52 @@ const readingBook = ref<Ebook | null>(null)
 const showScanDialog = ref(false)
 const scanPath = ref('')
 const scanning = ref(false)
+const seriesProgressMap = ref<Map<string, { percent: number; text: string }>>(new Map())
 
 async function loadEbooks() {
   loading.value = true
   error.value = ''
   try {
     seriesList.value = await getEbookSeries()
+    await loadAllSeriesProgress()
   } catch (e) {
     error.value = '加载电子书失败'
     console.error('Failed to load ebooks:', e)
   } finally {
     loading.value = false
   }
+}
+
+async function loadAllSeriesProgress() {
+  const map = new Map<string, { percent: number; text: string }>()
+  for (const series of seriesList.value) {
+    let totalProgress = 0
+    let count = 0
+    let lastText = ''
+    for (const book of series.books) {
+      try {
+        const progress = await getEbookProgress(book.id)
+        if (progress && !progress.completed) {
+          totalProgress += progress.chapterProgressPercent
+          count++
+          lastText = `第${progress.currentChapter}章 ${Math.round(progress.chapterProgressPercent)}%`
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (count > 0) {
+      map.set(series.name, {
+        percent: Math.round(totalProgress / count),
+        text: `${count}本阅读中 · ${lastText}`
+      })
+    }
+  }
+  seriesProgressMap.value = map
+}
+
+function getSeriesProgress(series: EbookSeries): { percent: number; text: string } | undefined {
+  return seriesProgressMap.value.get(series.name)
 }
 
 async function checkAutoOpen() {
@@ -406,6 +446,30 @@ watch(() => route.query.read, () => {
   font-size: 12px;
   color: var(--text-muted);
   margin: 0;
+}
+
+.series-progress {
+  margin-top: 6px;
+}
+
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 .series-arrow {

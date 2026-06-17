@@ -3,7 +3,6 @@ import type {
   MusicTrack,
   Comic,
   ComicSeries,
-  ComicVolume,
   PageInfo,
   Ebook,
   VideoDTO,
@@ -13,6 +12,9 @@ import type {
   ApiResponse,
   BackendConfig,
   VideoProgress,
+  ComicProgress,
+  EbookProgress,
+  EbookSeries,
 } from '@/types/backend'
 
 const client = axios.create()
@@ -415,6 +417,38 @@ export async function saveVideoProgress(id: number, position: number, duration: 
 
 export async function deleteVideoProgress(id: number): Promise<void> {
   await client.delete<ApiResponse<void>>(`/api/v1/video/${id}/progress`)
+}
+
+export async function getComicProgress(id: number): Promise<ComicProgress | null> {
+  const response = await client.get<ApiResponse<ComicProgress>>(`/api/v1/comic/${id}/progress`)
+  return response.data.data || null
+}
+
+export async function saveComicProgress(id: number, currentPage: number, totalPages: number): Promise<ComicProgress> {
+  const response = await client.put<ApiResponse<ComicProgress>>(`/api/v1/comic/${id}/progress`, null, {
+    params: { page: currentPage, totalPages },
+  })
+  return response.data.data
+}
+
+export async function deleteComicProgress(id: number): Promise<void> {
+  await client.delete<ApiResponse<void>>(`/api/v1/comic/${id}/progress`)
+}
+
+export async function getEbookProgress(id: number): Promise<EbookProgress | null> {
+  const response = await client.get<ApiResponse<EbookProgress>>(`/api/v1/ebook/${id}/progress`)
+  return response.data.data || null
+}
+
+export async function saveEbookProgress(id: number, currentChapter: number, totalChapters: number): Promise<EbookProgress> {
+  const response = await client.put<ApiResponse<EbookProgress>>(`/api/v1/ebook/${id}/progress`, null, {
+    params: { page: currentChapter, totalPages: totalChapters },
+  })
+  return response.data.data
+}
+
+export async function deleteEbookProgress(id: number): Promise<void> {
+  await client.delete<ApiResponse<void>>(`/api/v1/ebook/${id}/progress`)
 }
 
 export async function getAllSeries(): Promise<SeriesDTO[]> {
