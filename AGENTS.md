@@ -1,34 +1,34 @@
 # Fryfrog Hub
 
-Vue 3 media center frontend (music, comics, ebooks, video).
+Vue 3 媒体中心前端（音乐、漫画、电子书、视频）。
 
-## Commands
+## 命令
 
 ```bash
-npm run dev          # Vite dev server on :3540, proxies /api → :20058
+npm run dev          # Vite 开发服务器运行在 :3540，代理 /api → :20058
 npm run build        # vue-tsc -b && vite build
 ```
 
-No lint, test, or formatter scripts exist. Type-check via `npm run build` (runs `vue-tsc -b`).
+没有 lint、测试或格式化脚本。类型检查通过 `npm run build`（运行 `vue-tsc -b`）。
 
-## Architecture
+## 架构
 
-- **Three backends**: custom API (`/api`), Navidrome (`/navidrome-proxy`), Komga (`/komga-proxy`)
-- **API clients**: `src/api/backend.ts`, `src/api/navidrome.ts`, `src/api/komga.ts` — each manages its own config/auth state
-- **Stores**: `src/stores/connection.ts` (auth), `src/stores/player.ts` (audio playback), `src/stores/library.ts`, `src/stores/theme.ts`
-- **Path alias**: `@/` → `src/` (configured in both `vite.config.ts` and `tsconfig.json`)
+- **三个后端**：自定义 API (`/api`)、Navidrome (`/navidrome-proxy`)、Komga (`/komga-proxy`)
+- **API 客户端**：`src/api/backend.ts`、`src/api/navidrome.ts`、`src/api/komga.ts` — 各自管理自己的配置/认证状态
+- **状态管理**：`src/stores/connection.ts`（认证）、`src/stores/player.ts`（音频播放）、`src/stores/library.ts`、`src/stores/theme.ts`
+- **路径别名**：`@/` → `src/`（在 `vite.config.ts` 和 `tsconfig.json` 中配置）
 
-## Conventions
+## 规范
 
-- Vue 3 Composition API with `<script setup lang="ts">`
-- Chinese user-facing text (error messages, UI labels)
-- CSS variables defined in `src/styles/main.css` (light theme only, no dark mode)
-- Strict TS: `noUnusedLocals`, `noUnusedParameters`, `noFallthroughCasesInSwitch` all enabled
-- No ESLint/Prettier — follow existing code style
+- Vue 3 Composition API，使用 `<script setup lang="ts">`
+- 用户界面文本使用中文（错误消息、UI 标签）
+- CSS 变量定义在 `src/styles/main.css`（仅浅色主题，无深色模式）
+- 严格 TypeScript：启用 `noUnusedLocals`、`noUnusedParameters`、`noFallthroughCasesInSwitch`
+- 无 ESLint/Prettier — 遵循现有代码风格
 
-## Gotchas
+## 注意事项
 
-- Dev server binds `0.0.0.0:3540` — accessible on LAN
-- Navidrome/Komga proxies use `http-proxy-middleware` with custom error handling and `x-target-url` header forwarding
-- Backend auth is hardcoded `666/666` — not a real auth system
-- `player.ts` manages both Navidrome `Track` and backend `MusicTrack` via union type `AnyTrack`
+- 开发服务器绑定 `0.0.0.0:3540` — 可通过局域网访问
+- Navidrome/Komga 代理使用 `http-proxy-middleware`，具有自定义错误处理和 `x-target-url` 头转发
+- 后端认证硬编码为 `666/666` — 不是真实的认证系统
+- `player.ts` 通过联合类型 `AnyTrack` 同时管理 Navidrome `Track` 和后端 `MusicTrack`
