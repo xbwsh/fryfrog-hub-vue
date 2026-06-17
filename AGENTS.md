@@ -13,8 +13,8 @@ npm run build        # vue-tsc -b && vite build
 
 ## 架构
 
-- **三个后端**：自定义 API (`/api`)、Navidrome (`/navidrome-proxy`)、Komga (`/komga-proxy`)
-- **API 客户端**：`src/api/backend.ts`、`src/api/navidrome.ts`、`src/api/komga.ts` — 各自管理自己的配置/认证状态
+- **后端**：自定义 API (`/api`)
+- **API 客户端**：`src/api/backend.ts` — 管理配置/认证状态
 - **状态管理**：`src/stores/connection.ts`（认证）、`src/stores/player.ts`（音频播放）、`src/stores/library.ts`、`src/stores/theme.ts`
 - **路径别名**：`@/` → `src/`（在 `vite.config.ts` 和 `tsconfig.json` 中配置）
 
@@ -29,6 +29,5 @@ npm run build        # vue-tsc -b && vite build
 ## 注意事项
 
 - 开发服务器绑定 `0.0.0.0:3540` — 可通过局域网访问
-- Navidrome/Komga 代理使用 `http-proxy-middleware`，具有自定义错误处理和 `x-target-url` 头转发
 - 后端认证硬编码为 `666/666` — 不是真实的认证系统
-- `player.ts` 通过联合类型 `AnyTrack` 同时管理 Navidrome `Track` 和后端 `MusicTrack`
+- `player.ts` 通过联合类型 `AnyTrack` 管理后端 `MusicTrack`
