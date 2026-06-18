@@ -58,14 +58,26 @@ npm run build
 
 使用 host 网络模式，前端直接访问后端 `127.0.0.1:20058`。
 
-**1. 创建 nginx 配置文件并启动**
+> ⚠️ 镜像内置的 nginx.conf 使用 `host.docker.internal`，host 模式下不生效，需要覆盖 nginx 配置。以下所有方式均已包含此配置。
 
-镜像内置的 nginx.conf 使用 `host.docker.internal`，host 模式下不生效，需要覆盖。运行以下命令一键创建配置并启动：
+**方式一：docker-compose 本地构建**
 
 ```bash
+# 克隆项目
+git clone https://github.com/xbwsh/fryfrog-hub-vue.git
+cd fryfrog-hub-vue
+
+# 修改 Dockerfile 中 nginx.conf 的 proxy_pass 为 127.0.0.1:20058
+# 然后构建启动
+docker-compose up -d
+```
+
+**方式二：拉取预构建镜像（推荐）**
+
+```bash
+# 创建目录并生成 nginx 配置
 mkdir -p fryfrog-hub-frontend && cd fryfrog-hub-frontend
 
-# 创建 nginx 配置
 cat > nginx-docker.conf << 'EOF'
 server {
     listen 3540;
@@ -103,6 +115,23 @@ docker run -d \
 ```
 
 访问 `http://localhost:3540`
+
+**NAS 部署（群晖/威联通等）**
+
+在 Docker 管理界面创建项目，compose 配置：
+
+```yaml
+services:
+  frontend:
+    image: ghcr.io/xbwsh/fryfrog-hub:latest
+    container_name: fryfrog-frontend
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /vol1/docker/fryfrog-hub-frontend/nginx-docker.conf:/etc/nginx/conf.d/default.conf
+```
+
+需先在 `/vol1/docker/fryfrog-hub-frontend/` 目录下创建 `nginx-docker.conf`（内容同上）。
 
 ### 项目结构
 
@@ -173,14 +202,26 @@ Backend API address defaults to `http://localhost:20058`
 
 Uses host network mode. Frontend accesses backend at `127.0.0.1:20058` directly.
 
-**1. Create nginx config and start**
+> ⚠️ The built-in nginx.conf uses `host.docker.internal`, which doesn't work in host mode. You need to override it. All methods below include this config.
 
-The built-in nginx.conf uses `host.docker.internal`, which doesn't work in host mode. Run this to create the config and start:
+**Option 1: Local build with docker-compose**
 
 ```bash
+# Clone the project
+git clone https://github.com/xbwsh/fryfrog-hub-vue.git
+cd fryfrog-hub-vue
+
+# Modify nginx.conf proxy_pass to 127.0.0.1:20058
+# Then build and start
+docker-compose up -d
+```
+
+**Option 2: Pull pre-built image (Recommended)**
+
+```bash
+# Create directory and generate nginx config
 mkdir -p fryfrog-hub-frontend && cd fryfrog-hub-frontend
 
-# Create nginx config
 cat > nginx-docker.conf << 'EOF'
 server {
     listen 3540;
@@ -218,6 +259,23 @@ docker run -d \
 ```
 
 Access at `http://localhost:3540`
+
+**NAS Deployment (Synology/QNAP etc.)**
+
+Create a project in Docker Manager with this compose config:
+
+```yaml
+services:
+  frontend:
+    image: ghcr.io/xbwsh/fryfrog-hub:latest
+    container_name: fryfrog-frontend
+    network_mode: host
+    restart: unless-stopped
+    volumes:
+      - /vol1/docker/fryfrog-hub-frontend/nginx-docker.conf:/etc/nginx/conf.d/default.conf
+```
+
+You need to create `nginx-docker.conf` in `/vol1/docker/fryfrog-hub-frontend/` first (same content as above).
 
 ### Project Structure
 
