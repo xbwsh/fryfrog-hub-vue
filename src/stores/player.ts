@@ -273,8 +273,8 @@ export const usePlayerStore = defineStore('player', () => {
     localStorage.setItem('playMode', playMode.value)
   }
 
-  function getTrackCoverArt(track: AnyTrack, size = 300): string {
-    return getMusicCoverArtUrl(track.id as number)
+  function getTrackCoverArt(track: AnyTrack, _size = 300): string {
+    return getMusicCoverArtUrl(track.id)
   }
 
   function getTrackId(track: AnyTrack): string {

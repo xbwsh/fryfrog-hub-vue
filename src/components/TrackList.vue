@@ -26,7 +26,7 @@
           <span class="track-artist">{{ track.artist }}</span>
         </span>
         <span class="col-album">{{ track.album }}</span>
-        <span class="col-duration">{{ formatDuration(track.duration) }}</span>
+        <span class="col-duration">{{ formatDuration(track.durationSeconds) }}</span>
       </div>
     </div>
 

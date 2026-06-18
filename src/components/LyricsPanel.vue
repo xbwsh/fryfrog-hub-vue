@@ -110,13 +110,11 @@
 
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
-import { useLibraryStore } from '@/stores/library'
 import { getLyrics, toggleFavorite } from '@/api/backend'
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
 
 const playerStore = usePlayerStore()
-const libraryStore = useLibraryStore()
 defineEmits(['close'])
 
 const lyricsContainer = ref<HTMLElement>()
@@ -129,23 +127,17 @@ const fetchedLyrics = ref('')
 
 const isStarred = computed(() => {
   if (!playerStore.currentTrack) return false
-  const track = playerStore.currentTrack
-  if ('favorite' in track) return track.favorite
-  return libraryStore.isTrackStarred(String(track.id))
+  return playerStore.currentTrack.favorite
 })
 
 async function toggleStarred() {
   if (!playerStore.currentTrack) return
   const track = playerStore.currentTrack
-  if ('favorite' in track) {
-    try {
-      const updated = await toggleFavorite(track.id as number, !track.favorite)
-      if (updated) track.favorite = updated.favorite
-    } catch {
-      // silent
-    }
-  } else {
-    await libraryStore.toggleStar(String(track.id), isStarred.value, track)
+  try {
+    const updated = await toggleFavorite(track.id, !track.favorite)
+    if (updated) track.favorite = updated.favorite
+  } catch {
+    // silent
   }
 }
 
@@ -228,33 +220,18 @@ async function loadLyrics() {
 
   const track = playerStore.currentTrack
 
-  if ('filePath' in track) {
-    if (track.lyrics) {
-      lyricsSource.value = '内嵌'
-      return
-    }
-    try {
-      const lyrics = await getLyrics(track.id as number)
-      if (lyrics) {
-        fetchedLyrics.value = lyrics
-        lyricsSource.value = '外挂'
-      }
-    } catch {
-      // silent
-    }
+  if (track.lyrics) {
+    lyricsSource.value = '内嵌'
     return
   }
-
-  if ('coverArt' in track) {
-    try {
-      const lyrics = await getLyricsBySongId(String(track.id))
-      if (lyrics) {
-        fetchedLyrics.value = lyrics
-        lyricsSource.value = '外挂'
-      }
-    } catch {
-      // silent
+  try {
+    const lyrics = await getLyrics(track.id)
+    if (lyrics) {
+      fetchedLyrics.value = lyrics
+      lyricsSource.value = '外挂'
     }
+  } catch {
+    // silent
   }
 }
 
