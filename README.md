@@ -58,11 +58,14 @@ npm run build
 
 使用 host 网络模式，前端直接访问后端 `127.0.0.1:20058`。
 
-**1. 创建 nginx 配置文件**
+**1. 创建 nginx 配置文件并启动**
 
-镜像内置的 nginx.conf 使用 `host.docker.internal`，host 模式下不生效，需要覆盖：
+镜像内置的 nginx.conf 使用 `host.docker.internal`，host 模式下不生效，需要覆盖。运行以下命令一键创建配置并启动：
 
 ```bash
+mkdir -p fryfrog-hub-frontend && cd fryfrog-hub-frontend
+
+# 创建 nginx 配置
 cat > nginx-docker.conf << 'EOF'
 server {
     listen 3540;
@@ -89,11 +92,8 @@ server {
     }
 }
 EOF
-```
 
-**2. 启动容器**
-
-```bash
+# 启动容器
 docker run -d \
   --name fryfrog-frontend \
   --network host \
@@ -173,11 +173,14 @@ Backend API address defaults to `http://localhost:20058`
 
 Uses host network mode. Frontend accesses backend at `127.0.0.1:20058` directly.
 
-**1. Create nginx config**
+**1. Create nginx config and start**
 
-The built-in nginx.conf uses `host.docker.internal`, which doesn't work in host mode:
+The built-in nginx.conf uses `host.docker.internal`, which doesn't work in host mode. Run this to create the config and start:
 
 ```bash
+mkdir -p fryfrog-hub-frontend && cd fryfrog-hub-frontend
+
+# Create nginx config
 cat > nginx-docker.conf << 'EOF'
 server {
     listen 3540;
@@ -204,11 +207,8 @@ server {
     }
 }
 EOF
-```
 
-**2. Start container**
-
-```bash
+# Start container
 docker run -d \
   --name fryfrog-frontend \
   --network host \
