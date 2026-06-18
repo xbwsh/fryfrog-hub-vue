@@ -98,7 +98,7 @@
           >下一章</button>
         </div>
       </Transition>
-      <div v-if="chapters.length > 0" class="reading-progress-badge">{{ readingProgress }}%</div>
+      <div v-if="chapters.length > 0" class="reading-progress-badge">{{ Math.round(readingProgress) }}%</div>
       <div v-if="chapterHint" class="chapter-hint" :class="chapterHint">{{ chapterHint === 'next' ? '即将切换到下一章...' : '即将切换到上一章...' }}</div>
     </div>
   </div>
@@ -106,12 +106,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
-import { readEbook, getEbookChapters, getEbookChapterContent } from '@/api/backend'
+import { readEbook, getEbookChapters, getEbookChapterContent, getEpubImageUrl, getEbookProgress, saveEbookProgress } from '@/api/backend'
 import type { ChapterInfo } from '@/types/backend'
 
 const props = defineProps<{
   ebookId: number
   ebookTitle: string
+  ebookFilePath?: string
 }>()
 
 defineEmits<{
@@ -123,7 +124,7 @@ const contentRef = ref<HTMLElement>()
 const content = ref('')
 const loading = ref(false)
 const error = ref('')
-const fontSize = ref(18)
+const fontSize = ref(Number(localStorage.getItem(`ebook-fontsize-${props.ebookId}`)) || 18)
 const chapters = ref<ChapterInfo[]>([])
 const currentChapter = ref(1)
 const showChapterPanel = ref(false)
@@ -163,7 +164,11 @@ function onScroll() {
   const atBottom = max <= 0 || scrollTop >= max - 1
   const atTop = scrollTop <= 1
   const cooledDown = Date.now() - lastChapterSwitchTime > 1500
-  readingProgress.value = atBottom ? 100 : (max > 0 ? Math.min(100, Math.round((scrollTop / max) * 100)) : 0)
+  const newProgress = atBottom ? 100 : (max > 0 ? Math.min(100, Math.round((scrollTop / max) * 100)) : 0)
+  if (newProgress !== readingProgress.value) {
+    readingProgress.value = newProgress
+    scheduleSave()
+  }
 
   const hasNext = chapters.value.length > 0 && currentChapter.value < chapters.value.length
   const hasPrev = chapters.value.length > 0 && currentChapter.value > 1
@@ -251,31 +256,95 @@ const currentChapterTitle = computed(() => {
   return chapter?.title || ''
 })
 
+function rewriteEpubImages(html: string): string {
+  const fp = props.ebookFilePath
+  if (!fp) return html
+  return html.replace(/<img\s+([^>]*?)src="([^"]+)"([^>]*)>/gi, (match, before, src, after) => {
+    if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:') || src.startsWith('/api/')) {
+      return match
+    }
+    const imageUrl = getEpubImageUrl(fp, src)
+    return `<img ${before}src="${imageUrl}"${after}>`
+  })
+}
+
 const formattedContent = computed(() => {
-  return content.value
+  const raw = content.value
+  if (raw.includes('<') && (raw.includes('</p>') || raw.includes('</div>') || raw.includes('<img'))) {
+    return rewriteEpubImages(raw)
+  }
+  return raw
     .split('\n')
     .map(line => `<p>${line || '&nbsp;'}</p>`)
     .join('')
 })
 
 function increaseFontSize() {
-  if (fontSize.value < 32) fontSize.value += 2
+  if (fontSize.value < 32) {
+    fontSize.value += 2
+    localStorage.setItem(`ebook-fontsize-${props.ebookId}`, String(fontSize.value))
+  }
 }
 
 function decreaseFontSize() {
-  if (fontSize.value > 12) fontSize.value -= 2
+  if (fontSize.value > 12) {
+    fontSize.value -= 2
+    localStorage.setItem(`ebook-fontsize-${props.ebookId}`, String(fontSize.value))
+  }
+}
+
+async function loadProgress() {
+  try {
+    const progress = await getEbookProgress(props.ebookId)
+    if (progress && !progress.completed && chapters.value.length > 0) {
+      currentChapter.value = Math.min(progress.currentChapter, chapters.value.length)
+      readingProgress.value = progress.chapterProgressPercent
+      return progress.chapterProgressPercent
+    }
+  } catch (e) {
+    console.error('Failed to load ebook progress:', e)
+  }
+  return 0
+}
+
+let progressTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleSave() {
+  if (progressTimer) clearTimeout(progressTimer)
+  progressTimer = setTimeout(() => {
+    if (chapters.value.length > 0) {
+      saveEbookProgress(props.ebookId, currentChapter.value, chapters.value.length).catch(
+        e => console.error('Failed to save ebook progress:', e)
+      )
+    }
+  }, 1500)
 }
 
 onMounted(async () => {
   readerRef.value?.focus()
   await loadChapters()
-  loadContent()
+  const savedProgress = await loadProgress()
+  await loadContent()
+  if (savedProgress > 0) {
+    nextTick(() => {
+      if (contentRef.value) {
+        const scrollHeight = contentRef.value.scrollHeight - contentRef.value.clientHeight
+        contentRef.value.scrollTop = (scrollHeight * savedProgress) / 100
+      }
+    })
+  }
 })
 
 onUnmounted(() => {
   contentRef.value?.removeEventListener('scroll', onScroll)
   cancelAutoAdvance()
   if (navTimer) clearTimeout(navTimer)
+  if (progressTimer) clearTimeout(progressTimer)
+  if (chapters.value.length > 0) {
+    saveEbookProgress(props.ebookId, currentChapter.value, chapters.value.length).catch(
+      e => console.error('Failed to save ebook progress on unmount:', e)
+    )
+  }
 })
 </script>
 

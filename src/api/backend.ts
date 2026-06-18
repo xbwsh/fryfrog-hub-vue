@@ -1,9 +1,8 @@
 import axios from 'axios'
 import type {
   MusicTrack,
-  MusicTrackUpdateRequest,
   Comic,
-  ComicUpdateRequest,
+  ComicSeries,
   PageInfo,
   Ebook,
   VideoDTO,
@@ -13,6 +12,9 @@ import type {
   ApiResponse,
   BackendConfig,
   VideoProgress,
+  ComicProgress,
+  EbookProgress,
+  EbookSeries,
 } from '@/types/backend'
 
 const client = axios.create()
@@ -29,9 +31,7 @@ export function setBackendConfig(newConfig: BackendConfig) {
 
 export async function testConnection(): Promise<boolean> {
   try {
-    const response = await client.get<ApiResponse<any[]>>('/api/v1/music', {
-      params: { page: 0, size: 1 },
-    })
+    const response = await client.get<ApiResponse<any[]>>('/api/v1/music')
     if (response.data.success) {
       config = {
         url: config.url,
@@ -56,34 +56,9 @@ export async function getTrackById(id: number): Promise<MusicTrack | undefined> 
   return response.data.data
 }
 
-export async function updateTrack(id: number, data: MusicTrackUpdateRequest): Promise<boolean> {
-  try {
-    const response = await client.put<ApiResponse<MusicTrack>>(`/api/v1/music/${id}`, data)
-    return response.data.success
-  } catch {
-    return false
-  }
-}
-
-export async function deleteTrack(id: number): Promise<boolean> {
-  try {
-    const response = await client.delete<ApiResponse<void>>(`/api/v1/music/${id}`)
-    return response.data.success
-  } catch {
-    return false
-  }
-}
-
 export async function scanDirectory(path: string): Promise<string> {
   const response = await client.post<ApiResponse<string>>('/api/v1/music/scan', null, {
     params: { path },
-  })
-  return response.data.data
-}
-
-export async function extractMetadata(filePath: string): Promise<MusicTrack | undefined> {
-  const response = await client.post<ApiResponse<MusicTrack>>('/api/v1/music/metadata', null, {
-    params: { filePath },
   })
   return response.data.data
 }
@@ -129,8 +104,9 @@ export function getMusicCoverArtUrl(id: number): string {
   return `${config.url}/api/v1/music/${id}/cover`
 }
 
-export function getLyrics(id: number): string {
-  return `${config.url}/api/v1/music/${id}/lyrics`
+export async function getLyrics(id: number): Promise<string> {
+  const response = await client.get<ApiResponse<string>>(`/api/v1/music/${id}/lyrics`)
+  return response.data.data || ''
 }
 
 export async function getAllComics(): Promise<Comic[]> {
@@ -138,27 +114,14 @@ export async function getAllComics(): Promise<Comic[]> {
   return response.data.data || []
 }
 
+export async function getComicSeries(): Promise<ComicSeries[]> {
+  const response = await client.get<ApiResponse<ComicSeries[]>>('/api/v1/comic/series')
+  return response.data.data || []
+}
+
 export async function getComicById(id: number): Promise<Comic | undefined> {
   const response = await client.get<ApiResponse<Comic>>(`/api/v1/comic/${id}`)
   return response.data.data
-}
-
-export async function updateComic(id: number, data: ComicUpdateRequest): Promise<boolean> {
-  try {
-    const response = await client.put<ApiResponse<Comic>>(`/api/v1/comic/${id}`, data)
-    return response.data.success
-  } catch {
-    return false
-  }
-}
-
-export async function deleteComic(id: number): Promise<boolean> {
-  try {
-    const response = await client.delete<ApiResponse<void>>(`/api/v1/comic/${id}`)
-    return response.data.success
-  } catch {
-    return false
-  }
 }
 
 export async function toggleComicFavorite(id: number, status: boolean): Promise<Comic | undefined> {
@@ -176,13 +139,6 @@ export async function getComicFavorites(): Promise<Comic[]> {
 export async function scanComicDirectory(path: string): Promise<string> {
   const response = await client.post<ApiResponse<string>>('/api/v1/comic/scan', null, {
     params: { path },
-  })
-  return response.data.data
-}
-
-export async function extractComicMetadata(filePath: string): Promise<Comic | undefined> {
-  const response = await client.post<ApiResponse<Comic>>('/api/v1/comic/metadata', null, {
-    params: { filePath },
   })
   return response.data.data
 }
@@ -289,6 +245,15 @@ export function getEbookCoverUrl(id: number): string {
   return `${config.url}/api/v1/ebook/${id}/cover`
 }
 
+export function getEbookCoverImageUrl(path: string): string {
+  return `${config.url}/api/v1/ebook/cover-image?path=${encodeURIComponent(path)}`
+}
+
+export async function getEbookSeries(): Promise<EbookSeries[]> {
+  const response = await client.get<ApiResponse<EbookSeries[]>>('/api/v1/ebook/series')
+  return response.data.data || []
+}
+
 export function getEbookDownloadUrl(id: number): string {
   return `${config.url}/api/v1/ebook/${id}/download`
 }
@@ -306,6 +271,10 @@ export async function getEbookChapters(id: number): Promise<ChapterInfo[]> {
 export async function getEbookChapterContent(id: number, chapterNum: number): Promise<string> {
   const response = await client.get<string>(`/api/v1/ebook/${id}/chapters/${chapterNum}`)
   return response.data
+}
+
+export function getEpubImageUrl(filePath: string, file: string): string {
+  return `${config.url}/api/v1/ebook/epub-image?filePath=${encodeURIComponent(filePath)}&file=${encodeURIComponent(file)}`
 }
 
 export async function scanEbookDirectory(path: string): Promise<string> {
@@ -450,6 +419,38 @@ export async function deleteVideoProgress(id: number): Promise<void> {
   await client.delete<ApiResponse<void>>(`/api/v1/video/${id}/progress`)
 }
 
+export async function getComicProgress(id: number): Promise<ComicProgress | null> {
+  const response = await client.get<ApiResponse<ComicProgress>>(`/api/v1/comic/${id}/progress`)
+  return response.data.data || null
+}
+
+export async function saveComicProgress(id: number, currentPage: number, totalPages: number): Promise<ComicProgress> {
+  const response = await client.put<ApiResponse<ComicProgress>>(`/api/v1/comic/${id}/progress`, null, {
+    params: { page: currentPage, totalPages },
+  })
+  return response.data.data
+}
+
+export async function deleteComicProgress(id: number): Promise<void> {
+  await client.delete<ApiResponse<void>>(`/api/v1/comic/${id}/progress`)
+}
+
+export async function getEbookProgress(id: number): Promise<EbookProgress | null> {
+  const response = await client.get<ApiResponse<EbookProgress>>(`/api/v1/ebook/${id}/progress`)
+  return response.data.data || null
+}
+
+export async function saveEbookProgress(id: number, currentChapter: number, totalChapters: number): Promise<EbookProgress> {
+  const response = await client.put<ApiResponse<EbookProgress>>(`/api/v1/ebook/${id}/progress`, null, {
+    params: { page: currentChapter, totalPages: totalChapters },
+  })
+  return response.data.data
+}
+
+export async function deleteEbookProgress(id: number): Promise<void> {
+  await client.delete<ApiResponse<void>>(`/api/v1/ebook/${id}/progress`)
+}
+
 export async function getAllSeries(): Promise<SeriesDTO[]> {
   const response = await client.get<ApiResponse<SeriesDTO[]>>('/api/v1/video/series')
   return response.data.data || []
@@ -479,3 +480,5 @@ export async function getFavorites(): Promise<MusicTrack[]> {
   const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/favorites')
   return response.data.data || []
 }
+
+

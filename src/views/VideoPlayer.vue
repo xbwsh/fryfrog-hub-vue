@@ -55,13 +55,13 @@ function onMetadataLoaded() {
 async function loadProgress() {
   try {
     const progress = await getVideoProgress(props.videoId)
-    if (progress && videoEl.value && progress.watchPosition > 0) {
-      const percent = progress.watchProgressPercent || 0
+    if (progress && videoEl.value && progress.positionSeconds > 0) {
+      const percent = progress.progressPercent || 0
       if (percent >= 90) {
         watched.value = true
         return
       }
-      videoEl.value.currentTime = progress.watchPosition
+      videoEl.value.currentTime = progress.positionSeconds
       progressPercent.value = percent
     }
   } catch (e) {

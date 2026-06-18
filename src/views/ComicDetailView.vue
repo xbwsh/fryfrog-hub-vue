@@ -45,7 +45,7 @@
               <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
               <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
             </svg>
-            阅读
+            {{ comicProgress !== null ? `继续阅读 (${Math.round(comicProgress)}%)` : '阅读' }}
           </button>
         </div>
 
@@ -115,7 +115,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { Comic } from '@/types/backend'
-import { getComicById, toggleComicFavorite, getComicCoverUrl } from '@/api/backend'
+import { getComicById, toggleComicFavorite, getComicCoverUrl, getComicProgress } from '@/api/backend'
 import ComicReader from '@/views/ComicReader.vue'
 
 const router = useRouter()
@@ -125,6 +125,7 @@ const comic = ref<Comic | null>(null)
 const loading = ref(false)
 const error = ref('')
 const showReader = ref(false)
+const comicProgress = ref<number | null>(null)
 
 async function loadComic() {
   const id = Number(route.params.id)
@@ -139,6 +140,10 @@ async function loadComic() {
     const data = await getComicById(id)
     if (data) {
       comic.value = data
+      const progress = await getComicProgress(id)
+      if (progress && !progress.completed) {
+        comicProgress.value = progress.progressPercent
+      }
     } else {
       error.value = '漫画不存在'
     }
@@ -315,6 +320,26 @@ onMounted(loadComic)
 
 .read-btn:hover {
   background: var(--accent-hover);
+}
+
+.continue-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.continue-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .info-section {

@@ -21,17 +21,6 @@ export interface MusicTrack {
   favorite: boolean
 }
 
-export interface MusicTrackUpdateRequest {
-  title: string
-  artist?: string
-  album?: string
-  albumArtist?: string
-  trackNumber?: number
-  discNumber?: number
-  year?: number
-  genre?: string
-}
-
 export interface Comic {
   id: number
   createdAt: string
@@ -53,19 +42,39 @@ export interface Comic {
   favorite: boolean
 }
 
-export interface ComicUpdateRequest {
+export interface ComicVolume {
+  id: number
+  volume: number
   title: string
-  author?: string
-  series?: string
-  volume?: number
-  year?: number
-  genre?: string
-  summary?: string
+  author: string
+  series: string
+  year: number
+  pageCount: number
+  coverArtPath: string
+  filePath: string
+  fileName: string
+  favorite: boolean
+}
+
+export interface ComicSeries {
+  name: string
+  author: string
+  coverArtPath: string
+  volumeCount: number
+  comics: ComicVolume[]
 }
 
 export interface PageInfo {
   pageNum: number
   fileName: string
+}
+
+export interface EbookSeries {
+  name: string
+  author: string
+  coverArtPath: string
+  volumeCount: number
+  books: Ebook[]
 }
 
 export interface Ebook {
@@ -77,7 +86,7 @@ export interface Ebook {
   publisher: string
   isbn: string
   year: number
-  genre: string
+  genre: string | null
   description: string
   filePath: string
   fileName: string
@@ -133,10 +142,29 @@ export interface VideoDTO {
 }
 
 export interface VideoProgress {
-  watchPosition: number
-  duration: number
-  watchProgressPercent: number
-  watched: boolean
+  videoId: number
+  positionSeconds: number
+  durationSeconds: number
+  completed: boolean
+  progressPercent: number
+  updatedAt: string
+}
+
+export interface ComicProgress {
+  comicId: number
+  currentPage: number
+  totalPages: number
+  completed: boolean
+  progressPercent: number
+  updatedAt: string
+}
+
+export interface EbookProgress {
+  ebookId: number
+  currentChapter: number
+  chapterProgressPercent: number
+  completed: boolean
+  updatedAt: string
 }
 
 export interface SeriesDTO {

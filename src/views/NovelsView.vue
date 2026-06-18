@@ -6,6 +6,13 @@
         <p class="view-subtitle">管理你的电子书库</p>
       </div>
       <div class="header-actions">
+        <button class="scan-btn" @click="showScanDialog = true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          扫描目录
+        </button>
         <div class="search-bar">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/>
@@ -26,7 +33,7 @@
       <button @click="loadEbooks">重试</button>
     </div>
 
-    <div v-else-if="ebooks.length === 0" class="empty-state">
+    <div v-else-if="seriesList.length === 0" class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
@@ -34,48 +41,38 @@
       <p>暂无电子书</p>
     </div>
 
-    <div v-else class="content-grid">
-      <div v-for="book in ebooks" :key="book.id" class="content-card">
-        <div class="card-cover ebook-cover">
-          <img :src="getEbookCoverUrl(book.id)" :alt="book.title" @error="onImageError" />
-          <div class="card-actions">
-            <button
-              class="action-btn read-btn"
-              @click.stop="readEbook(book)"
-              title="在线阅读"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-                <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-              </svg>
-            </button>
-            <button
-              class="action-btn download-btn"
-              @click.stop="downloadEbook(book)"
-              title="下载"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-            </button>
-            <button
-              class="action-btn favorite-btn"
-              :class="{ active: book.favorite }"
-              @click.stop="handleToggleFavorite(book)"
-              :title="book.favorite ? '取消收藏' : '收藏'"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" :fill="book.favorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-              </svg>
-            </button>
+    <div v-else class="series-list">
+      <div
+        v-for="series in seriesList"
+        :key="series.name"
+        class="series-group"
+      >
+        <div
+          class="series-header"
+          @click="viewSeries(series)"
+        >
+          <div class="series-cover">
+            <img
+              :src="getSeriesCoverUrl(series.coverArtPath)"
+              :alt="series.name"
+              @error="onImageError"
+            />
           </div>
-          <div class="card-badge" v-if="book.format">{{ book.format }}</div>
-        </div>
-        <div class="card-info">
-          <div class="card-title">{{ book.title }}</div>
-          <div class="card-meta">{{ book.author }}</div>
+          <div class="series-info">
+            <h3 class="series-name">{{ series.name }}</h3>
+            <p class="series-meta">{{ series.author }} · {{ series.volumeCount }} 卷</p>
+            <div v-if="getSeriesProgress(series)" class="series-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" :style="{ width: getSeriesProgress(series)!.percent + '%' }"></div>
+              </div>
+              <span class="progress-text">{{ getSeriesProgress(series)!.text }}</span>
+            </div>
+          </div>
+          <div class="series-arrow">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </div>
         </div>
       </div>
     </div>
@@ -84,33 +81,109 @@
       v-if="readingBook"
       :ebook-id="readingBook.id"
       :ebook-title="readingBook.title"
+      :ebook-file-path="readingBook.filePath"
       @close="readingBook = null"
     />
+
+    <Teleport to="body">
+      <div v-if="showScanDialog" class="dialog-overlay" @click.self="showScanDialog = false">
+        <div class="dialog">
+          <h3>扫描电子书目录</h3>
+          <p class="dialog-desc">输入要扫描的目录路径，支持 .epub、.txt 等格式</p>
+          <input
+            v-model="scanPath"
+            type="text"
+            class="dialog-input"
+            placeholder="例如: /media/books"
+            @keyup.enter="handleScan"
+          />
+          <div class="dialog-actions">
+            <button class="dialog-btn cancel" @click="showScanDialog = false">取消</button>
+            <button class="dialog-btn confirm" :disabled="!scanPath.trim() || scanning" @click="handleScan">
+              {{ scanning ? '扫描中...' : '开始扫描' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import type { Ebook } from '@/types/backend'
-import { getAllEbooks, searchEbooks, toggleEbookFavorite, getEbookCoverUrl, getEbookDownloadUrl } from '@/api/backend'
+import { ref, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import type { Ebook, EbookSeries } from '@/types/backend'
+import { getEbookSeries, scanEbookDirectory, getEbookProgress } from '@/api/backend'
 import EbookReader from '@/views/EbookReader.vue'
 
-const ebooks = ref<Ebook[]>([])
+const route = useRoute()
+const router = useRouter()
+const seriesList = ref<EbookSeries[]>([])
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
 const readingBook = ref<Ebook | null>(null)
+const showScanDialog = ref(false)
+const scanPath = ref('')
+const scanning = ref(false)
+const seriesProgressMap = ref<Map<string, { percent: number; text: string }>>(new Map())
 
 async function loadEbooks() {
   loading.value = true
   error.value = ''
   try {
-    ebooks.value = await getAllEbooks()
+    seriesList.value = await getEbookSeries()
+    await loadAllSeriesProgress()
   } catch (e) {
     error.value = '加载电子书失败'
     console.error('Failed to load ebooks:', e)
   } finally {
     loading.value = false
+  }
+}
+
+async function loadAllSeriesProgress() {
+  const map = new Map<string, { percent: number; text: string }>()
+  for (const series of seriesList.value) {
+    let totalProgress = 0
+    let count = 0
+    let lastText = ''
+    for (const book of series.books) {
+      try {
+        const progress = await getEbookProgress(book.id)
+        if (progress && !progress.completed) {
+          totalProgress += progress.chapterProgressPercent
+          count++
+          lastText = `第${progress.currentChapter}章 ${Math.round(progress.chapterProgressPercent)}%`
+        }
+      } catch {
+        // ignore
+      }
+    }
+    if (count > 0) {
+      map.set(series.name, {
+        percent: Math.round(totalProgress / count),
+        text: `${count}本阅读中 · ${lastText}`
+      })
+    }
+  }
+  seriesProgressMap.value = map
+}
+
+function getSeriesProgress(series: EbookSeries): { percent: number; text: string } | undefined {
+  return seriesProgressMap.value.get(series.name)
+}
+
+async function checkAutoOpen() {
+  const readId = route.query.read
+  if (readId && !readingBook.value) {
+    for (const series of seriesList.value) {
+      const book = series.books.find(b => b.id === parseInt(String(readId)))
+      if (book) {
+        readingBook.value = book
+        break
+      }
+    }
   }
 }
 
@@ -122,7 +195,12 @@ async function handleSearch() {
   loading.value = true
   error.value = ''
   try {
-    ebooks.value = await searchEbooks(searchQuery.value)
+    const allSeries = await getEbookSeries()
+    const query = searchQuery.value.toLowerCase()
+    seriesList.value = allSeries.filter(s =>
+      s.name.toLowerCase().includes(query) ||
+      s.author.toLowerCase().includes(query)
+    )
   } catch (e) {
     error.value = '搜索失败'
     console.error('Search failed:', e)
@@ -131,16 +209,14 @@ async function handleSearch() {
   }
 }
 
-async function handleToggleFavorite(book: Ebook) {
-  try {
-    const updated = await toggleEbookFavorite(book.id, !book.favorite)
-    if (updated) {
-      const index = ebooks.value.findIndex(b => b.id === book.id)
-      if (index !== -1) ebooks.value[index] = updated
-    }
-  } catch (e) {
-    console.error('Failed to toggle favorite:', e)
-  }
+function viewSeries(series: EbookSeries) {
+  router.push({ name: 'ebook-series', params: { name: series.name } })
+}
+
+function getSeriesCoverUrl(coverPath: string): string {
+  if (!coverPath) return ''
+  if (coverPath.startsWith('http')) return coverPath
+  return `/api/v1/ebook/cover-image?path=${encodeURIComponent(coverPath)}`
 }
 
 function onImageError(e: Event) {
@@ -148,19 +224,32 @@ function onImageError(e: Event) {
   img.style.display = 'none'
 }
 
-function downloadEbook(book: Ebook) {
-  const url = getEbookDownloadUrl(book.id)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = book.fileName
-  a.click()
+async function handleScan() {
+  if (!scanPath.value.trim()) return
+  scanning.value = true
+  try {
+    await scanEbookDirectory(scanPath.value)
+    showScanDialog.value = false
+    scanPath.value = ''
+    await loadEbooks()
+  } catch (e) {
+    error.value = '扫描失败'
+    console.error('Failed to scan directory:', e)
+  } finally {
+    scanning.value = false
+  }
 }
 
-function readEbook(book: Ebook) {
-  readingBook.value = book
-}
+onMounted(async () => {
+  await loadEbooks()
+  checkAutoOpen()
+})
 
-onMounted(loadEbooks)
+watch(() => route.query.read, () => {
+  if (!loading.value) {
+    checkAutoOpen()
+  }
+})
 </script>
 
 <style scoped>
@@ -193,6 +282,28 @@ onMounted(loadEbooks)
 
 .header-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scan-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.scan-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .search-bar {
@@ -271,132 +382,187 @@ onMounted(loadEbooks)
   background: var(--accent-hover);
 }
 
-.content-grid {
+.series-list {
   flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  grid-auto-rows: max-content;
-  gap: 16px;
-  padding: 0 32px 32px;
   overflow-y: auto;
+  padding: 0 32px 32px;
 }
 
-.content-card {
+.series-group {
+  margin-bottom: 24px;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   overflow: hidden;
+}
+
+.series-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
   cursor: pointer;
   transition: var(--transition);
 }
 
-.content-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+.series-header:hover {
+  background: var(--bg-hover);
 }
 
-.card-cover {
-  aspect-ratio: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
+.series-header:hover .series-arrow {
+  color: var(--accent);
+}
+
+.series-cover {
+  width: 50px;
+  height: 68px;
+  border-radius: var(--radius-md);
   overflow: hidden;
-  position: relative;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
 }
 
-.card-cover img {
+.series-cover img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.ebook-cover {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
+.series-info {
+  flex: 1;
+  min-width: 0;
 }
 
-.favorite-btn {
-  position: static;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--transition);
-}
-
-.card-actions {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 6px;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.content-card:hover .card-actions {
-  opacity: 1;
-}
-
-.action-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: var(--transition);
-}
-
-.action-btn:hover {
-  transform: scale(1.1);
-}
-
-.favorite-btn.active {
-  color: #ff6b6b;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.card-badge {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.card-info {
-  padding: 12px;
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 500;
+.series-name {
+  font-size: 15px;
+  font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: 4px;
+  margin: 0 0 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-meta {
+.series-meta {
   font-size: 12px;
   color: var(--text-muted);
-  white-space: nowrap;
+  margin: 0;
+}
+
+.series-progress {
+  margin-top: 6px;
+}
+
+.progress-bar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
   overflow: hidden;
-  text-overflow: ellipsis;
+  margin-bottom: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.series-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  width: 400px;
+  max-width: 90vw;
+}
+
+.dialog h3 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dialog-desc {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.dialog-input {
+  width: 100%;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+  margin-bottom: 16px;
+}
+
+.dialog-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dialog-btn {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.dialog-btn.cancel {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.dialog-btn.cancel:hover {
+  background: var(--bg-hover);
+}
+
+.dialog-btn.confirm {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.dialog-btn.confirm:hover {
+  background: var(--accent-hover);
+}
+
+.dialog-btn.confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media screen and (max-width: 767px) {
@@ -409,9 +575,7 @@ onMounted(loadEbooks)
     width: 100%;
   }
 
-  .content-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 12px;
+  .series-list {
     padding: 0 16px 16px;
   }
 }

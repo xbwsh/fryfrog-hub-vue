@@ -24,6 +24,11 @@ const router = createRouter({
       component: () => import('@/views/ComicsView.vue'),
     },
     {
+      path: '/comics/series/:name',
+      name: 'comic-series',
+      component: () => import('@/views/ComicSeriesDetailView.vue'),
+    },
+    {
       path: '/comics/:id',
       name: 'comic-detail',
       component: () => import('@/views/ComicDetailView.vue'),
@@ -32,6 +37,11 @@ const router = createRouter({
       path: '/ebooks',
       name: 'ebooks',
       component: () => import('@/views/NovelsView.vue'),
+    },
+    {
+      path: '/ebooks/series/:name',
+      name: 'ebook-series',
+      component: () => import('@/views/EbookSeriesDetailView.vue'),
     },
     {
       path: '/videos',
@@ -47,6 +57,11 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: () => import('@/views/SettingsView.vue'),
+    },
+    {
+      path: '/icons',
+      name: 'icons',
+      component: () => import('@/components/IconLibrary.vue'),
     },
   ],
 })

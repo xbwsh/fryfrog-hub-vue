@@ -10,20 +10,10 @@
         <span v-if="lyricsSource" class="lyrics-tag">{{ lyricsSource }}</span>
         <button class="mode-toggle-btn" @click="toggleLayoutMode"
           :title="layoutMode === 'full' ? '分屏模式' : '全屏模式'">
-          <svg v-if="layoutMode === 'full'" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            stroke-width="2">
-            <rect x="3" y="3" width="8" height="18" rx="1" />
-            <rect x="13" y="3" width="8" height="18" rx="1" />
-          </svg>
-          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="3" width="18" height="18" rx="1" />
-          </svg>
+          <AppIcon :name="layoutMode === 'full' ? 'fullscreen' : 'fullscreen-exit'" :size="20" />
         </button>
         <button class="close-btn" @click="$emit('close')">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
+          <AppIcon name="close" :size="24" />
         </button>
       </div>
     </div>
@@ -43,71 +33,27 @@
             <p>{{ playerStore.currentTrack?.artist || '未知艺术家' }}</p>
           </div>
           <div class="controls">
-            <button class="ctrl-btn" @click="playerStore.cyclePlayMode" :title="playModeTitle">
-              <svg v-if="playerStore.playMode === 'order'" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <polyline points="17 1 21 5 17 9" />
-                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                <polyline points="7 23 3 19 7 15" />
-                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-              </svg>
-              <svg v-else-if="playerStore.playMode === 'shuffle'" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <polyline points="16 3 21 3 21 8" />
-                <line x1="4" y1="20" x2="21" y2="3" />
-                <polyline points="21 16 21 21 16 21" />
-                <line x1="15" y1="15" x2="21" y2="21" />
-                <line x1="4" y1="4" x2="9" y2="9" />
-              </svg>
-              <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="17 1 21 5 17 9" />
-                <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                <polyline points="7 23 3 19 7 15" />
-                <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-                <text v-if="playerStore.playMode === 'repeat_one'" x="12" y="13" text-anchor="middle"
-                  font-size="10" font-weight="bold" fill="currentColor" stroke="none">1</text>
-              </svg>
+            <button class="ctrl-btn star-btn" :class="{ starred: isStarred }" @click="toggleStarred" title="收藏">
+              <AppIcon name="star" :size="20" :filled="isStarred" />
             </button>
             <button class="ctrl-btn" @click="playerStore.prevTrack" title="上一首">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-              </svg>
+              <AppIcon name="previous" :size="22" />
             </button>
             <button class="ctrl-btn play-btn" @click="playerStore.togglePlay" :disabled="!playerStore.currentTrack">
-              <svg v-if="!playerStore.isPlaying" width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              <svg v-else width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-              </svg>
+              <AppIcon :name="playerStore.isPlaying ? 'pause' : 'play'" :size="28" />
             </button>
             <button class="ctrl-btn" @click="playerStore.nextTrack" title="下一首">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
-              </svg>
+              <AppIcon name="next" :size="22" />
             </button>
-            <button class="ctrl-btn" @click="toggleMute" :title="playerStore.volume > 0 ? '静音' : '取消静音'">
-              <svg v-if="playerStore.volume > 0" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <path v-if="playerStore.volume > 0.5" d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                <path v-if="playerStore.volume > 0" d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-              </svg>
-              <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                <line x1="23" y1="9" x2="17" y2="15" />
-                <line x1="17" y1="9" x2="23" y2="15" />
-              </svg>
+            <button class="ctrl-btn" @click="playerStore.cyclePlayMode" :title="playModeTitle">
+              <AppIcon :name="playerStore.playMode === 'shuffle' ? 'shuffle' : playerStore.playMode === 'repeat_one' ? 'repeat-one' : playerStore.playMode === 'order' ? 'order' : 'repeat'" :size="20" />
             </button>
-            <div class="volume-slider-wrap">
-              <input type="range" class="seek-slider volume-slider" min="0" max="1" step="0.01"
-                :value="playerStore.volume" @input="onVolumeInput" />
-            </div>
           </div>
           <div class="slider-row">
             <span class="time-label">{{ formatTime(playerStore.currentTime) }}</span>
             <input type="range" class="seek-slider" min="0" :max="playerStore.duration || 0" step="0.1"
-              :value="playerStore.currentTime" @input="onSeekInput" />
+              :value="playerStore.currentTime" @input="onSeekInput"
+              :style="{ '--seek-pct': (playerStore.duration ? (playerStore.currentTime / playerStore.duration) * 100 : 0) + '%' }" />
             <span class="time-label">{{ formatTime(playerStore.duration) }}</span>
           </div>
         </div>
@@ -127,10 +73,34 @@
             {{ lyric.text }}
           </div>
           <div v-if="parsedLyrics.length === 0" class="no-lyrics">
-            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-            </svg>
+            <AppIcon name="edit" :size="64" />
             <p>暂无歌词</p>
+          </div>
+        </div>
+        <div v-if="layoutMode === 'full'" class="mobile-controls">
+          <div class="controls">
+            <button class="ctrl-btn star-btn" :class="{ starred: isStarred }" @click="toggleStarred" title="收藏">
+              <AppIcon name="star" :size="20" :filled="isStarred" />
+            </button>
+            <button class="ctrl-btn" @click="playerStore.prevTrack" title="上一首">
+              <AppIcon name="previous" :size="22" />
+            </button>
+            <button class="ctrl-btn play-btn" @click="playerStore.togglePlay" :disabled="!playerStore.currentTrack">
+              <AppIcon :name="playerStore.isPlaying ? 'pause' : 'play'" :size="28" />
+            </button>
+            <button class="ctrl-btn" @click="playerStore.nextTrack" title="下一首">
+              <AppIcon name="next" :size="22" />
+            </button>
+            <button class="ctrl-btn" @click="playerStore.cyclePlayMode" :title="playModeTitle">
+              <AppIcon :name="playerStore.playMode === 'shuffle' ? 'shuffle' : playerStore.playMode === 'repeat_one' ? 'repeat-one' : playerStore.playMode === 'order' ? 'order' : 'repeat'" :size="20" />
+            </button>
+          </div>
+          <div class="slider-row">
+            <span class="time-label">{{ formatTime(playerStore.currentTime) }}</span>
+            <input type="range" class="seek-slider" min="0" :max="playerStore.duration || 0" step="0.1"
+              :value="playerStore.currentTime" @input="onSeekInput"
+              :style="{ '--seek-pct': (playerStore.duration ? (playerStore.currentTime / playerStore.duration) * 100 : 0) + '%' }" />
+            <span class="time-label">{{ formatTime(playerStore.duration) }}</span>
           </div>
         </div>
       </div>
@@ -140,10 +110,13 @@
 
 <script setup lang="ts">
 import { usePlayerStore } from '@/stores/player'
-import { getLyricsBySongId } from '@/api/navidrome'
+import { useLibraryStore } from '@/stores/library'
+import { getLyrics, toggleFavorite } from '@/api/backend'
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import AppIcon from '@/components/AppIcon.vue'
 
 const playerStore = usePlayerStore()
+const libraryStore = useLibraryStore()
 defineEmits(['close'])
 
 const lyricsContainer = ref<HTMLElement>()
@@ -153,6 +126,28 @@ let bgAnimationFrame: number | null = null
 const layoutMode = ref<'full' | 'split'>('full')
 const lyricsSource = ref<'内嵌' | '外挂' | ''>('')
 const fetchedLyrics = ref('')
+
+const isStarred = computed(() => {
+  if (!playerStore.currentTrack) return false
+  const track = playerStore.currentTrack
+  if ('favorite' in track) return track.favorite
+  return libraryStore.isTrackStarred(String(track.id))
+})
+
+async function toggleStarred() {
+  if (!playerStore.currentTrack) return
+  const track = playerStore.currentTrack
+  if ('favorite' in track) {
+    try {
+      const updated = await toggleFavorite(track.id as number, !track.favorite)
+      if (updated) track.favorite = updated.favorite
+    } catch {
+      // silent
+    }
+  } else {
+    await libraryStore.toggleStar(String(track.id), isStarred.value, track)
+  }
+}
 
 function toggleLayoutMode() {
   layoutMode.value = layoutMode.value === 'full' ? 'split' : 'full'
@@ -169,14 +164,6 @@ function formatTime(seconds: number): string {
 function onSeekInput(e: Event) {
   const val = parseFloat((e.target as HTMLInputElement).value)
   playerStore.seekTo(val)
-}
-
-function toggleMute() {
-  playerStore.setVolume(playerStore.volume > 0 ? 0 : 0.8)
-}
-
-function onVolumeInput(e: Event) {
-  playerStore.setVolume(parseFloat((e.target as HTMLInputElement).value))
 }
 
 const playModeTitle = computed(() => {
@@ -240,12 +227,25 @@ async function loadLyrics() {
   if (!playerStore.currentTrack) return
 
   const track = playerStore.currentTrack
-  if ('lyrics' in track && track.lyrics) {
-    lyricsSource.value = '内嵌'
+
+  if ('filePath' in track) {
+    if (track.lyrics) {
+      lyricsSource.value = '内嵌'
+      return
+    }
+    try {
+      const lyrics = await getLyrics(track.id as number)
+      if (lyrics) {
+        fetchedLyrics.value = lyrics
+        lyricsSource.value = '外挂'
+      }
+    } catch {
+      // silent
+    }
     return
   }
 
-  if ('id' in track) {
+  if ('coverArt' in track) {
     try {
       const lyrics = await getLyricsBySongId(String(track.id))
       if (lyrics) {
@@ -397,14 +397,13 @@ function seekToLyric(time: number) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 20px;
-  padding: 32px;
-  border-right: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 32px;
+  padding: 40px;
 }
 
 .vinyl-wrapper {
-  width: 260px;
-  height: 260px;
+  width: 380px;
+  height: 380px;
 }
 
 .vinyl-disc {
@@ -466,13 +465,13 @@ function seekToLyric(time: number) {
 
 .track-meta h3 {
   margin: 0 0 4px;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 600;
 }
 
 .track-meta p {
   margin: 0;
-  font-size: 14px;
+  font-size: 16px;
   opacity: 0.7;
 }
 
@@ -480,12 +479,12 @@ function seekToLyric(time: number) {
 .controls {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .ctrl-btn {
-  width: 44px;
-  height: 44px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   border: none;
   background: rgba(255, 255, 255, 0.1);
@@ -502,8 +501,8 @@ function seekToLyric(time: number) {
 }
 
 .play-btn {
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   background: #fff;
   color: #000;
 }
@@ -518,14 +517,38 @@ function seekToLyric(time: number) {
   transform: none;
 }
 
-.volume-slider-wrap {
-  width: 100px;
-  display: flex;
-  align-items: center;
+.star-btn {
+  color: rgba(255, 255, 255, 0.5);
 }
 
-.volume-slider {
+.star-btn:hover {
+  color: #f39c12;
+}
+
+.star-btn.starred {
+  color: #f39c12;
+}
+
+.mobile-controls {
+  margin-top: auto;
+  padding: 24px 40px;
+}
+
+.mobile-controls .controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.mobile-controls .slider-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 16px auto 0;
   width: 100%;
+  max-width: 400px;
 }
 
 /* ===== slider row ===== */
@@ -550,7 +573,7 @@ function seekToLyric(time: number) {
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--seek-pct, 0%), rgba(255, 255, 255, 0.2) var(--seek-pct, 0%), rgba(255, 255, 255, 0.2) 100%);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
@@ -580,23 +603,23 @@ function seekToLyric(time: number) {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 32px 40px;
+  padding: 40px 56px;
 }
 
 .full-track-info {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 28px;
 }
 
 .full-track-info h3 {
   margin: 0 0 4px;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
 }
 
 .full-track-info p {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   opacity: 0.7;
 }
 
@@ -605,7 +628,7 @@ function seekToLyric(time: number) {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   align-items: center;
   text-align: center;
 }
@@ -615,11 +638,11 @@ function seekToLyric(time: number) {
 }
 
 .lyric-line {
-  font-size: 22px;
+  font-size: 28px;
   line-height: 1.8;
   color: rgba(255, 255, 255, 0.35);
   cursor: pointer;
-  padding: 6px 20px;
+  padding: 8px 24px;
   border-radius: 8px;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
@@ -644,7 +667,7 @@ function seekToLyric(time: number) {
 }
 
 .lyric-line.active {
-  font-size: 28px;
+  font-size: 38px;
   font-weight: 700;
   color: #fff;
   transform: scale(1.05);
@@ -695,6 +718,62 @@ function seekToLyric(time: number) {
   font-size: 16px;
 }
 
+/* ===== tablet ===== */
+@media screen and (max-width: 1200px) {
+  .vinyl-wrapper {
+    width: 300px;
+    height: 300px;
+  }
+
+  .left-panel {
+    gap: 24px;
+    padding: 32px;
+  }
+
+  .track-meta h3 {
+    font-size: 18px;
+  }
+
+  .track-meta p {
+    font-size: 14px;
+  }
+
+  .ctrl-btn {
+    width: 48px;
+    height: 48px;
+  }
+
+  .play-btn {
+    width: 58px;
+    height: 58px;
+  }
+
+  .lyric-line {
+    font-size: 22px;
+    padding: 6px 16px;
+  }
+
+  .lyric-line.active {
+    font-size: 28px;
+  }
+
+  .right-panel {
+    padding: 32px 36px;
+  }
+
+  .full-track-info h3 {
+    font-size: 20px;
+  }
+
+  .full-track-info p {
+    font-size: 14px;
+  }
+
+  .mobile-controls .slider-row {
+    max-width: 300px;
+  }
+}
+
 /* ===== mobile ===== */
 @media screen and (max-width: 900px) {
   .lyrics-body {
@@ -704,28 +783,51 @@ function seekToLyric(time: number) {
   .left-panel {
     flex: none;
     border-right: none;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding: 20px;
-    gap: 12px;
+    padding: 24px;
+    gap: 16px;
   }
 
   .vinyl-wrapper {
-    width: 160px;
-    height: 160px;
+    width: 180px;
+    height: 180px;
+  }
+
+  .split-mode .right-panel {
+    display: none;
   }
 
   .ctrl-btn {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
 
   .play-btn {
-    width: 50px;
-    height: 50px;
+    width: 56px;
+    height: 56px;
   }
 
   .right-panel {
-    padding: 20px;
+    padding: 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .lyric-line {
+    font-size: 20px;
+  }
+
+  .lyric-line.active {
+    font-size: 26px;
+  }
+
+  .mobile-controls {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .mobile-controls .slider-row {
+    max-width: 320px;
   }
 }
 </style>

@@ -41,11 +41,11 @@
 </template>
 
 <script setup lang="ts">
-import type { Track } from '@/types/navidrome'
+import type { MusicTrack } from '@/types/backend'
 import { usePlayerStore } from '@/stores/player'
 
 const props = defineProps<{
-  tracks: Track[]
+  tracks: MusicTrack[]
   loading?: boolean
 }>()
 
@@ -58,7 +58,7 @@ function formatDuration(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, '0')}`
 }
 
-function playTrack(track: Track) {
+function playTrack(track: MusicTrack) {
   playerStore.playTrack(track, props.tracks)
 }
 </script>

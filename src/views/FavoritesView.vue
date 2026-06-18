@@ -105,6 +105,7 @@
       v-if="readingEbook"
       :ebook-id="readingEbook.id"
       :ebook-title="readingEbook.title"
+      :ebook-file-path="readingEbook.filePath"
       @close="readingEbook = null"
     />
 

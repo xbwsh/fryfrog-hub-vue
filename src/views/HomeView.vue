@@ -14,7 +14,7 @@
         <router-link to="/music" class="see-all">查看全部</router-link>
       </div>
       <div class="content-grid" v-if="musicTracks.length > 0">
-        <div v-for="track in musicTracks.slice(0, 6)" :key="track.id" class="content-card">
+        <div v-for="track in musicTracks.slice(0, 6)" :key="track.id" class="content-card" @click="playMusic(track)">
           <div class="card-cover music-cover">
             <img :src="getMusicCoverArtUrl(track.id)" alt="封面" />
           </div>
@@ -49,7 +49,7 @@
         <router-link to="/comics" class="see-all">查看全部</router-link>
       </div>
       <div class="content-grid" v-if="comics.length > 0">
-        <div v-for="comic in comics.slice(0, 6)" :key="comic.id" class="content-card">
+        <div v-for="comic in comics.slice(0, 6)" :key="comic.id" class="content-card" @click="readComic(comic)">
           <div class="card-cover comic-cover">
             <img :src="getComicCoverUrl(comic.id)" alt="封面" @error="onImageError" />
           </div>
@@ -84,7 +84,7 @@
         <router-link to="/ebooks" class="see-all">查看全部</router-link>
       </div>
       <div class="content-grid" v-if="ebooks.length > 0">
-        <div v-for="book in ebooks.slice(0, 6)" :key="book.id" class="content-card">
+        <div v-for="book in ebooks.slice(0, 6)" :key="book.id" class="content-card" @click="readEbook(book)">
           <div class="card-cover ebook-cover">
             <img :src="getEbookCoverUrl(book.id)" alt="封面" @error="onImageError" />
           </div>
@@ -119,7 +119,7 @@
         <router-link to="/videos" class="see-all">查看全部</router-link>
       </div>
       <div class="content-grid" v-if="seriesList.length > 0">
-        <router-link v-for="series in seriesList.slice(0, 6)" :key="series.id" class="content-card" :to="{ name: 'video-detail', params: { id: series.episodes && series.episodes.length > 0 ? series.episodes[0].id : 0 } }">
+        <div v-for="series in seriesList.slice(0, 6)" :key="series.id" class="content-card" @click="watchVideo(series)">
           <div class="card-cover video-cover">
             <img :src="series.posterUrl || getSeriesPosterUrl(series.id)" alt="封面" @error="onImageError" />
           </div>
@@ -127,7 +127,7 @@
             <span class="card-title">{{ series.title }}</span>
             <span class="card-subtitle">{{ series.year }} · {{ series.episodes ? series.episodes.length : 0 }} 集</span>
           </div>
-        </router-link>
+        </div>
       </div>
       <div class="content-grid" v-else>
         <div v-for="i in 6" :key="'video-' + i" class="content-card">
@@ -151,7 +151,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useConnectionStore } from '@/stores/connection'
+import { usePlayerStore } from '@/stores/player'
 import {
   getAllTracks,
   getAllComics,
@@ -165,6 +167,8 @@ import {
 import type { MusicTrack, Comic, Ebook, SeriesDTO } from '@/types/backend'
 
 const connectionStore = useConnectionStore()
+const playerStore = usePlayerStore()
+const router = useRouter()
 
 const musicTracks = ref<MusicTrack[]>([])
 const comics = ref<Comic[]>([])
@@ -188,6 +192,25 @@ onMounted(async () => {
     console.error('Failed to load home data:', error)
   }
 })
+
+function playMusic(track: MusicTrack) {
+  playerStore.playTrack(track, musicTracks.value)
+  router.push('/music')
+}
+
+function readComic(comic: Comic) {
+  router.push({ name: 'comic-detail', params: { id: comic.id } })
+}
+
+function readEbook(book: Ebook) {
+  router.push({ name: 'ebooks', query: { read: book.id } })
+}
+
+function watchVideo(series: SeriesDTO) {
+  if (series.episodes && series.episodes.length > 0) {
+    router.push({ name: 'video-detail', params: { id: series.episodes[0].id } })
+  }
+}
 
 function onImageError(e: Event) {
   const img = e.target as HTMLImageElement

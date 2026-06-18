@@ -1,82 +1,30 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
-import type { Album, Artist, Track, Playlist } from '@/types/navidrome'
+import { ref } from 'vue'
+import type { MusicTrack } from '@/types/backend'
 import {
-  getAlbums,
-  getArtists,
-  getRandomTracks,
-  getPlaylists,
-  getPlaylistTracks,
-  getStarred,
   getAllTracks,
   getLyrics,
-  getLyricsBySongId,
-  star,
-} from '@/api/navidrome'
+} from '@/api/backend'
 
 export const useLibraryStore = defineStore('library', () => {
-  const albums = ref<Album[]>([])
-  const artists = ref<Artist[]>([])
-  const playlists = ref<Playlist[]>([])
-  const allTracks = ref<Track[]>([])
-  const starredTracks = ref<Track[]>([])
-  const featuredTracks = ref<Track[]>([])
+  const allTracks = ref<MusicTrack[]>([])
+  const starredTracks = ref<MusicTrack[]>([])
+  const featuredTracks = ref<MusicTrack[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
   const currentLyrics = ref('')
 
-  const albumMap = computed(() => {
-    const map = new Map<string, Album>()
-    albums.value.forEach(album => map.set(album.id, album))
-    return map
-  })
-
-  const starredTrackIds = computed(() => {
-    return starredTracks.value.map(t => t.id)
-  })
+  const starredTrackIds = ref<Set<number>>(new Set())
 
   function isTrackStarred(trackId: string): boolean {
-    return starredTrackIds.value.includes(trackId)
-  }
-
-  async function loadAlbums(page = 0) {
-    loading.value = true
-    error.value = null
-    try {
-      albums.value = await getAlbums(page)
-    } catch (e) {
-      error.value = '加载专辑失败'
-    }
-    loading.value = false
-  }
-
-  async function loadArtists() {
-    loading.value = true
-    error.value = null
-    try {
-      artists.value = await getArtists()
-    } catch (e) {
-      error.value = '加载艺术家失败'
-    }
-    loading.value = false
-  }
-
-  async function loadPlaylists() {
-    loading.value = true
-    error.value = null
-    try {
-      playlists.value = await getPlaylists()
-    } catch (e) {
-      error.value = '加载播放列表失败'
-    }
-    loading.value = false
+    return starredTrackIds.value.has(Number(trackId))
   }
 
   async function loadAllTracks() {
     loading.value = true
     error.value = null
     try {
-      allTracks.value = await getAllTracks(0, 500)
+      allTracks.value = await getAllTracks()
     } catch (e) {
       error.value = '加载所有歌曲失败'
     }
@@ -87,7 +35,13 @@ export const useLibraryStore = defineStore('library', () => {
     loading.value = true
     error.value = null
     try {
-      starredTracks.value = await getStarred()
+      // 使用本地存储模拟收藏功能
+      const saved = localStorage.getItem('starredTracks')
+      if (saved) {
+        const ids = JSON.parse(saved) as number[]
+        starredTrackIds.value = new Set(ids)
+        starredTracks.value = allTracks.value.filter(t => ids.includes(t.id))
+      }
     } catch (e) {
       error.value = '加载收藏失败'
     }
@@ -96,67 +50,57 @@ export const useLibraryStore = defineStore('library', () => {
 
   async function loadFeatured() {
     try {
-      featuredTracks.value = await getRandomTracks(30)
+      // 随机选择30首歌曲作为推荐
+      if (allTracks.value.length > 0) {
+        const shuffled = [...allTracks.value].sort(() => 0.5 - Math.random())
+        featuredTracks.value = shuffled.slice(0, 30)
+      }
     } catch {
       // silent fail
     }
   }
 
-  async function getPlaylistPlaylist(playlistId: string): Promise<Track[]> {
-    return getPlaylistTracks(playlistId)
-  }
-
-  async function fetchLyrics(artist: string, title: string, songId?: string): Promise<string> {
+  async function fetchLyrics(_artist: string, _title: string, songId?: string): Promise<string> {
     if (songId) {
-      const lyrics = await getLyricsBySongId(songId)
+      const lyrics = await getLyrics(Number(songId))
       if (lyrics) {
         currentLyrics.value = lyrics
         return lyrics
       }
     }
-    const lyrics = await getLyrics(artist, title)
-    currentLyrics.value = lyrics
-    return lyrics
+    return ''
   }
 
-  async function toggleStar(id: string, currentStarred: boolean, track?: Track): Promise<boolean> {
-    const success = await star(id, !currentStarred)
-    if (success) {
+  async function toggleStar(id: string, currentStarred: boolean, _track?: MusicTrack): Promise<boolean> {
+    try {
+      const trackId = Number(id)
       if (!currentStarred) {
-        let trackToAdd = track
-        if (!trackToAdd) {
-          trackToAdd = allTracks.value.find(t => t.id === id)
-        }
-        if (trackToAdd) {
-          starredTracks.value = [...starredTracks.value, trackToAdd]
-        }
+        starredTrackIds.value.add(trackId)
       } else {
-        starredTracks.value = starredTracks.value.filter(t => t.id !== id)
+        starredTrackIds.value.delete(trackId)
       }
+      // 保存到本地存储
+      localStorage.setItem('starredTracks', JSON.stringify([...starredTrackIds.value]))
+      // 更新starredTracks
+      starredTracks.value = allTracks.value.filter(t => starredTrackIds.value.has(t.id))
+      return true
+    } catch {
+      return false
     }
-    return success
   }
 
   return {
-    albums,
-    artists,
-    playlists,
     allTracks,
     starredTracks,
     featuredTracks,
     loading,
     error,
     currentLyrics,
-    albumMap,
-    loadAlbums,
-    loadArtists,
-    loadPlaylists,
     loadAllTracks,
     loadStarred,
     loadFeatured,
     fetchLyrics,
     toggleStar,
-    getPlaylistPlaylist,
     isTrackStarred,
   }
 })
