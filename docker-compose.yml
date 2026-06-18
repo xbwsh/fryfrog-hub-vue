@@ -1,0 +1,18 @@
+services:
+  frontend:
+    image: ghcr.io/xbwsh/fryfrog-hub:latest
+    container_name: fryfrog-frontend
+    ports:
+      - "3540:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    image: ghcr.io/xbwsh/fryfrog-hub-api:master
+    container_name: fryfrog-backend
+    ports:
+      - "20058:20058"
+    volumes:
+      - /path/to/media:/media
+    restart: unless-stopped

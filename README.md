@@ -54,6 +54,19 @@ npm run build
 
 后端 API 地址默认为 `http://localhost:20058`
 
+### Docker 部署
+
+```bash
+# 拉取并启动
+docker-compose up -d
+
+# 或手动运行
+docker pull ghcr.io/xbwsh/fryfrog-hub:latest
+docker run -d -p 3540:80 --name fryfrog-frontend ghcr.io/xbwsh/fryfrog-hub:latest
+```
+
+访问 `http://localhost:3540`
+
 ### 项目结构
 
 ```
@@ -118,6 +131,19 @@ npm run build
 Default credentials: `666` / `666`
 
 Backend API address defaults to `http://localhost:20058`
+
+### Docker Deployment
+
+```bash
+# Pull and start
+docker-compose up -d
+
+# Or run manually
+docker pull ghcr.io/xbwsh/fryfrog-hub:latest
+docker run -d -p 3540:80 --name fryfrog-frontend ghcr.io/xbwsh/fryfrog-hub:latest
+```
+
+Access at `http://localhost:3540`
 
 ### Project Structure
 
