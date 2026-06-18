@@ -56,13 +56,50 @@ npm run build
 
 ### Docker 部署
 
-```bash
-# 拉取并启动
-docker-compose up -d
+使用 host 网络模式，前端直接访问后端 `127.0.0.1:20058`。
 
-# 或手动运行
-docker pull ghcr.io/xbwsh/fryfrog-hub:latest
-docker run -d -p 3540:80 --name fryfrog-frontend ghcr.io/xbwsh/fryfrog-hub:latest
+**1. 创建 nginx 配置文件**
+
+镜像内置的 nginx.conf 使用 `host.docker.internal`，host 模式下不生效，需要覆盖：
+
+```bash
+cat > nginx-docker.conf << 'EOF'
+server {
+    listen 3540;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api {
+        proxy_pass http://127.0.0.1:20058;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+EOF
+```
+
+**2. 启动容器**
+
+```bash
+docker run -d \
+  --name fryfrog-frontend \
+  --network host \
+  -v $(pwd)/nginx-docker.conf:/etc/nginx/conf.d/default.conf \
+  --restart unless-stopped \
+  ghcr.io/xbwsh/fryfrog-hub:latest
 ```
 
 访问 `http://localhost:3540`
@@ -134,13 +171,50 @@ Backend API address defaults to `http://localhost:20058`
 
 ### Docker Deployment
 
-```bash
-# Pull and start
-docker-compose up -d
+Uses host network mode. Frontend accesses backend at `127.0.0.1:20058` directly.
 
-# Or run manually
-docker pull ghcr.io/xbwsh/fryfrog-hub:latest
-docker run -d -p 3540:80 --name fryfrog-frontend ghcr.io/xbwsh/fryfrog-hub:latest
+**1. Create nginx config**
+
+The built-in nginx.conf uses `host.docker.internal`, which doesn't work in host mode:
+
+```bash
+cat > nginx-docker.conf << 'EOF'
+server {
+    listen 3540;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api {
+        proxy_pass http://127.0.0.1:20058;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+EOF
+```
+
+**2. Start container**
+
+```bash
+docker run -d \
+  --name fryfrog-frontend \
+  --network host \
+  -v $(pwd)/nginx-docker.conf:/etc/nginx/conf.d/default.conf \
+  --restart unless-stopped \
+  ghcr.io/xbwsh/fryfrog-hub:latest
 ```
 
 Access at `http://localhost:3540`
