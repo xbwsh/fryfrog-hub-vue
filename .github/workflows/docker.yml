@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: xbwsh/fryfrog-hub
+  IMAGE_NAME: xbwsh/fryfrog-hub-frontend
 
 jobs:
   build:
