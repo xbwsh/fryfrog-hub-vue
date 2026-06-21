@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ghcr.io/xbwsh/fryfrog-hub-frontend:latest
+    image: xbwsh/fryfrog-hub-frontend:latest
     container_name: fryfrog-frontend
     network_mode: host
     restart: unless-stopped
