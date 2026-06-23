@@ -42,16 +42,52 @@
         <button class="btn-clear" @click="clearCache">清除缓存</button>
       </div>
     </div>
+
+    <div class="settings-section">
+      <div class="section-title">媒体库</div>
+      <div class="setting-item">
+        <div class="item-info">
+          <h3 class="item-label">一键整理</h3>
+          <p class="item-description">清理无效记录并扫描新文件（音乐、漫画、电子书、视频）</p>
+        </div>
+        <button class="btn-rescan" :disabled="isRescanning" @click="handleRescan">
+          {{ isRescanning ? '整理中...' : '开始整理' }}
+        </button>
+      </div>
+      <div v-if="rescanResult" class="rescan-result">
+        <div class="result-item" v-for="(mod, key) in rescanResult" :key="key">
+          <span class="result-label">{{ moduleLabels[key as keyof typeof moduleLabels] }}</span>
+          <span class="result-detail">清理 {{ mod.cleanedCount }} 条 · {{ mod.scanStatus }}</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { usePlayerStore } from '@/stores/player'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
+import { useLibraryStore } from '@/stores/library'
 
 const playerStore = usePlayerStore()
 const themeStore = useThemeStore()
+const libraryStore = useLibraryStore()
+
+const isRescanning = ref(false)
+const rescanResult = ref<{
+  music: { cleanedCount: number; scanStatus: string }
+  comic: { cleanedCount: number; scanStatus: string }
+  ebook: { cleanedCount: number; scanStatus: string }
+  video: { cleanedCount: number; scanStatus: string }
+} | null>(null)
+
+const moduleLabels: Record<string, string> = {
+  music: '音乐',
+  comic: '漫画',
+  ebook: '电子书',
+  video: '视频',
+}
 
 const themeMode = computed({
   get: () => themeStore.mode,
@@ -68,6 +104,19 @@ function clearCache() {
   if (confirm('确定要清除所有缓存的歌曲吗？')) {
     playerStore.downloadedTracks = new Map()
     localStorage.removeItem('downloadedTracks')
+  }
+}
+
+async function handleRescan() {
+  if (isRescanning.value) return
+  isRescanning.value = true
+  rescanResult.value = null
+  try {
+    rescanResult.value = await libraryStore.rescan()
+  } catch {
+    alert('整理媒体库失败，请检查后端连接')
+  } finally {
+    isRescanning.value = false
   }
 }
 </script>
@@ -190,5 +239,46 @@ function clearCache() {
   background: var(--bg-hover);
   color: #ff6b6b;
   border-color: #ff6b6b;
+}
+
+.btn-rescan {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-size: 13px;
+  color: white;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn-rescan:hover {
+  opacity: 0.85;
+}
+
+.btn-rescan:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rescan-result {
+  padding: 12px 0 4px;
+}
+
+.result-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+}
+
+.result-label {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.result-detail {
+  color: var(--text-muted);
 }
 </style>

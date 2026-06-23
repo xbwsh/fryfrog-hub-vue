@@ -219,3 +219,15 @@ export interface BackendConfig {
   url: string
   authenticated: boolean
 }
+
+export interface ModuleRescanResult {
+  cleanedCount: number
+  scanStatus: string
+}
+
+export interface LibraryRescanResult {
+  music: ModuleRescanResult
+  comic: ModuleRescanResult
+  ebook: ModuleRescanResult
+  video: ModuleRescanResult
+}

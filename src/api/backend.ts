@@ -15,6 +15,7 @@ import type {
   ComicProgress,
   EbookProgress,
   EbookSeries,
+  LibraryRescanResult,
 } from '@/types/backend'
 
 const client = axios.create()
@@ -479,6 +480,11 @@ export async function toggleFavorite(id: number, status: boolean): Promise<Music
 export async function getFavorites(): Promise<MusicTrack[]> {
   const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/favorites')
   return response.data.data || []
+}
+
+export async function rescanLibrary(): Promise<LibraryRescanResult> {
+  const response = await client.post<ApiResponse<LibraryRescanResult>>('/api/v1/library/rescan')
+  return response.data.data
 }
 
 

@@ -1,9 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { MusicTrack } from '@/types/backend'
+import type { MusicTrack, LibraryRescanResult } from '@/types/backend'
 import {
   getAllTracks,
   getLyrics,
+  rescanLibrary,
 } from '@/api/backend'
 
 export const useLibraryStore = defineStore('library', () => {
@@ -89,6 +90,20 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
+  async function rescan(): Promise<LibraryRescanResult> {
+    loading.value = true
+    error.value = null
+    try {
+      const result = await rescanLibrary()
+      return result
+    } catch (e) {
+      error.value = '整理媒体库失败'
+      throw e
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     allTracks,
     starredTracks,
@@ -102,5 +117,6 @@ export const useLibraryStore = defineStore('library', () => {
     fetchLyrics,
     toggleStar,
     isTrackStarred,
+    rescan,
   }
 })
