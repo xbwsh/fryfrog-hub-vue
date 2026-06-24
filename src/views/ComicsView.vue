@@ -2,7 +2,7 @@
   <div class="comics-view">
     <div class="view-header">
       <div class="header-left">
-        <h1>📚 漫画</h1>
+        <h1>漫画</h1>
         <p class="view-subtitle">管理你的漫画库</p>
       </div>
       <div class="header-actions">

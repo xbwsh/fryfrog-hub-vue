@@ -8,8 +8,8 @@
     <section class="content-section">
       <div class="section-header">
         <div class="section-title">
-          <span class="section-icon">🎵</span>
-          <h2>音乐</h2>
+
+            <h2>音乐</h2>
         </div>
         <router-link to="/music" class="see-all">查看全部</router-link>
       </div>
@@ -43,8 +43,8 @@
     <section class="content-section">
       <div class="section-header">
         <div class="section-title">
-          <span class="section-icon">📚</span>
-          <h2>漫画</h2>
+
+            <h2>漫画</h2>
         </div>
         <router-link to="/comics" class="see-all">查看全部</router-link>
       </div>
@@ -78,8 +78,8 @@
     <section class="content-section">
       <div class="section-header">
         <div class="section-title">
-          <span class="section-icon">📖</span>
-          <h2>电子书</h2>
+
+            <h2>电子书</h2>
         </div>
         <router-link to="/ebooks" class="see-all">查看全部</router-link>
       </div>
@@ -113,8 +113,8 @@
     <section class="content-section">
       <div class="section-header">
         <div class="section-title">
-          <span class="section-icon">🎬</span>
-          <h2>视频</h2>
+
+            <h2>视频</h2>
         </div>
         <router-link to="/videos" class="see-all">查看全部</router-link>
       </div>
@@ -256,10 +256,6 @@ function onImageError(e: Event) {
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.section-icon {
-  font-size: 20px;
 }
 
 .section-header h2 {

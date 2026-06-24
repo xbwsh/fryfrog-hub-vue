@@ -2,7 +2,7 @@
   <div class="videos-view">
     <div class="view-header">
       <div class="header-left">
-        <h1>🎬 视频</h1>
+        <h1>视频</h1>
         <p class="view-subtitle">管理你的视频库</p>
       </div>
       <div class="header-actions">

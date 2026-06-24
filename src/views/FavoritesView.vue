@@ -1,7 +1,7 @@
 <template>
   <div class="favorites-view">
     <div class="view-header">
-      <h1>⭐ 收藏</h1>
+      <h1>收藏</h1>
       <p class="view-subtitle">你喜欢的内容</p>
     </div>
 

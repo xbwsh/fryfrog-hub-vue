@@ -1,7 +1,7 @@
 <template>
   <nav class="sidebar" :class="{ mobile, open: mobile && show }">
     <div class="sidebar-header">
-      <div class="logo">🐸</div>
+      <div class="logo">F</div>
       <div class="header-info" v-show="!mobile">
         <span class="logo-text">Fryfrog Hub</span>
         <span class="user-name">{{ connectionStore.username }}</span>
@@ -14,13 +14,13 @@
         <AppIcon name="home" :size="20" />
         首页
       </router-link>
-      <router-link to="/music" class="nav-item" active-class="active">
-        <AppIcon name="music-circle" :size="20" />
-        音乐
-      </router-link>
       <router-link to="/favorites" class="nav-item" active-class="active">
         <AppIcon name="star" :size="20" />
         收藏
+      </router-link>
+      <router-link to="/music" class="nav-item" active-class="active">
+        <AppIcon name="music-circle" :size="20" />
+        音乐
       </router-link>
       <router-link to="/comics" class="nav-item" active-class="active">
         <AppIcon name="book" :size="20" />

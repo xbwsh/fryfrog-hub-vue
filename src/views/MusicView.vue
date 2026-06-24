@@ -1,8 +1,21 @@
 <template>
   <div class="music-view">
     <div class="view-header">
-      <h1>🎵 音乐</h1>
-      <p class="view-subtitle">管理你的音乐库</p>
+      <div class="header-left">
+        <h1>音乐</h1>
+        <p class="view-subtitle">管理你的音乐库</p>
+      </div>
+      <div class="header-actions">
+        <button class="scrape-all-btn" @click="handleScrapeAll" :disabled="scraping">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 0 1-15.36 6.36"/>
+            <path d="M3 12a9 9 0 0 1 15.36-6.36"/>
+            <polyline points="12 3 12 9 16 11"/>
+            <polyline points="12 21 12 15 8 13"/>
+          </svg>
+          {{ scraping ? '刮削中...' : '批量刮削' }}
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -41,6 +54,20 @@
           <div class="track-artist">{{ track.artist }} - {{ track.album }}</div>
         </div>
         <div class="track-duration">{{ formatDuration(track.durationSeconds) }}</div>
+        <button
+          class="scrape-btn"
+          :class="{ scraping: scrapingIds.has(track.id) }"
+          :disabled="scrapingIds.has(track.id)"
+          @click.stop="handleScrapeTrack(track)"
+          :title="scrapingIds.has(track.id) ? '刮削中...' : '刮削元数据'"
+        >
+          <svg v-if="!scrapingIds.has(track.id)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12a9 9 0 0 1-15.36 6.36"/>
+            <path d="M3 12a9 9 0 0 1 15.36-6.36"/>
+            <polyline points="12 3 12 9 16 11"/>
+          </svg>
+          <div v-else class="scrape-spinner"></div>
+        </button>
       </div>
     </div>
 
@@ -57,8 +84,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { MusicTrack } from '@/types/backend'
-import { getAllTracks } from '@/api/backend'
-import { getMusicCoverArtUrl } from '@/api/backend'
+import { getAllTracks, getMusicCoverArtUrl, scrapeMusicTrack, scrapeAllMusic } from '@/api/backend'
 import { usePlayerStore } from '@/stores/player'
 import MusicPlayerBar from '@/components/MusicPlayerBar.vue'
 import LyricsPanel from '@/components/LyricsPanel.vue'
@@ -68,6 +94,8 @@ const tracks = ref<MusicTrack[]>([])
 const loading = ref(false)
 const error = ref('')
 const showLyrics = ref(false)
+const scraping = ref(false)
+const scrapingIds = ref(new Set<number>())
 
 async function loadTracks() {
   loading.value = true
@@ -92,6 +120,38 @@ function formatDuration(seconds: number): string {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
+async function handleScrapeTrack(track: MusicTrack) {
+  if (scrapingIds.value.has(track.id)) return
+  scrapingIds.value.add(track.id)
+  try {
+    const updated = await scrapeMusicTrack(track.id)
+    if (updated) {
+      const idx = tracks.value.findIndex(t => t.id === track.id)
+      if (idx !== -1) tracks.value[idx] = updated
+    }
+  } catch (e) {
+    console.error('Failed to scrape track:', e)
+  } finally {
+    scrapingIds.value.delete(track.id)
+  }
+}
+
+async function handleScrapeAll() {
+  if (scraping.value) return
+  scraping.value = true
+  try {
+    const updated = await scrapeAllMusic()
+    if (updated.length > 0) {
+      const updatedMap = new Map(updated.map(t => [t.id, t]))
+      tracks.value = tracks.value.map(t => updatedMap.get(t.id) || t)
+    }
+  } catch (e) {
+    console.error('Failed to scrape all:', e)
+  } finally {
+    scraping.value = false
+  }
+}
+
 onMounted(loadTracks)
 </script>
 
@@ -105,6 +165,10 @@ onMounted(loadTracks)
 .view-header {
   padding: 24px 32px 16px;
   flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .view-header h1 {
@@ -117,6 +181,36 @@ onMounted(loadTracks)
 .view-subtitle {
   color: var(--text-secondary);
   font-size: 14px;
+}
+
+.header-actions {
+  flex-shrink: 0;
+}
+
+.scrape-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.scrape-all-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.scrape-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .loading-state,
@@ -268,6 +362,49 @@ onMounted(loadTracks)
   flex-shrink: 0;
 }
 
+.scrape-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.track-item:hover .scrape-btn {
+  opacity: 1;
+}
+
+.scrape-btn:hover:not(:disabled) {
+  color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.scrape-btn:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+.scrape-btn.scraping {
+  opacity: 1;
+}
+
+.scrape-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
 .lyrics-overlay {
   position: fixed;
   top: 0;
@@ -295,5 +432,20 @@ onMounted(loadTracks)
 .lyrics-fade-leave-from {
   opacity: 1;
   transform: translateY(0);
+}
+
+@media screen and (max-width: 767px) {
+  .view-header {
+    padding: 20px 16px 12px;
+    flex-direction: column;
+  }
+
+  .track-item {
+    padding: 10px 12px;
+  }
+
+  .scrape-btn {
+    opacity: 1;
+  }
 }
 </style>

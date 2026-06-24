@@ -24,7 +24,7 @@
   <ServerConnect v-else-if="!restoring" @connected="onConnected" />
   <div v-else class="loading-screen">
     <div class="loading-content">
-      <div class="loading-icon">🐸</div>
+      <div class="loading-icon">F</div>
       <p>正在恢复连接...</p>
     </div>
   </div>

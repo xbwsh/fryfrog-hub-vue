@@ -17,7 +17,16 @@ export interface MusicTrack {
   bitrateKbps: number
   format: string
   coverArtPath: string
+  coverSource: string
   lyrics: string
+  lyricsSource: string
+  label: string
+  catalogNumber: string
+  releaseDate: string
+  musicBrainzId: string
+  artistImage: string
+  artistBio: string
+  scrapeStatus: string
   favorite: boolean
 }
 

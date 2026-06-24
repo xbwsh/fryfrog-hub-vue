@@ -482,6 +482,28 @@ export async function getFavorites(): Promise<MusicTrack[]> {
   return response.data.data || []
 }
 
+export async function scrapeMusicTrack(id: number): Promise<MusicTrack | undefined> {
+  const response = await client.post<ApiResponse<MusicTrack>>(`/api/v1/music/${id}/scrape`)
+  return response.data.data
+}
+
+export async function scrapeMusicByArtist(artist: string): Promise<MusicTrack[]> {
+  const response = await client.post<ApiResponse<MusicTrack[]>>('/api/v1/music/scrape/artist', null, {
+    params: { artist },
+  })
+  return response.data.data || []
+}
+
+export async function scrapeAllMusic(): Promise<MusicTrack[]> {
+  const response = await client.post<ApiResponse<MusicTrack[]>>('/api/v1/music/scrape/all')
+  return response.data.data || []
+}
+
+export async function getMusicScrapeStatus(): Promise<number> {
+  const response = await client.get<ApiResponse<number>>('/api/v1/music/scrape/status')
+  return response.data.data || 0
+}
+
 export async function rescanLibrary(): Promise<LibraryRescanResult> {
   const response = await client.post<ApiResponse<LibraryRescanResult>>('/api/v1/library/rescan')
   return response.data.data
