@@ -48,6 +48,7 @@
             <img
               :src="getSeriesCoverUrl(series.coverArtPath)"
               :alt="series.name"
+              draggable="false"
               @error="onImageError"
             />
           </div>

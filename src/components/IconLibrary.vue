@@ -48,12 +48,12 @@ const colorVars = computed(() => {
 })
 
 const tabLabels: Record<CategoryKey, string> = {
-  general: 'General / System',
-  music: 'Music',
-  comic: 'Comic',
-  audiobook: 'Audiobook',
-  ebook: 'eBook',
-  video: 'Video',
+  general: '通用 / 系统',
+  music: '音乐',
+  comic: '漫画',
+  audiobook: '有声书',
+  ebook: '电子书',
+  video: '视频',
 }
 
 const tabOrder: CategoryKey[] = ['general', 'music', 'comic', 'audiobook', 'ebook', 'video']
@@ -106,8 +106,8 @@ function showToast(msg: string) {
 <template>
   <div class="icon-library-page" :style="colorVars">
     <header class="il-header">
-      <h1>SVG Icon <span>Library</span></h1>
-      <p>Music · Comic · Audiobook · eBook · Video · System · 24×24 · stroke 1.5</p>
+      <h1>SVG 图标 <span>库</span></h1>
+      <p>音乐 · 漫画 · 有声书 · 电子书 · 视频 · 系统 · 24×24 · 描边 1.5</p>
     </header>
 
     <div class="il-tabs">
@@ -123,31 +123,33 @@ function showToast(msg: string) {
       </button>
     </div>
 
-    <div class="il-icon-grid">
-      <div
-        v-for="icon in currentIcons"
-        :key="icon.id"
-        class="il-icon-card"
-        :class="{ copied: copiedId === icon.id }"
-        @click="copySVG(icon)"
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          v-html="icon.svg"
-        />
-        <span class="il-icon-name">{{ icon.name }}</span>
-        <span class="il-icon-id">{{ icon.id }}</span>
+    <div class="il-scroll-area">
+      <div class="il-icon-grid">
+        <div
+          v-for="icon in currentIcons"
+          :key="icon.id"
+          class="il-icon-card"
+          :class="{ copied: copiedId === icon.id }"
+          @click="copySVG(icon)"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            v-html="icon.svg"
+          />
+          <span class="il-icon-name">{{ icon.nameCn }}</span>
+          <span class="il-icon-id">{{ icon.id }}</span>
+        </div>
       </div>
     </div>
 
     <footer class="il-footer">
-      <p>All icons · <span>24×24</span> · stroke 1.5 · rounded caps & joins</p>
-      <p style="margin-top:6px;">Click any icon to copy its SVG code to clipboard</p>
+      <p>所有图标 · <span>24×24</span> · 描边 1.5 · 圆角端点与连接</p>
+      <p style="margin-top:6px;">点击图标复制 SVG 代码到剪贴板</p>
     </footer>
 
     <div class="il-toast" :class="{ show: toastVisible }">{{ toastMessage }}</div>
@@ -162,14 +164,18 @@ function showToast(msg: string) {
   z-index: 1;
   max-width: 1300px;
   margin: 0 auto;
-  padding: 40px 30px 80px;
+  padding: 40px 30px 0;
   background: var(--il-bg);
-  min-height: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .il-header {
   margin-bottom: 30px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .il-header h1 {
@@ -200,6 +206,7 @@ function showToast(msg: string) {
   gap: 6px;
   margin-bottom: 36px;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .il-tab-btn {
@@ -223,6 +230,13 @@ function showToast(msg: string) {
 
 .il-tab-btn.active {
   font-weight: 500;
+}
+
+.il-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 8px;
+  padding-bottom: 20px;
 }
 
 .il-icon-grid {
@@ -337,13 +351,14 @@ function showToast(msg: string) {
 }
 
 .il-footer {
-  margin-top: 60px;
-  padding-top: 24px;
+  margin-top: 0;
+  padding: 24px 0;
   border-top: 1px solid var(--il-border);
   font-size: 0.7rem;
   color: var(--il-text-muted);
   text-align: center;
   letter-spacing: 0.05em;
+  flex-shrink: 0;
 }
 
 .il-footer span {

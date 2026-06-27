@@ -27,6 +27,7 @@
             <img
               :src="getComicCoverUrl(comic.id)"
               :alt="comic.title"
+              draggable="false"
               @error="onImageError"
             />
           </div>

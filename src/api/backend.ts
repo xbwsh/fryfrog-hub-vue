@@ -16,9 +16,17 @@ import type {
   EbookProgress,
   EbookSeries,
   LibraryRescanResult,
+  AnilistMediaItem,
+  BangumiItem,
+  SystemSetting,
+  TmdbStatus,
+  ComicCharacter,
+  VideoActor,
 } from '@/types/backend'
 
-const client = axios.create()
+const client = axios.create({
+  timeout: 30000,
+})
 
 let config: BackendConfig = {
   url: '',
@@ -54,13 +62,6 @@ export async function getAllTracks(): Promise<MusicTrack[]> {
 
 export async function getTrackById(id: number): Promise<MusicTrack | undefined> {
   const response = await client.get<ApiResponse<MusicTrack>>(`/api/v1/music/${id}`)
-  return response.data.data
-}
-
-export async function scanDirectory(path: string): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/music/scan', null, {
-    params: { path },
-  })
   return response.data.data
 }
 
@@ -105,9 +106,35 @@ export function getMusicCoverArtUrl(id: number): string {
   return `${config.url}/api/v1/music/${id}/cover`
 }
 
+export function getArtistImageUrl(id: number): string {
+  return `${config.url}/api/v1/music/${id}/artist-image`
+}
+
 export async function getLyrics(id: number): Promise<string> {
   const response = await client.get<ApiResponse<string>>(`/api/v1/music/${id}/lyrics`)
   return response.data.data || ''
+}
+
+export async function scrapeMusicTrack(id: number): Promise<MusicTrack | undefined> {
+  const response = await client.post<ApiResponse<MusicTrack>>(`/api/v1/music/${id}/scrape`)
+  return response.data.data
+}
+
+export async function scrapeMusicByArtist(artist: string): Promise<MusicTrack[]> {
+  const response = await client.post<ApiResponse<MusicTrack[]>>('/api/v1/music/scrape/artist', null, {
+    params: { artist },
+  })
+  return response.data.data || []
+}
+
+export async function scrapeAllMusic(): Promise<MusicTrack[]> {
+  const response = await client.post<ApiResponse<MusicTrack[]>>('/api/v1/music/scrape/all')
+  return response.data.data || []
+}
+
+export async function getMusicScrapeStatus(): Promise<number> {
+  const response = await client.get<ApiResponse<number>>('/api/v1/music/scrape/status')
+  return response.data.data || 0
 }
 
 export async function getAllComics(): Promise<Comic[]> {
@@ -126,22 +153,13 @@ export async function getComicById(id: number): Promise<Comic | undefined> {
 }
 
 export async function toggleComicFavorite(id: number, status: boolean): Promise<Comic | undefined> {
-  const response = await client.put<ApiResponse<Comic>>(`/api/v1/comic/${id}/favorite`, null, {
-    params: { status },
-  })
+  const response = await client.put<ApiResponse<Comic>>(`/api/v1/comic/${id}/favorite`, { status })
   return response.data.data
 }
 
 export async function getComicFavorites(): Promise<Comic[]> {
   const response = await client.get<ApiResponse<Comic[]>>('/api/v1/comic/favorites')
   return response.data.data || []
-}
-
-export async function scanComicDirectory(path: string): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/comic/scan', null, {
-    params: { path },
-  })
-  return response.data.data
 }
 
 export async function searchComicByTitle(query: string): Promise<Comic[]> {
@@ -181,6 +199,18 @@ export function getComicCoverUrl(id: number): string {
   return `${config.url}/api/v1/comic/${id}/cover`
 }
 
+export function getSeriesCoverUrl(coverUrl: string): string {
+  if (!coverUrl) return ''
+  if (coverUrl.startsWith('http')) return coverUrl
+  return `${config.url}${coverUrl}`
+}
+
+export function getComicCoverUrlWithCache(id: number, updatedAt?: string): string {
+  return updatedAt
+    ? `${config.url}/api/v1/comic/${id}/cover?t=${updatedAt}`
+    : `${config.url}/api/v1/comic/${id}/cover`
+}
+
 export async function getComicPages(id: number): Promise<PageInfo[]> {
   const response = await client.get<ApiResponse<PageInfo[]>>(`/api/v1/comic/${id}/pages`)
   return response.data.data || []
@@ -188,6 +218,44 @@ export async function getComicPages(id: number): Promise<PageInfo[]> {
 
 export function getComicPageImageUrl(id: number, pageNum: number): string {
   return `${config.url}/api/v1/comic/${id}/pages/${pageNum}`
+}
+
+export async function searchAnilistComics(query: string): Promise<AnilistMediaItem[]> {
+  const response = await client.get<ApiResponse<AnilistMediaItem[]>>('/api/v1/comic/anilist/search', {
+    params: { q: query },
+  })
+  return response.data.data || []
+}
+
+export async function bindAnilistMetadata(comicId: number, anilistId: number, bindSeries?: boolean): Promise<Comic | undefined> {
+  const response = await client.post<ApiResponse<Comic>>(`/api/v1/comic/${comicId}/anilist/bind`, { anilistId, ...(bindSeries !== undefined ? { bindSeries } : {}) })
+  return response.data.data
+}
+
+export async function searchBangumiComics(query: string): Promise<BangumiItem[]> {
+  const response = await client.get<ApiResponse<BangumiItem[]>>('/api/v1/comic/bangumi/search', {
+    params: { q: query },
+  })
+  return response.data.data || []
+}
+
+export async function bindBangumiMetadata(comicId: number, bangumiId: number, bindSeries?: boolean): Promise<Comic | undefined> {
+  const response = await client.post<ApiResponse<Comic>>(`/api/v1/comic/${comicId}/bangumi/bind`, { bangumiId, ...(bindSeries !== undefined ? { bindSeries } : {}) })
+  return response.data.data
+}
+
+export async function getAnilistStatus(): Promise<boolean> {
+  const response = await client.get<ApiResponse<boolean>>('/api/v1/comic/anilist/status')
+  return response.data.data
+}
+
+export async function getComicCharacters(comicId: number): Promise<ComicCharacter[]> {
+  const response = await client.get<ApiResponse<ComicCharacter[]>>(`/api/v1/comic/${comicId}/characters`)
+  return response.data.data || []
+}
+
+export function getComicCharacterImageUrl(characterId: number): string {
+  return `${config.url}/api/v1/comic/character/${characterId}/image`
 }
 
 export async function getAllEbooks(): Promise<Ebook[]> {
@@ -201,9 +269,7 @@ export async function getEbookById(id: number): Promise<Ebook | undefined> {
 }
 
 export async function toggleEbookFavorite(id: number, status: boolean): Promise<Ebook | undefined> {
-  const response = await client.put<ApiResponse<Ebook>>(`/api/v1/ebook/${id}/favorite`, null, {
-    params: { status },
-  })
+  const response = await client.put<ApiResponse<Ebook>>(`/api/v1/ebook/${id}/favorite`, { status })
   return response.data.data
 }
 
@@ -278,13 +344,6 @@ export function getEpubImageUrl(filePath: string, file: string): string {
   return `${config.url}/api/v1/ebook/epub-image?filePath=${encodeURIComponent(filePath)}&file=${encodeURIComponent(file)}`
 }
 
-export async function scanEbookDirectory(path: string): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/ebook/scan', null, {
-    params: { path },
-  })
-  return response.data.data
-}
-
 export async function getAllVideos(): Promise<VideoDTO[]> {
   const response = await client.get<ApiResponse<VideoDTO[]>>('/api/v1/video')
   return response.data.data || []
@@ -296,9 +355,7 @@ export async function getVideoById(id: number): Promise<VideoDTO | undefined> {
 }
 
 export async function toggleVideoFavorite(id: number, status: boolean): Promise<VideoDTO | undefined> {
-  const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/favorite`, null, {
-    params: { status },
-  })
+  const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/favorite`, { status })
   return response.data.data
 }
 
@@ -353,16 +410,18 @@ export function getVideoStreamUrl(id: number): string {
   return `${config.url}/api/v1/video/${id}/stream`
 }
 
-export async function scanVideoDirectory(path: string): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/video/scan', null, {
-    params: { path },
-  })
-  return response.data.data
-}
-
 export async function cleanupVideoRecords(): Promise<Record<string, number>> {
   const response = await client.post<ApiResponse<Record<string, number>>>('/api/v1/video/cleanup')
   return response.data.data
+}
+
+export async function getVideoActors(id: number): Promise<VideoActor[]> {
+  const response = await client.get<ApiResponse<VideoActor[]>>(`/api/v1/video/${id}/actors`)
+  return response.data.data || []
+}
+
+export function getVideoActorImageUrl(actorId: number): string {
+  return `${config.url}/api/v1/video/actor/${actorId}/image`
 }
 
 export async function checkTmdbStatus(): Promise<boolean> {
@@ -378,15 +437,18 @@ export async function searchTmdb(query: string): Promise<TmdbSearchItem[]> {
 }
 
 export async function bindTmdb(id: number, tmdbId: number, mediaType: string): Promise<VideoDTO | undefined> {
-  const response = await client.post<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/tmdb/bind`, null, {
-    params: { tmdbId, mediaType },
-  })
+  const response = await client.post<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/tmdb/bind`, { tmdbId, mediaType })
   return response.data.data
 }
 
-export async function autoScrapeAll(): Promise<VideoDTO[]> {
-  const response = await client.post<ApiResponse<VideoDTO[]>>('/api/v1/video/tmdb/auto-scrape')
-  return response.data.data || []
+export async function refreshTmdb(id: number): Promise<VideoDTO | undefined> {
+  const response = await client.post<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/tmdb/refresh`)
+  return response.data.data
+}
+
+export async function unbindTmdb(id: number): Promise<VideoDTO | undefined> {
+  const response = await client.post<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/tmdb/unbind`)
+  return response.data.data
 }
 
 export async function getNfoContent(id: number): Promise<string> {
@@ -410,9 +472,7 @@ export async function getVideoProgress(id: number): Promise<VideoProgress | null
 }
 
 export async function saveVideoProgress(id: number, position: number, duration: number): Promise<VideoProgress> {
-  const response = await client.put<ApiResponse<VideoProgress>>(`/api/v1/video/${id}/progress`, null, {
-    params: { position, duration },
-  })
+  const response = await client.put<ApiResponse<VideoProgress>>(`/api/v1/video/${id}/progress`, { position, duration })
   return response.data.data
 }
 
@@ -426,9 +486,7 @@ export async function getComicProgress(id: number): Promise<ComicProgress | null
 }
 
 export async function saveComicProgress(id: number, currentPage: number, totalPages: number): Promise<ComicProgress> {
-  const response = await client.put<ApiResponse<ComicProgress>>(`/api/v1/comic/${id}/progress`, null, {
-    params: { page: currentPage, totalPages },
-  })
+  const response = await client.put<ApiResponse<ComicProgress>>(`/api/v1/comic/${id}/progress`, { currentPage, totalPages })
   return response.data.data
 }
 
@@ -442,9 +500,7 @@ export async function getEbookProgress(id: number): Promise<EbookProgress | null
 }
 
 export async function saveEbookProgress(id: number, currentChapter: number, totalChapters: number): Promise<EbookProgress> {
-  const response = await client.put<ApiResponse<EbookProgress>>(`/api/v1/ebook/${id}/progress`, null, {
-    params: { page: currentChapter, totalPages: totalChapters },
-  })
+  const response = await client.put<ApiResponse<EbookProgress>>(`/api/v1/ebook/${id}/progress`, { currentChapter, totalChapters })
   return response.data.data
 }
 
@@ -471,9 +527,7 @@ export function getSeriesFanartUrl(id: number): string {
 }
 
 export async function toggleFavorite(id: number, status: boolean): Promise<MusicTrack | undefined> {
-  const response = await client.put<ApiResponse<MusicTrack>>(`/api/v1/music/${id}/favorite`, null, {
-    params: { status },
-  })
+  const response = await client.put<ApiResponse<MusicTrack>>(`/api/v1/music/${id}/favorite`, { status })
   return response.data.data
 }
 
@@ -482,31 +536,70 @@ export async function getFavorites(): Promise<MusicTrack[]> {
   return response.data.data || []
 }
 
-export async function scrapeMusicTrack(id: number): Promise<MusicTrack | undefined> {
-  const response = await client.post<ApiResponse<MusicTrack>>(`/api/v1/music/${id}/scrape`)
-  return response.data.data
-}
-
-export async function scrapeMusicByArtist(artist: string): Promise<MusicTrack[]> {
-  const response = await client.post<ApiResponse<MusicTrack[]>>('/api/v1/music/scrape/artist', null, {
-    params: { artist },
-  })
-  return response.data.data || []
-}
-
-export async function scrapeAllMusic(): Promise<MusicTrack[]> {
-  const response = await client.post<ApiResponse<MusicTrack[]>>('/api/v1/music/scrape/all')
-  return response.data.data || []
-}
-
-export async function getMusicScrapeStatus(): Promise<number> {
-  const response = await client.get<ApiResponse<number>>('/api/v1/music/scrape/status')
-  return response.data.data || 0
-}
-
 export async function rescanLibrary(): Promise<LibraryRescanResult> {
   const response = await client.post<ApiResponse<LibraryRescanResult>>('/api/v1/library/rescan')
   return response.data.data
 }
 
+export async function scanDirectory(path: string): Promise<string> {
+  const response = await client.post<ApiResponse<string>>('/api/v1/music/scan', null, {
+    params: { path },
+  })
+  return response.data.data
+}
 
+export async function scanComicDirectory(path: string): Promise<string> {
+  const response = await client.post<ApiResponse<string>>('/api/v1/comic/scan', null, {
+    params: { path },
+  })
+  return response.data.data
+}
+
+export async function scanEbookDirectory(path: string): Promise<string> {
+  const response = await client.post<ApiResponse<string>>('/api/v1/ebook/scan', null, {
+    params: { path },
+  })
+  return response.data.data
+}
+
+export async function scanVideoDirectory(path: string): Promise<string> {
+  const response = await client.post<ApiResponse<string>>('/api/v1/video/scan', null, {
+    params: { path },
+  })
+  return response.data.data
+}
+
+export async function getAllSettings(): Promise<SystemSetting[]> {
+  const response = await client.get<ApiResponse<SystemSetting[]>>('/api/v1/settings')
+  return response.data.data || []
+}
+
+export async function getSetting(key: string): Promise<SystemSetting | null> {
+  try {
+    const response = await client.get<ApiResponse<SystemSetting>>(`/api/v1/settings/${key}`)
+    return response.data.success ? response.data.data : null
+  } catch {
+    return null
+  }
+}
+
+export async function updateSetting(key: string, value: string): Promise<SystemSetting> {
+  const response = await client.put<ApiResponse<SystemSetting>>(`/api/v1/settings/${key}`, { value })
+  return response.data.data
+}
+
+export async function getTmdbStatus(): Promise<TmdbStatus> {
+  const response = await client.get<ApiResponse<TmdbStatus>>('/api/v1/settings/tmdb/status')
+  return response.data.data
+}
+
+export interface PerformanceSettings {
+  'watcher.periodic-scan': boolean
+  'watcher.periodic-scan-interval': number
+  'hub.tmdb.scraper-threads': number
+}
+
+export async function getPerformanceSettings(): Promise<PerformanceSettings> {
+  const response = await client.get<ApiResponse<PerformanceSettings>>('/api/v1/settings/performance')
+  return response.data.data
+}

@@ -1,10 +1,9 @@
 <template>
   <nav class="sidebar" :class="{ mobile, open: mobile && show }">
     <div class="sidebar-header">
-      <div class="logo">F</div>
       <div class="header-info" v-show="!mobile">
         <span class="logo-text">Fryfrog Hub</span>
-        <span class="user-name">{{ connectionStore.username }}</span>
+        <span v-if="connectionStore.showServerAddress" class="server-url">{{ serverDisplay }}</span>
       </div>
     </div>
 
@@ -58,6 +57,7 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useConnectionStore } from '@/stores/connection'
 import { useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
@@ -73,6 +73,15 @@ defineProps<{
 defineEmits<{
   close: []
 }>()
+
+const serverDisplay = computed(() => {
+  try {
+    const url = new URL(connectionStore.backendUrl)
+    return url.host
+  } catch {
+    return connectionStore.backendUrl
+  }
+})
 
 function handleDisconnect() {
   connectionStore.disconnect()
@@ -109,13 +118,14 @@ function handleDisconnect() {
 .sidebar-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
   padding: 20px 16px;
-  border-bottom: 1px solid var(--border);
 }
 
-.logo {
-  font-size: 24px;
+.header-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .logo-text {
@@ -125,14 +135,10 @@ function handleDisconnect() {
   color: var(--text-primary);
 }
 
-.header-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.user-name {
+.server-url {
   font-size: 11px;
   color: var(--text-muted);
+  font-family: monospace;
 }
 
 .nav-section {
@@ -153,6 +159,7 @@ function handleDisconnect() {
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
+  margin-bottom: 4px;
   border-radius: var(--radius-md);
   color: var(--text-secondary);
   font-size: 14px;
@@ -174,7 +181,6 @@ function handleDisconnect() {
 .sidebar-footer {
   margin-top: auto;
   padding: 16px 8px;
-  border-top: 1px solid var(--border);
 }
 
 .btn-disconnect {

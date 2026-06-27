@@ -40,7 +40,7 @@
         @click="openItem(item)"
       >
         <div class="fav-cover">
-          <img :src="getCoverUrl(item)" alt="" @error="onCoverError" />
+          <img :src="getCoverUrl(item)" alt="" draggable="false" @error="onCoverError" />
         </div>
         <div class="fav-info">
           <div class="fav-title">{{ item.title }}</div>
@@ -67,7 +67,7 @@
         @click="openItem(item)"
       >
         <div class="card-cover">
-          <img :src="getCoverUrl(item)" :alt="item.title" @error="onCoverError" />
+          <img :src="getCoverUrl(item)" :alt="item.title" draggable="false" @error="onCoverError" />
           <button
             class="favorite-btn"
             :class="{ active: item.favorite }"
@@ -79,9 +79,9 @@
             </svg>
           </button>
           <div class="card-badge" v-if="getBadge(item)">{{ getBadge(item) }}</div>
-          <div v-if="item._type === 'video' && (item as VideoDTO).watchProgressPercent > 0" class="card-progress">
+          <div v-if="item._type === 'video' && (item as VideoDTO).watchProgressPercent! > 0" class="card-progress">
             <div class="card-progress-bar">
-              <div class="card-progress-fill" :style="{ width: Math.min((item as VideoDTO).watchProgressPercent, 100) + '%' }"></div>
+              <div class="card-progress-fill" :style="{ width: Math.min((item as VideoDTO).watchProgressPercent!, 100) + '%' }"></div>
             </div>
           </div>
           <div v-if="item._type === 'video' && (item as VideoDTO).watched" class="card-watched-badge">已看完</div>
@@ -212,7 +212,7 @@ function getSubtitle(item: FavItem): string {
     case 'music': return `${(item as MusicTrack).artist} - ${(item as MusicTrack).album}`
     case 'comic': return (item as Comic).author || (item as Comic).series
     case 'ebook': return (item as Ebook).author
-    case 'video': return (item as VideoDTO).director || (item as VideoDTO).actors
+    case 'video': return (item as VideoDTO).director || (item as VideoDTO).actors || ''
     default: return ''
   }
 }

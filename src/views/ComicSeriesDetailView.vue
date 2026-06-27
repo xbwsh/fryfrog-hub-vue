@@ -27,6 +27,7 @@
             <img
               :src="getSeriesCoverUrl(series.coverArtPath)"
               :alt="series.name"
+              draggable="false"
               @error="onImageError"
             />
           </div>
@@ -52,6 +53,7 @@
               <img
                 :src="getComicCoverUrl(comic.id)"
                 :alt="comic.title"
+                draggable="false"
                 @error="onImageError"
               />
               <div class="volume-badge" v-if="comic.volume">Vol.{{ comic.volume }}</div>

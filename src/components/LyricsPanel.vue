@@ -1,21 +1,18 @@
 <template>
-  <div class="lyrics-panel" :class="{ 'split-mode': layoutMode === 'split' }">
+  <div class="lyrics-panel" :class="{ 'split-mode': layoutMode === 'split' }" :style="{ '--lyrics-color': accentColor }">
     <img v-if="playerStore.currentTrack" :src="playerStore.getTrackCoverArt(playerStore.currentTrack, 600)"
-      class="lyrics-bg-image" alt="" />
+      class="lyrics-bg-image" alt="" draggable="false" />
     <div class="lyrics-bg-overlay" ref="bgOverlay"></div>
 
-    <div class="lyrics-header">
-      <h2>歌词</h2>
-      <div class="header-actions">
-        <span v-if="lyricsSource" class="lyrics-tag">{{ lyricsSource }}</span>
-        <button class="mode-toggle-btn" @click="toggleLayoutMode"
-          :title="layoutMode === 'full' ? '分屏模式' : '全屏模式'">
-          <AppIcon :name="layoutMode === 'full' ? 'fullscreen' : 'fullscreen-exit'" :size="20" />
-        </button>
-        <button class="close-btn" @click="$emit('close')">
-          <AppIcon name="close" :size="24" />
-        </button>
-      </div>
+    <div class="top-actions">
+      <span v-if="lyricsSource" class="lyrics-tag">{{ lyricsSource }}</span>
+      <button class="mode-toggle-btn" @click="toggleLayoutMode"
+        :title="layoutMode === 'full' ? '分屏模式' : '全屏模式'">
+        <AppIcon :name="layoutMode === 'full' ? 'split-horizontal' : 'fullscreen'" :size="20" />
+      </button>
+      <button class="close-btn" @click="$emit('close')" title="关闭">
+        <AppIcon name="close" :size="20" />
+      </button>
     </div>
 
     <div class="lyrics-body">
@@ -24,7 +21,7 @@
           <div class="vinyl-wrapper">
             <div class="vinyl-disc" :class="{ spinning: playerStore.isPlaying }">
               <img v-if="playerStore.currentTrack"
-                :src="playerStore.getTrackCoverArt(playerStore.currentTrack, 400)" class="vinyl-cover" alt="封面" />
+                :src="playerStore.getTrackCoverArt(playerStore.currentTrack, 400)" class="vinyl-cover" alt="封面" draggable="false" />
               <div class="vinyl-hole"></div>
             </div>
           </div>
@@ -115,6 +112,11 @@ import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import AppIcon from '@/components/AppIcon.vue'
 
 const playerStore = usePlayerStore()
+
+defineProps<{
+  accentColor?: string
+}>()
+
 defineEmits(['close'])
 
 const lyricsContainer = ref<HTMLElement>()
@@ -285,6 +287,8 @@ function seekToLyric(time: number) {
   background: var(--bg-primary);
   overflow: hidden;
   color: #fff;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .lyrics-bg-image {
@@ -304,58 +308,43 @@ function seekToLyric(time: number) {
   z-index: 0;
 }
 
-.lyrics-header {
-  position: relative;
-  z-index: 1;
+.top-actions {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 16px 24px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(20px);
-  flex-shrink: 0;
+  gap: 4px;
 }
 
-.lyrics-header h2 {
-  margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mode-toggle-btn,
-.close-btn {
+.top-actions button {
   background: none;
   border: none;
   color: #fff;
-  opacity: 0.7;
+  opacity: 0.5;
   cursor: pointer;
-  padding: 6px;
-  border-radius: 6px;
+  padding: 8px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, background 0.2s;
 }
 
-.mode-toggle-btn:hover,
-.close-btn:hover {
+.top-actions button:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .lyrics-tag {
-  font-size: 12px;
+  font-size: 11px;
   padding: 2px 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
   font-weight: 500;
+  line-height: 1;
 }
 
 /* ===== body ===== */
@@ -393,6 +382,8 @@ function seekToLyric(time: number) {
   display: flex;
   align-items: center;
   justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .vinyl-disc::before {
@@ -424,6 +415,7 @@ function seekToLyric(time: number) {
   height: 65%;
   border-radius: 50%;
   object-fit: cover;
+  pointer-events: none;
 }
 
 .vinyl-hole {
@@ -550,7 +542,7 @@ function seekToLyric(time: number) {
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--seek-pct, 0%), rgba(255, 255, 255, 0.2) var(--seek-pct, 0%), rgba(255, 255, 255, 0.2) 100%);
+  background: linear-gradient(to right, var(--lyrics-color) 0%, var(--lyrics-color) var(--seek-pct, 0%), rgba(255, 255, 255, 0.2) var(--seek-pct, 0%), rgba(255, 255, 255, 0.2) 100%);
   border-radius: 2px;
   outline: none;
   cursor: pointer;
@@ -652,31 +644,21 @@ function seekToLyric(time: number) {
 
 .lyric-line.active .lyric-text,
 .lyric-line.active {
+  color: var(--lyrics-color);
   text-shadow:
-    0 0 15px rgba(232, 93, 74, 0.9),
-    0 0 30px rgba(232, 93, 74, 0.6),
-    0 0 45px rgba(232, 93, 74, 0.4),
+    0 0 15px var(--lyrics-color),
+    0 0 30px var(--lyrics-color),
+    0 0 45px var(--lyrics-color),
     0 2px 8px rgba(0, 0, 0, 0.8);
   animation: pulse 2s ease-in-out infinite;
 }
 
 @keyframes pulse {
-
-  0%,
-  100% {
-    text-shadow:
-      0 0 15px rgba(232, 93, 74, 0.9),
-      0 0 30px rgba(232, 93, 74, 0.6),
-      0 0 45px rgba(232, 93, 74, 0.4),
-      0 2px 8px rgba(0, 0, 0, 0.8);
+  0%, 100% {
+    opacity: 1;
   }
-
   50% {
-    text-shadow:
-      0 0 20px rgba(232, 93, 74, 1),
-      0 0 40px rgba(232, 93, 74, 0.8),
-      0 0 60px rgba(232, 93, 74, 0.5),
-      0 2px 8px rgba(0, 0, 0, 0.8);
+    opacity: 0.8;
   }
 }
 

@@ -39,7 +39,7 @@
     <div v-else class="content-grid">
       <div v-for="series in seriesList" :key="series.id" class="content-card" @click="viewSeries(series)">
         <div class="card-cover video-cover">
-          <img :src="series.posterUrl || getSeriesPosterUrl(series.id)" :alt="series.title" @error="onImageError" />
+          <img :src="series.posterUrl || getSeriesPosterUrl(series.id)" :alt="series.title" draggable="false" @error="onImageError" />
           <div class="play-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 3 19 12 5 21 5 3"/>

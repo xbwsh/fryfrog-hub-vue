@@ -1,101 +1,381 @@
 <template>
-  <div class="music-view">
-    <div class="view-header">
+  <div class="music-view" :style="{ '--dynamic-color': dynamicColor }">
+    <div class="top-header">
       <div class="header-left">
         <h1>音乐</h1>
         <p class="view-subtitle">管理你的音乐库</p>
       </div>
       <div class="header-actions">
-        <button class="scrape-all-btn" @click="handleScrapeAll" :disabled="scraping">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12a9 9 0 0 1-15.36 6.36"/>
-            <path d="M3 12a9 9 0 0 1 15.36-6.36"/>
-            <polyline points="12 3 12 9 16 11"/>
-            <polyline points="12 21 12 15 8 13"/>
-          </svg>
-          {{ scraping ? '刮削中...' : '批量刮削' }}
-        </button>
+        <SearchBar v-model="searchQuery" placeholder="搜索音乐、歌手、专辑..." @debounced="handleSearch" />
       </div>
     </div>
 
-    <div v-if="loading" class="loading-state">
-      <div class="loading-spinner"></div>
-      <p>加载中...</p>
-    </div>
-
-    <div v-else-if="error" class="error-state">
-      <p>{{ error }}</p>
-      <button @click="loadTracks">重试</button>
-    </div>
-
-    <div v-else-if="tracks.length === 0" class="empty-state">
-      <p>暂无音乐</p>
-    </div>
-
-    <div v-else class="track-list">
-      <div
-        v-for="track in tracks"
-        :key="track.id"
-        class="track-item"
-        :class="{ active: playerStore.currentTrack?.id === track.id }"
-        @click="playTrack(track)"
-      >
-        <div class="track-cover-small">
-          <img :src="getMusicCoverArtUrl(track.id)" alt="封面" />
+    <div class="content-area">
+      <!-- 左侧歌曲列表 -->
+      <div class="list-panel">
+        <div class="list-header">
+          <div class="list-title-row">
+            <span class="list-title">全部歌曲 ({{ tracks.length }})</span>
+            <div class="list-actions">
+              <button class="play-all-btn" @click="playAll">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                播放全部
+              </button>
+              <button class="play-all-btn shuffle-btn" @click="shufflePlay">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="16 3 21 3 21 8"/>
+                  <line x1="4" y1="20" x2="21" y2="3"/>
+                  <polyline points="21 16 21 21 16 21"/>
+                  <line x1="15" y1="15" x2="21" y2="21"/>
+                  <line x1="4" y1="4" x2="9" y2="9"/>
+                </svg>
+                随机播放
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="track-playing" v-if="playerStore.currentTrack?.id === track.id && playerStore.isPlaying">
-          <div class="eq-bar"></div>
-          <div class="eq-bar"></div>
-          <div class="eq-bar"></div>
+
+        <div v-if="loading" class="loading-state">
+          <div class="loading-spinner"></div>
         </div>
-        <div class="track-index" v-else>{{ tracks.indexOf(track) + 1 }}</div>
-        <div class="track-info">
-          <div class="track-title">{{ track.title }}</div>
-          <div class="track-artist">{{ track.artist }} - {{ track.album }}</div>
+
+        <div v-else-if="tracks.length === 0" class="empty-state">
+          <p>暂无音乐</p>
         </div>
-        <div class="track-duration">{{ formatDuration(track.durationSeconds) }}</div>
-        <button
-          class="scrape-btn"
-          :class="{ scraping: scrapingIds.has(track.id) }"
-          :disabled="scrapingIds.has(track.id)"
-          @click.stop="handleScrapeTrack(track)"
-          :title="scrapingIds.has(track.id) ? '刮削中...' : '刮削元数据'"
-        >
-          <svg v-if="!scrapingIds.has(track.id)" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12a9 9 0 0 1-15.36 6.36"/>
-            <path d="M3 12a9 9 0 0 1 15.36-6.36"/>
-            <polyline points="12 3 12 9 16 11"/>
-          </svg>
-          <div v-else class="scrape-spinner"></div>
-        </button>
+
+        <div v-else class="track-list">
+          <div
+            v-for="(track, index) in tracks"
+            :key="track.id"
+            class="track-item"
+            :class="{ active: playerStore.currentTrack?.id === track.id }"
+            @click="playTrack(track)"
+            @contextmenu="onContextMenu($event, track)"
+          >
+            <div class="track-cover-small">
+              <img loading="lazy" :src="getMusicCoverArtUrl(track.id)" alt="封面" draggable="false" />
+            </div>
+            <div class="track-playing" v-if="playerStore.currentTrack?.id === track.id && playerStore.isPlaying">
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+              <div class="eq-bar"></div>
+            </div>
+            <div class="track-index" v-else>{{ String(index + 1).padStart(2, '0') }}</div>
+            <div class="track-info">
+              <div class="track-title">{{ track.title }}</div>
+              <div class="track-artist">{{ track.artist }} · {{ track.album }}</div>
+            </div>
+            <div class="track-duration">{{ formatDuration(track.durationSeconds) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 中间主内容 -->
+      <div class="main-panel">
+        <div class="main-scroll">
+          <!-- Banner -->
+          <div class="banner">
+            <div class="banner-text">
+              <h2>音乐，<br>是生活的调色板</h2>
+              <p>发掘 · 收藏 · 享受</p>
+            </div>
+            <div class="banner-visual">
+              <img src="/photo-1508700115892-45ecd05ae2ad.avif" alt="" class="banner-img banner-img-left" draggable="false" />
+              <img src="/banner-804-400x200.jpg" alt="banner" class="banner-img banner-img-right" draggable="false" />
+            </div>
+          </div>
+
+          <!-- 快速分类 -->
+          <div class="section">
+            <div class="section-header">
+              <h3>快速分类</h3>
+            </div>
+            <div class="category-grid">
+              <div class="category-card" v-for="cat in categories" :key="cat.name">
+                <div class="cat-icon" :style="{ background: cat.bg, color: cat.color }">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="cat.icon"/>
+                </div>
+                <div class="cat-info">
+                  <h4>{{ cat.name }}</h4>
+                  <p>{{ cat.count }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 推荐歌单 -->
+          <div class="section">
+            <div class="section-header">
+              <h3>推荐歌单</h3>
+              <a class="see-all">查看全部</a>
+            </div>
+            <div class="playlist-scroll">
+              <div v-for="pl in playlists" :key="pl.name" class="playlist-card">
+                <div class="pl-img-wrap">
+                  <img :src="pl.cover" alt="封面" draggable="false" />
+                  <div class="pl-play">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="pl-info">
+                  <h4>{{ pl.name }}</h4>
+                  <p>{{ pl.count }} 首歌曲</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右侧面板 -->
+      <div class="right-panel">
+        <div class="panel-section">
+          <div class="panel-header">
+            <h3>歌手榜</h3>
+          </div>
+          <div class="rank-scroll">
+            <div v-for="(artist, index) in artistRanking" :key="artist.name" class="rank-item">
+              <div class="rank-num">{{ index + 1 }}</div>
+              <div class="rank-avatar" :style="{ background: artist.color }">
+                <img :src="getArtistImageUrl(artist.trackId)" :alt="artist.name" @error="($event.target as HTMLImageElement).style.display='none'" />
+              </div>
+              <div class="rank-info">
+                <div class="rank-name">{{ artist.name }}</div>
+                <div class="rank-count">{{ artist.count }} 首歌曲</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel-section">
+          <div class="panel-header">
+            <h3>音乐风格</h3>
+          </div>
+          <div class="tags">
+            <span v-for="(tag, index) in genreTags" :key="tag.name" class="tag" :class="'tag-' + (index % 4)">
+              {{ tag.name }} ({{ tag.count }})
+            </span>
+          </div>
+        </div>
+
+        <div class="panel-section stats-panel">
+          <div class="panel-header">
+            <h3>音乐统计</h3>
+          </div>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <div class="stat-num">{{ tracks.length.toLocaleString() }}</div>
+              <div class="stat-label">歌曲总数</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-num">{{ albumCount }}</div>
+              <div class="stat-label">专辑数量</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-num">{{ artistCount }}</div>
+              <div class="stat-label">歌手数量</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-num">{{ totalSize }}</div>
+              <div class="stat-label">占用空间</div>
+            </div>
+          </div>
+          <div class="stats-footer">最后更新：{{ lastUpdateTime }}</div>
+        </div>
       </div>
     </div>
 
-    <MusicPlayerBar @toggle-lyrics="showLyrics = !showLyrics" />
+    <MusicPlayerBar :accent-color="dynamicColor" @toggle-lyrics="showLyrics = !showLyrics" />
 
     <transition name="lyrics-fade">
       <div class="lyrics-overlay" v-show="showLyrics">
-        <LyricsPanel @close="showLyrics = false" />
+        <LyricsPanel :accent-color="dynamicColor" @close="showLyrics = false" />
       </div>
     </transition>
+
+    <Teleport to="body">
+      <div
+        v-if="contextMenu.visible"
+        class="context-menu"
+        :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
+        @click.stop
+      >
+        <div class="context-menu-item" @click="handleScrapeFromMenu">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          {{ scrapingId === contextMenu.trackId ? '刮削中...' : '刮削元数据' }}
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { MusicTrack } from '@/types/backend'
-import { getAllTracks, getMusicCoverArtUrl, scrapeMusicTrack, scrapeAllMusic } from '@/api/backend'
+import { getAllTracks, getMusicCoverArtUrl, getArtistImageUrl, scrapeMusicTrack, searchMusic } from '@/api/backend'
 import { usePlayerStore } from '@/stores/player'
 import MusicPlayerBar from '@/components/MusicPlayerBar.vue'
 import LyricsPanel from '@/components/LyricsPanel.vue'
+import SearchBar from '@/components/SearchBar.vue'
 
 const playerStore = usePlayerStore()
 const tracks = ref<MusicTrack[]>([])
 const loading = ref(false)
 const error = ref('')
 const showLyrics = ref(false)
-const scraping = ref(false)
-const scrapingIds = ref(new Set<number>())
+const scrapingId = ref<number | null>(null)
+const searchQuery = ref('')
+
+const trackColors: Record<string, string> = {
+  'LiSA': '#d63031',
+  '中岛美嘉': '#ff7675',
+  '蔡健雅': '#e17055',
+  '陈奕迅': '#0984e3',
+  '张碧晨': '#00b894',
+  '郭顶': '#6c5ce7',
+  '许嵩': '#fdcb6e',
+  '毛不易': '#e17055',
+  '汪苏泷': '#e84393',
+  '周杰伦': '#ea7a7a',
+  '张杰': '#00cec9',
+}
+
+const defaultColors = ['#ea7a7a', '#74b9ff', '#a29bfe', '#55efc4', '#ffeaa7', '#fab1a0', '#fd79a8', '#00b894']
+
+const dynamicColor = computed(() => {
+  const track = playerStore.currentTrack
+  if (!track) return 'var(--accent)'
+  if (trackColors[track.artist]) return trackColors[track.artist]
+  const hash = track.artist.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+  return defaultColors[hash % defaultColors.length]
+})
+
+const categories = [
+  { name: '最近播放', count: '32 首歌曲', bg: '#eaf2ff', color: '#4a82ff', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
+  { name: '我喜欢的', count: '128 首歌曲', bg: '#ffeff2', color: '#ea7a7a', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>' },
+  { name: '播放列表', count: '24 个列表', bg: '#f2f4f8', color: '#555', icon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>' },
+  { name: '最常播放', count: '56 首歌曲', bg: '#f2fcf5', color: '#45b883', icon: '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>' },
+  { name: '最近添加', count: '17 首歌曲', bg: '#faf0ff', color: '#a44aff', icon: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' },
+  { name: '本地音乐', count: '1,248 首歌曲', bg: '#fcf5f0', color: '#ff8744', icon: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
+]
+
+const playlists = [
+  { name: '清晨咖啡馆', count: 29, cover: 'https://picsum.photos/seed/cafe/300/300' },
+  { name: '独立民谣精选', count: 36, cover: 'https://picsum.photos/seed/bike/300/300' },
+  { name: '夜跑霓虹', count: 42, cover: 'https://picsum.photos/seed/neon/300/300' },
+  { name: '日系治愈', count: 31, cover: 'https://picsum.photos/seed/sunset/300/300' },
+  { name: '经典怀旧', count: 55, cover: 'https://picsum.photos/seed/vinyl/300/300' },
+]
+
+const artistRanking = computed(() => {
+  const map = new Map<string, { count: number; trackId: number }>()
+  for (const track of tracks.value) {
+    const existing = map.get(track.artist)
+    if (existing) {
+      existing.count++
+    } else {
+      map.set(track.artist, { count: 1, trackId: track.id })
+    }
+  }
+  return Array.from(map.entries())
+    .map(([name, data]) => ({
+      name,
+      count: data.count,
+      trackId: data.trackId,
+      color: trackColors[name] || defaultColors[name.charCodeAt(0) % defaultColors.length],
+    }))
+    .sort((a, b) => b.count - a.count)
+})
+
+const albumCount = computed(() => {
+  const albums = new Set(tracks.value.map(t => t.album).filter(Boolean))
+  return albums.size
+})
+
+const artistCount = computed(() => {
+  return new Set(tracks.value.map(t => t.artist)).size
+})
+
+const totalSize = computed(() => {
+  const total = tracks.value.reduce((sum, t) => sum + (t.fileSize || 0), 0)
+  const gb = total / (1024 * 1024 * 1024)
+  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(total / (1024 * 1024)).toFixed(0)} MB`
+})
+
+const lastUpdateTime = computed(() => {
+  if (tracks.value.length === 0) return '-'
+  const latest = tracks.value.reduce((latest, t) => {
+    const time = new Date(t.updatedAt || t.createdAt).getTime()
+    return time > latest ? time : latest
+  }, 0)
+  if (!latest) return '-'
+  const d = new Date(latest)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+})
+
+const genreTags = computed(() => {
+  const map = new Map<string, number>()
+  for (const track of tracks.value) {
+    if (track.genre) {
+      map.set(track.genre, (map.get(track.genre) || 0) + 1)
+    }
+  }
+  return Array.from(map.entries())
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8)
+})
+
+const contextMenu = ref({ visible: false, x: 0, y: 0, trackId: 0 })
+
+function onContextMenu(e: MouseEvent, track: MusicTrack) {
+  e.preventDefault()
+  contextMenu.value = { visible: true, x: e.clientX, y: e.clientY, trackId: track.id }
+}
+
+function closeContextMenu() {
+  contextMenu.value = { ...contextMenu.value, visible: false }
+}
+
+async function handleScrapeFromMenu() {
+  const id = contextMenu.value.trackId
+  closeContextMenu()
+  if (scrapingId.value !== null) return
+  scrapingId.value = id
+  try {
+    const updated = await scrapeMusicTrack(id)
+    if (updated) {
+      const idx = tracks.value.findIndex(t => t.id === id)
+      if (idx !== -1) tracks.value[idx] = updated
+    }
+  } catch (e) {
+    console.error('Scrape failed:', e)
+  } finally {
+    scrapingId.value = null
+  }
+}
+
+async function handleSearch() {
+  if (!searchQuery.value.trim()) {
+    await loadTracks()
+    return
+  }
+  error.value = ''
+  try {
+    tracks.value = await searchMusic(searchQuery.value)
+  } catch (e) {
+    error.value = '搜索失败'
+    console.error('Search failed:', e)
+  }
+}
 
 async function loadTracks() {
   loading.value = true
@@ -114,45 +394,32 @@ function playTrack(track: MusicTrack) {
   playerStore.playTrack(track, tracks.value)
 }
 
+function playAll() {
+  if (tracks.value.length > 0) {
+    playerStore.playTrack(tracks.value[0], tracks.value)
+  }
+}
+
+function shufflePlay() {
+  if (tracks.value.length > 0) {
+    const shuffled = [...tracks.value].sort(() => Math.random() - 0.5)
+    playerStore.playTrack(shuffled[0], shuffled)
+  }
+}
+
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-async function handleScrapeTrack(track: MusicTrack) {
-  if (scrapingIds.value.has(track.id)) return
-  scrapingIds.value.add(track.id)
-  try {
-    const updated = await scrapeMusicTrack(track.id)
-    if (updated) {
-      const idx = tracks.value.findIndex(t => t.id === track.id)
-      if (idx !== -1) tracks.value[idx] = updated
-    }
-  } catch (e) {
-    console.error('Failed to scrape track:', e)
-  } finally {
-    scrapingIds.value.delete(track.id)
-  }
-}
-
-async function handleScrapeAll() {
-  if (scraping.value) return
-  scraping.value = true
-  try {
-    const updated = await scrapeAllMusic()
-    if (updated.length > 0) {
-      const updatedMap = new Map(updated.map(t => [t.id, t]))
-      tracks.value = tracks.value.map(t => updatedMap.get(t.id) || t)
-    }
-  } catch (e) {
-    console.error('Failed to scrape all:', e)
-  } finally {
-    scraping.value = false
-  }
-}
-
-onMounted(loadTracks)
+onMounted(() => {
+  loadTracks()
+  document.addEventListener('click', closeContextMenu)
+})
+onUnmounted(() => {
+  document.removeEventListener('click', closeContextMenu)
+})
 </script>
 
 <style scoped>
@@ -160,128 +427,137 @@ onMounted(loadTracks)
   display: flex;
   flex-direction: column;
   height: 100%;
+  --dynamic-color: var(--accent);
 }
 
-.view-header {
-  padding: 24px 32px 16px;
-  flex-shrink: 0;
+.top-header {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  padding: 20px 24px 16px;
+  flex-shrink: 0;
+  background: var(--bg-primary);
 }
 
-.view-header h1 {
+.header-left h1 {
   font-family: var(--font-display);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 
 .view-subtitle {
   color: var(--text-secondary);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .header-actions {
   flex-shrink: 0;
 }
 
-.scrape-all-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.scrape-all-btn:hover:not(:disabled) {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--accent);
-}
-
-.scrape-all-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.loading-state,
-.error-state,
-.empty-state {
+.content-area {
   flex: 1;
   display: flex;
+  overflow: hidden;
+  gap: 12px;
+  padding: 0 8px;
+  padding-bottom: 50px;
+}
+
+/* 左侧歌曲列表 */
+.list-panel {
+  width: 550px;
+  flex-shrink: 0;
+  display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  color: var(--text-secondary);
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.error-state button {
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.error-state button:hover {
-  background: var(--accent-hover);
+  background: var(--bg-secondary);
+  border-radius: 16px;
+  margin: 0 8px;
 }
 
 .track-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 16px;
+  padding: 0 12px 0;
+}
+
+.list-header {
+  padding: 16px 20px 12px;
+  flex-shrink: 0;
+}
+
+.list-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.list-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.list-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.play-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  background: var(--dynamic-color);
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.play-all-btn:hover {
+  opacity: 0.85;
+}
+
+.shuffle-btn {
+  background: transparent;
+  color: var(--dynamic-color);
+  border: 1px solid var(--dynamic-color);
+}
+
+.shuffle-btn:hover {
+  background: var(--dynamic-color);
+  color: #fff;
+  opacity: 1;
 }
 
 .track-item {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-radius: var(--radius-md);
+  gap: 10px;
+  padding: 8px 12px;
+  margin-bottom: 2px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.2s ease;
 }
 
 .track-item:hover {
   background: var(--bg-hover);
+  transform: translateX(4px);
 }
 
 .track-item.active {
-  background: var(--accent-glow);
+  background: color-mix(in srgb, var(--dynamic-color) 10%, transparent);
 }
 
 .track-cover-small {
   width: 40px;
   height: 40px;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
   overflow: hidden;
   flex-shrink: 0;
   background: var(--bg-tertiary);
@@ -303,7 +579,7 @@ onMounted(loadTracks)
 
 .eq-bar {
   width: 3px;
-  background: var(--accent);
+  background: var(--dynamic-color);
   border-radius: 1px;
   animation: eq 0.5s ease-in-out infinite alternate;
 }
@@ -319,14 +595,14 @@ onMounted(loadTracks)
 
 .track-index {
   width: 24px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
   text-align: center;
   flex-shrink: 0;
 }
 
 .track-item:hover .track-index {
-  color: var(--accent);
+  color: var(--dynamic-color);
 }
 
 .track-info {
@@ -335,7 +611,7 @@ onMounted(loadTracks)
 }
 
 .track-title {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
   margin-bottom: 2px;
@@ -345,64 +621,401 @@ onMounted(loadTracks)
 }
 
 .track-item.active .track-title {
-  color: var(--accent);
+  color: var(--dynamic-color);
 }
 
 .track-artist {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 11px;
+  color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .track-duration {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 11px;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
-.scrape-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
+/* 中间主内容 */
+.main-panel {
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.main-scroll {
+  height: 100%;
+  overflow-y: auto;
+  padding-bottom: 100px;
+}
+
+.banner {
+  background: linear-gradient(135deg, #6b3e3e, #b25d5d);
+  border-radius: 16px;
+  padding: 40px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  margin: 0 0 24px 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.banner-text h2 {
+  font-size: 28px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  line-height: 1.3;
+}
+
+.banner-text p {
+  font-size: 15px;
+  opacity: 0.8;
+}
+
+.banner-visual {
+  flex-shrink: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.banner-img {
+  height: 140px;
+  object-fit: cover;
+  border-radius: 10px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+
+.banner-img-left {
+  width: 140px;
+  transform: rotate(-8deg);
+}
+
+.banner-img-right {
+  width: 220px;
+  transform: rotate(-3deg);
+}
+
+.section {
+  margin-bottom: 28px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 12px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.see-all {
+  font-size: 13px;
+  color: var(--dynamic-color);
+  cursor: pointer;
+}
+
+.see-all:hover {
+  opacity: 0.8;
+}
+
+.category-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.category-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.category-card:hover {
+  background: var(--bg-hover);
+  transform: translateY(-2px);
+}
+
+.cat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-muted);
-  background: none;
-  border: none;
-  cursor: pointer;
   flex-shrink: 0;
-  opacity: 0;
-  transition: var(--transition);
 }
 
-.track-item:hover .scrape-btn {
-  opacity: 1;
+.cat-info h4 {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
 }
 
-.scrape-btn:hover:not(:disabled) {
-  color: var(--accent);
-  background: var(--accent-glow);
+.cat-info p {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-.scrape-btn:disabled {
-  opacity: 1;
-  cursor: not-allowed;
+.playlist-scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 10px;
 }
 
-.scrape-btn.scraping {
-  opacity: 1;
+.playlist-scroll::-webkit-scrollbar {
+  height: 4px;
 }
 
-.scrape-spinner {
-  width: 14px;
-  height: 14px;
-  border: 2px solid var(--border);
-  border-top-color: var(--accent);
+.playlist-card {
+  flex-shrink: 0;
+  width: 140px;
+  cursor: pointer;
+}
+
+.pl-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.pl-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pl-play {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: #fff;
+  color: #000;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.playlist-card:hover .pl-play {
+  opacity: 1;
+}
+
+.pl-info h4 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pl-info p {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* 右侧面板 */
+.right-panel {
+  width: 400px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  margin: 0 8px;
+}
+
+.panel-section {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.panel-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.rank-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 4px 0;
+}
+
+.rank-item:last-child {
+  margin-bottom: 0;
+}
+
+.rank-num {
+  width: 18px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.rank-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.rank-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rank-info {
+  flex: 1;
+}
+
+.rank-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.rank-count {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.tags {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.tag {
+  padding: 6px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: 0.2s;
+  text-align: center;
+}
+
+.tag:hover {
+  opacity: 0.8;
+}
+
+.tag-0 { background: #f0f7ff; color: #4a82ff; }
+.tag-1 { background: #fff5f0; color: #ff7a4a; }
+.tag-2 { background: #f0fcf5; color: #2db87a; }
+.tag-3 { background: #faf0ff; color: #a44aff; }
+
+.rank-scroll {
+  flex: 1;
+  overflow-y: auto;
+  max-height: 400px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 8px 0;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-num {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.stats-footer {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding-top: 12px;
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+/* 其他 */
+.loading-state,
+.empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--dynamic-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .lyrics-overlay {
@@ -425,27 +1038,49 @@ onMounted(loadTracks)
 .lyrics-fade-enter-from,
 .lyrics-fade-leave-to {
   opacity: 0;
-  transform: translateY(10px);
 }
 
-.lyrics-fade-enter-to,
-.lyrics-fade-leave-from {
-  opacity: 1;
-  transform: translateY(0);
+.context-menu {
+  position: fixed;
+  z-index: 200;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  min-width: 160px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
-@media screen and (max-width: 767px) {
-  .view-header {
-    padding: 20px 16px 12px;
-    flex-direction: column;
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.context-menu-item:hover {
+  background: var(--bg-hover);
+}
+
+/* 响应式 */
+@media screen and (max-width: 1200px) {
+  .right-panel {
+    display: none;
+  }
+}
+
+@media screen and (max-width: 900px) {
+  .list-panel {
+    width: 100%;
   }
 
-  .track-item {
-    padding: 10px 12px;
-  }
-
-  .scrape-btn {
-    opacity: 1;
+  .main-panel {
+    display: none;
   }
 }
 </style>

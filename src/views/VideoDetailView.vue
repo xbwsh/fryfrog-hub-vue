@@ -13,7 +13,7 @@
     <div v-else-if="series" class="detail-content">
       <div class="hero-section">
         <div class="backdrop">
-          <img v-if="currentDisplayInfo.backdropUrl" :src="currentDisplayInfo.backdropUrl" :alt="currentDisplayInfo.title" @error="onImageError" />
+          <img v-if="currentDisplayInfo.backdropUrl" :src="currentDisplayInfo.backdropUrl" :alt="currentDisplayInfo.title" draggable="false" @error="onImageError" />
           <div class="backdrop-overlay"></div>
         </div>
 
@@ -31,6 +31,7 @@
               :src="currentDisplayInfo.posterUrl"
               :alt="currentDisplayInfo.title"
               class="poster-img"
+              draggable="false"
               @error="onImageError"
             />
             <div v-else class="poster-placeholder">
@@ -76,7 +77,7 @@
                 </svg>
                 从头播放
               </button>
-              <button class="icon-btn" v-if="series.rating > 0" :title="'评分 ' + series.rating">
+              <button class="icon-btn" v-if="series.rating! > 0" :title="'评分 ' + series.rating">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"/>
                   <polyline points="12 6 12 12 16 14"/>
@@ -84,8 +85,8 @@
               </button>
             </div>
 
-            <div class="rating-row" v-if="series.rating > 0">
-              <span class="rating-score">{{ series.rating.toFixed(1) }}</span>
+            <div class="rating-row" v-if="series.rating! > 0">
+              <span class="rating-score">{{ series.rating!.toFixed(1) }}</span>
             </div>
           </div>
         </div>
@@ -110,12 +111,12 @@
               <div class="episode-info">
                 <div class="episode-title">{{ episode.title }} - 第 {{ episode.episodeNumber }} 集</div>
                 <div class="episode-file">{{ episode.fileName }}</div>
-                <div v-if="episode.watchProgressPercent > 0" class="episode-progress">
+                <div v-if="episode.watchProgressPercent! > 0" class="episode-progress">
                   <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: Math.min(episode.watchProgressPercent, 100) + '%' }"></div>
+                    <div class="progress-fill" :style="{ width: Math.min(episode.watchProgressPercent!, 100) + '%' }"></div>
                   </div>
                   <span v-if="episode.watched" class="progress-text watched">已看完</span>
-                  <span v-else class="progress-text">{{ Math.round(episode.watchProgressPercent) }}%</span>
+                  <span v-else class="progress-text">{{ Math.round(episode.watchProgressPercent!) }}%</span>
                 </div>
               </div>
               <div class="episode-play">
@@ -150,7 +151,7 @@
     <div v-else-if="video" class="detail-content">
       <div class="hero-section">
         <div class="backdrop">
-          <img v-if="video.backdropUrl || video.id" :src="video.backdropUrl || getVideoFanartUrl(video.id)" :alt="video.title" @error="onImageError" />
+          <img v-if="video.backdropUrl || video.id" :src="video.backdropUrl || getVideoFanartUrl(video.id)" :alt="video.title" draggable="false" @error="onImageError" />
           <div class="backdrop-overlay"></div>
         </div>
 
@@ -168,6 +169,7 @@
               :src="video.posterUrl || getVideoPosterUrl(video.id)"
               :alt="video.title"
               class="poster-img"
+              draggable="false"
               @error="onImageError"
             />
             <div v-else class="poster-placeholder">
@@ -203,12 +205,12 @@
               <span class="tag" v-if="video.format">{{ video.format }}</span>
             </div>
 
-            <div v-if="video.watchProgressPercent > 0" class="video-progress">
+            <div v-if="video.watchProgressPercent! > 0" class="video-progress">
               <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: Math.min(video.watchProgressPercent, 100) + '%' }"></div>
+                <div class="progress-fill" :style="{ width: Math.min(video.watchProgressPercent!, 100) + '%' }"></div>
               </div>
               <span v-if="video.watched" class="progress-text watched">已看完</span>
-              <span v-else class="progress-text">{{ Math.round(video.watchProgressPercent) }}%</span>
+              <span v-else class="progress-text">{{ Math.round(video.watchProgressPercent!) }}%</span>
             </div>
 
             <div class="action-row">
@@ -216,10 +218,10 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
-                {{ video.watchPosition > 0 && !video.watched ? '继续播放' : '播放' }}
+                {{ video.watchPosition! > 0 && !video.watched ? '继续播放' : '播放' }}
               </button>
               <button
-                v-if="video.watchPosition > 0 && !video.watched"
+                v-if="video.watchPosition! > 0 && !video.watched"
                 class="play-btn secondary"
                 @click="resetAndPlay"
               >
@@ -238,7 +240,7 @@
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                 </svg>
               </button>
-              <button class="icon-btn" v-if="video.rating > 0" :title="'评分 ' + video.rating">
+              <button class="icon-btn" v-if="video.rating! > 0" :title="'评分 ' + video.rating">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <circle cx="12" cy="12" r="10"/>
                   <polyline points="12 6 12 12 16 14"/>
@@ -246,8 +248,8 @@
               </button>
             </div>
 
-            <div class="rating-row" v-if="video.rating > 0">
-              <span class="rating-score">{{ video.rating.toFixed(1) }}</span>
+            <div class="rating-row" v-if="video.rating! > 0">
+              <span class="rating-score">{{ video.rating!.toFixed(1) }}</span>
               <span class="rating-vote">{{ video.voteCount }} 票</span>
             </div>
           </div>
@@ -465,7 +467,7 @@ const currentDisplayInfo = computed(() => {
 
 const hasSeriesProgress = computed(() => {
   if (!series.value?.episodes) return false
-  return series.value.episodes.some(ep => ep.watchPosition > 0 && !ep.watched)
+  return series.value.episodes.some(ep => ep.watchPosition! > 0 && !ep.watched)
 })
 
 watch(() => route.params.id, (newId) => {

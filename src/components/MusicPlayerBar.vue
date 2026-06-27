@@ -1,9 +1,9 @@
 <template>
-  <div class="music-player-bar" v-if="playerStore.currentTrack">
+  <div class="music-player-bar" :style="{ '--player-color': accentColor }" v-if="playerStore.currentTrack">
     <div class="player-left">
       <div class="track-cover" @click="$emit('toggle-lyrics')">
         <img v-if="playerStore.currentTrack" :src="playerStore.getTrackCoverArt(playerStore.currentTrack, 60)"
-          alt="封面" />
+          alt="封面" draggable="false" />
       </div>
       <div class="track-info">
         <span class="track-title">{{ playerStore.currentTrack.title }}</span>
@@ -60,7 +60,13 @@ import AppIcon from '@/components/AppIcon.vue'
 
 const playerStore = usePlayerStore()
 
+const props = defineProps<{
+  accentColor?: string
+}>()
+
 defineEmits(['toggle-lyrics'])
+
+const accentColor = computed(() => props.accentColor || 'var(--accent)')
 
 const isFavorite = ref(false)
 
@@ -214,17 +220,17 @@ function formatTime(seconds: number): string {
 .play-btn {
   width: 40px;
   height: 40px;
-  background: var(--accent);
+  background: var(--player-color);
   color: white;
 }
 
 .play-btn:hover {
-  background: var(--accent-hover);
+  opacity: 0.85;
   transform: scale(1.05);
 }
 
 .mode-btn.active {
-  color: var(--accent);
+  color: var(--player-color);
 }
 
 .star-btn {
@@ -276,7 +282,7 @@ function formatTime(seconds: number): string {
 
 .progress-fill {
   height: 100%;
-  background: var(--accent);
+  background: var(--player-color);
   border-radius: 2px;
   transition: width 0.1s linear;
 }
@@ -300,7 +306,7 @@ function formatTime(seconds: number): string {
   height: 4px;
   -webkit-appearance: none;
   appearance: none;
-  background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--volume-percent, 80%), var(--bg-tertiary) var(--volume-percent, 80%), var(--bg-tertiary) 100%);
+  background: linear-gradient(to right, var(--player-color) 0%, var(--player-color) var(--volume-percent, 80%), var(--bg-tertiary) var(--volume-percent, 80%), var(--bg-tertiary) 100%);
   border-radius: 2px;
   outline: none;
   cursor: pointer;

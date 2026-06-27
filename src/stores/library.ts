@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import type { MusicTrack, LibraryRescanResult } from '@/types/backend'
+import type { MusicTrack } from '@/types/backend'
 import {
   getAllTracks,
   getLyrics,
@@ -90,12 +90,18 @@ export const useLibraryStore = defineStore('library', () => {
     }
   }
 
-  async function rescan(): Promise<LibraryRescanResult> {
+  async function rescan(): Promise<string> {
     loading.value = true
     error.value = null
     try {
       const result = await rescanLibrary()
-      return result
+      const modules = ['音乐', '漫画', '视频', '电子书']
+      const keys = ['music', 'comic', 'video', 'ebook'] as const
+      const messages = keys.map((key, i) => {
+        const mod = result[key]
+        return `${modules[i]}: ${mod.scanStatus}（清理 ${mod.cleanedCount} 条）`
+      })
+      return messages.join('\n')
     } catch (e) {
       error.value = '整理媒体库失败'
       throw e
