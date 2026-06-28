@@ -22,6 +22,7 @@ import type {
   TmdbStatus,
   ComicCharacter,
   VideoActor,
+  MusicPlaylist,
 } from '@/types/backend'
 
 const client = axios.create({
@@ -113,28 +114,6 @@ export function getArtistImageUrl(id: number): string {
 export async function getLyrics(id: number): Promise<string> {
   const response = await client.get<ApiResponse<string>>(`/api/v1/music/${id}/lyrics`)
   return response.data.data || ''
-}
-
-export async function scrapeMusicTrack(id: number): Promise<MusicTrack | undefined> {
-  const response = await client.post<ApiResponse<MusicTrack>>(`/api/v1/music/${id}/scrape`)
-  return response.data.data
-}
-
-export async function scrapeMusicByArtist(artist: string): Promise<MusicTrack[]> {
-  const response = await client.post<ApiResponse<MusicTrack[]>>('/api/v1/music/scrape/artist', null, {
-    params: { artist },
-  })
-  return response.data.data || []
-}
-
-export async function scrapeAllMusic(): Promise<MusicTrack[]> {
-  const response = await client.post<ApiResponse<MusicTrack[]>>('/api/v1/music/scrape/all')
-  return response.data.data || []
-}
-
-export async function getMusicScrapeStatus(): Promise<number> {
-  const response = await client.get<ApiResponse<number>>('/api/v1/music/scrape/status')
-  return response.data.data || 0
 }
 
 export async function getAllComics(): Promise<Comic[]> {
@@ -536,9 +515,75 @@ export async function getFavorites(): Promise<MusicTrack[]> {
   return response.data.data || []
 }
 
+export async function recordMusicPlay(id: number): Promise<void> {
+  await client.post(`/api/v1/music/${id}/play`)
+}
+
+export async function getRecentlyPlayed(): Promise<MusicTrack[]> {
+  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/recently-played')
+  return response.data.data || []
+}
+
+export async function getMostPlayed(): Promise<MusicTrack[]> {
+  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/most-played')
+  return response.data.data || []
+}
+
+export async function getRecentlyAdded(): Promise<MusicTrack[]> {
+  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/recently-added')
+  return response.data.data || []
+}
+
+export async function getMusicRecommendations(): Promise<Record<string, MusicTrack[]>> {
+  const response = await client.get<ApiResponse<Record<string, MusicTrack[]>>>('/api/v1/music/recommendations')
+  return response.data.data || {}
+}
+
+export async function getPlaylists(): Promise<MusicPlaylist[]> {
+  const response = await client.get<ApiResponse<MusicPlaylist[]>>('/api/v1/music/playlists')
+  return response.data.data || []
+}
+
+export async function createPlaylist(name: string, description?: string): Promise<MusicPlaylist> {
+  const response = await client.post<ApiResponse<MusicPlaylist>>('/api/v1/music/playlists', { name, description })
+  return response.data.data
+}
+
+export async function updatePlaylist(id: number, name: string, description?: string): Promise<MusicPlaylist> {
+  const response = await client.put<ApiResponse<MusicPlaylist>>(`/api/v1/music/playlists/${id}`, { name, description })
+  return response.data.data
+}
+
+export async function deletePlaylist(id: number): Promise<void> {
+  await client.delete(`/api/v1/music/playlists/${id}`)
+}
+
+export async function getPlaylistTracks(id: number): Promise<MusicTrack[]> {
+  const response = await client.get<ApiResponse<MusicTrack[]>>(`/api/v1/music/playlists/${id}/tracks`)
+  return response.data.data || []
+}
+
+export async function addTrackToPlaylist(playlistId: number, trackId: number): Promise<void> {
+  await client.post(`/api/v1/music/playlists/${playlistId}/tracks`, { trackId })
+}
+
+export async function removeTrackFromPlaylist(playlistId: number, trackId: number): Promise<void> {
+  await client.delete(`/api/v1/music/playlists/${playlistId}/tracks/${trackId}`)
+}
+
 export async function rescanLibrary(): Promise<LibraryRescanResult> {
   const response = await client.post<ApiResponse<LibraryRescanResult>>('/api/v1/library/rescan')
   return response.data.data
+}
+
+export async function rescanMusic(): Promise<string> {
+  const response = await client.post<ApiResponse<string>>('/api/v1/music/rescan')
+  return response.data.data || ''
+}
+
+export async function reorganizeMusic(): Promise<number> {
+  const response = await client.post<ApiResponse<number>>('/api/v1/music/reorganize')
+  return response.data.data || 0
 }
 
 export async function scanDirectory(path: string): Promise<string> {

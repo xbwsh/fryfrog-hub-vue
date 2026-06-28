@@ -117,14 +117,14 @@ defineProps<{
   accentColor?: string
 }>()
 
-defineEmits(['close'])
+const emit = defineEmits(['close', 'favorite-changed'])
 
 const lyricsContainer = ref<HTMLElement>()
 const bgOverlay = ref<HTMLElement>()
 let bgAnimationFrame: number | null = null
 
 const layoutMode = ref<'full' | 'split'>('full')
-const lyricsSource = ref<'内嵌' | '外挂' | ''>('')
+const lyricsSource = ref<string>('')
 const fetchedLyrics = ref('')
 
 const isStarred = computed(() => {
@@ -141,6 +141,7 @@ async function toggleStarred() {
   } catch {
     // silent
   }
+  emit('favorite-changed')
 }
 
 function toggleLayoutMode() {
@@ -241,14 +242,15 @@ const parsedLyrics = computed(() => {
   if (!currentLyrics.value) return []
   const lines = currentLyrics.value.split('\n')
   const result: { time: number; text: string }[] = []
-  const timeRegex = /\[(\d{2}):(\d{2})\.(\d{2,3})\]/
+  const timeRegex = /\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/
   for (const line of lines) {
     const match = line.match(timeRegex)
     if (match) {
       const mins = parseInt(match[1])
       const secs = parseInt(match[2])
-      const ms = parseInt(match[3])
-      const time = mins * 60 + secs + ms / 1000
+      const ms = match[3] ? parseInt(match[3]) : 0
+      const divisor = match[3] && match[3].length === 3 ? 1000 : 100
+      const time = mins * 60 + secs + ms / divisor
       const text = line.replace(timeRegex, '').trim()
       if (text) result.push({ time, text })
     }

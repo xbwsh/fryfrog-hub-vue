@@ -6,6 +6,19 @@
         <p class="view-subtitle">管理你的音乐库</p>
       </div>
       <div class="header-actions">
+        <button class="rescan-btn" :disabled="rescanning" @click="handleRescan">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          {{ rescanning ? '扫描中...' : '扫描音乐' }}
+        </button>
+        <button class="rescan-btn" :disabled="reorganizing" @click="handleReorganize">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+          {{ reorganizing ? '整理中...' : '整理文件' }}
+        </button>
         <SearchBar v-model="searchQuery" placeholder="搜索音乐、歌手、专辑..." @debounced="handleSearch" />
       </div>
     </div>
@@ -15,7 +28,7 @@
       <div class="list-panel">
         <div class="list-header">
           <div class="list-title-row">
-            <span class="list-title">全部歌曲 ({{ tracks.length }})</span>
+            <span class="list-title">{{ activeCategory || '全部歌曲' }} ({{ tracks.length }})</span>
             <div class="list-actions">
               <button class="play-all-btn" @click="playAll">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -93,7 +106,7 @@
               <h3>快速分类</h3>
             </div>
             <div class="category-grid">
-              <div class="category-card" v-for="cat in categories" :key="cat.name">
+              <div class="category-card" v-for="cat in categories" :key="cat.name" :class="{ active: activeCategory === cat.name }" @click="filterByCategory(cat.name)">
                 <div class="cat-icon" :style="{ background: cat.bg, color: cat.color }">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="cat.icon"/>
                 </div>
@@ -109,12 +122,21 @@
           <div class="section">
             <div class="section-header">
               <h3>推荐歌单</h3>
-              <a class="see-all">查看全部</a>
             </div>
             <div class="playlist-scroll">
-              <div v-for="pl in playlists" :key="pl.name" class="playlist-card">
+              <div
+                v-for="(tracks, category) in recommendations"
+                :key="category"
+                class="playlist-card"
+                @click="playRecommendation(tracks)"
+              >
                 <div class="pl-img-wrap">
-                  <img :src="pl.cover" alt="封面" draggable="false" />
+                  <img
+                    v-if="tracks.length > 0"
+                    :src="getMusicCoverArtUrl(tracks[0].id)"
+                    alt=""
+                    draggable="false"
+                  />
                   <div class="pl-play">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                       <polygon points="5 3 19 12 5 21 5 3"/>
@@ -122,8 +144,8 @@
                   </div>
                 </div>
                 <div class="pl-info">
-                  <h4>{{ pl.name }}</h4>
-                  <p>{{ pl.count }} 首歌曲</p>
+                  <h4>{{ category }}</h4>
+                  <p>{{ tracks.length }} 首歌曲</p>
                 </div>
               </div>
             </div>
@@ -189,11 +211,11 @@
       </div>
     </div>
 
-    <MusicPlayerBar :accent-color="dynamicColor" @toggle-lyrics="showLyrics = !showLyrics" />
+    <MusicPlayerBar :accent-color="dynamicColor" @toggle-lyrics="showLyrics = !showLyrics" @favorite-changed="() => { loadFavoriteCount(); loadCategoryCounts() }" />
 
     <transition name="lyrics-fade">
       <div class="lyrics-overlay" v-show="showLyrics">
-        <LyricsPanel :accent-color="dynamicColor" @close="showLyrics = false" />
+        <LyricsPanel :accent-color="dynamicColor" @close="showLyrics = false" @favorite-changed="() => { loadFavoriteCount(); loadCategoryCounts() }" />
       </div>
     </transition>
 
@@ -204,13 +226,6 @@
         :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
         @click.stop
       >
-        <div class="context-menu-item" @click="handleScrapeFromMenu">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"/>
-            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          {{ scrapingId === contextMenu.trackId ? '刮削中...' : '刮削元数据' }}
-        </div>
       </div>
     </Teleport>
   </div>
@@ -219,7 +234,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { MusicTrack } from '@/types/backend'
-import { getAllTracks, getMusicCoverArtUrl, getArtistImageUrl, scrapeMusicTrack, searchMusic } from '@/api/backend'
+import { getAllTracks, getMusicCoverArtUrl, getArtistImageUrl, searchMusic, getFavorites, getRecentlyPlayed, getMostPlayed, getRecentlyAdded, recordMusicPlay, getMusicRecommendations, rescanMusic, reorganizeMusic } from '@/api/backend'
 import { usePlayerStore } from '@/stores/player'
 import MusicPlayerBar from '@/components/MusicPlayerBar.vue'
 import LyricsPanel from '@/components/LyricsPanel.vue'
@@ -230,7 +245,8 @@ const tracks = ref<MusicTrack[]>([])
 const loading = ref(false)
 const error = ref('')
 const showLyrics = ref(false)
-const scrapingId = ref<number | null>(null)
+const rescanning = ref(false)
+const reorganizing = ref(false)
 const searchQuery = ref('')
 
 const trackColors: Record<string, string> = {
@@ -257,22 +273,22 @@ const dynamicColor = computed(() => {
   return defaultColors[hash % defaultColors.length]
 })
 
-const categories = [
-  { name: '最近播放', count: '32 首歌曲', bg: '#eaf2ff', color: '#4a82ff', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
-  { name: '我喜欢的', count: '128 首歌曲', bg: '#ffeff2', color: '#ea7a7a', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>' },
-  { name: '播放列表', count: '24 个列表', bg: '#f2f4f8', color: '#555', icon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>' },
-  { name: '最常播放', count: '56 首歌曲', bg: '#f2fcf5', color: '#45b883', icon: '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>' },
-  { name: '最近添加', count: '17 首歌曲', bg: '#faf0ff', color: '#a44aff', icon: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' },
-  { name: '本地音乐', count: '1,248 首歌曲', bg: '#fcf5f0', color: '#ff8744', icon: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
-]
+const favoriteCount = ref(0)
+const recentlyPlayedCount = ref(0)
+const mostPlayedCount = ref(0)
+const recentlyAddedCount = ref(0)
+const activeCategory = ref<string | null>(null)
+const allTracks = ref<MusicTrack[]>([])
 
-const playlists = [
-  { name: '清晨咖啡馆', count: 29, cover: 'https://picsum.photos/seed/cafe/300/300' },
-  { name: '独立民谣精选', count: 36, cover: 'https://picsum.photos/seed/bike/300/300' },
-  { name: '夜跑霓虹', count: 42, cover: 'https://picsum.photos/seed/neon/300/300' },
-  { name: '日系治愈', count: 31, cover: 'https://picsum.photos/seed/sunset/300/300' },
-  { name: '经典怀旧', count: 55, cover: 'https://picsum.photos/seed/vinyl/300/300' },
-]
+const categories = computed(() => [
+  { name: '最近播放', count: `${recentlyPlayedCount.value} 首歌曲`, bg: '#eaf2ff', color: '#4a82ff', icon: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' },
+  { name: '我喜欢的', count: `${favoriteCount.value} 首歌曲`, bg: '#ffeff2', color: '#ea7a7a', icon: '<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>' },
+  { name: '最常播放', count: `${mostPlayedCount.value} 首歌曲`, bg: '#f2fcf5', color: '#45b883', icon: '<path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>' },
+  { name: '最近添加', count: `${recentlyAddedCount.value} 首歌曲`, bg: '#faf0ff', color: '#a44aff', icon: '<line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>' },
+  { name: '本地音乐', count: `${allTracks.value.length.toLocaleString()} 首歌曲`, bg: '#fcf5f0', color: '#ff8744', icon: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/>' },
+])
+
+const recommendations = ref<Record<string, MusicTrack[]>>({})
 
 const artistRanking = computed(() => {
   const map = new Map<string, { count: number; trackId: number }>()
@@ -345,27 +361,13 @@ function closeContextMenu() {
   contextMenu.value = { ...contextMenu.value, visible: false }
 }
 
-async function handleScrapeFromMenu() {
-  const id = contextMenu.value.trackId
-  closeContextMenu()
-  if (scrapingId.value !== null) return
-  scrapingId.value = id
-  try {
-    const updated = await scrapeMusicTrack(id)
-    if (updated) {
-      const idx = tracks.value.findIndex(t => t.id === id)
-      if (idx !== -1) tracks.value[idx] = updated
-    }
-  } catch (e) {
-    console.error('Scrape failed:', e)
-  } finally {
-    scrapingId.value = null
-  }
-}
-
 async function handleSearch() {
   if (!searchQuery.value.trim()) {
-    await loadTracks()
+    if (activeCategory.value) {
+      await filterByCategory(activeCategory.value)
+    } else {
+      tracks.value = allTracks.value
+    }
     return
   }
   error.value = ''
@@ -381,7 +383,8 @@ async function loadTracks() {
   loading.value = true
   error.value = ''
   try {
-    tracks.value = await getAllTracks()
+    allTracks.value = await getAllTracks()
+    tracks.value = allTracks.value
   } catch (e) {
     error.value = '加载音乐失败'
     console.error('Failed to load tracks:', e)
@@ -390,8 +393,63 @@ async function loadTracks() {
   }
 }
 
+async function loadFavoriteCount() {
+  try {
+    const favorites = await getFavorites()
+    favoriteCount.value = favorites.length
+  } catch (e) {
+    console.error('Failed to load favorites:', e)
+  }
+}
+
+async function loadCategoryCounts() {
+  try {
+    const [recent, popular, added] = await Promise.all([
+      getRecentlyPlayed(),
+      getMostPlayed(),
+      getRecentlyAdded(),
+    ])
+    recentlyPlayedCount.value = recent.length
+    mostPlayedCount.value = popular.length
+    recentlyAddedCount.value = added.length
+  } catch (e) {
+    console.error('Failed to load category counts:', e)
+  }
+}
+
+async function filterByCategory(name: string) {
+  if (activeCategory.value === name) {
+    activeCategory.value = null
+    tracks.value = allTracks.value
+    return
+  }
+  activeCategory.value = name
+  try {
+    switch (name) {
+      case '本地音乐':
+        tracks.value = allTracks.value
+        break
+      case '我喜欢的':
+        tracks.value = await getFavorites()
+        break
+      case '最近播放':
+        tracks.value = await getRecentlyPlayed()
+        break
+      case '最常播放':
+        tracks.value = await getMostPlayed()
+        break
+      case '最近添加':
+        tracks.value = await getRecentlyAdded()
+        break
+    }
+  } catch (e) {
+    console.error('Failed to filter:', e)
+  }
+}
+
 function playTrack(track: MusicTrack) {
   playerStore.playTrack(track, tracks.value)
+  recordMusicPlay(track.id).catch(() => {})
 }
 
 function playAll() {
@@ -407,14 +465,60 @@ function shufflePlay() {
   }
 }
 
+function playRecommendation(trackList: MusicTrack[]) {
+  if (trackList.length > 0) {
+    playerStore.playTrack(trackList[0], trackList)
+  }
+}
+
+async function handleRescan() {
+  if (rescanning.value) return
+  rescanning.value = true
+  try {
+    await rescanMusic()
+    await loadTracks()
+    loadCategoryCounts()
+    loadFavoriteCount()
+    loadRecommendations()
+  } catch (e) {
+    console.error('Rescan failed:', e)
+  } finally {
+    rescanning.value = false
+  }
+}
+
+async function handleReorganize() {
+  if (reorganizing.value) return
+  reorganizing.value = true
+  try {
+    await reorganizeMusic()
+    await loadTracks()
+  } catch (e) {
+    console.error('Reorganize failed:', e)
+  } finally {
+    reorganizing.value = false
+  }
+}
+
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
+async function loadRecommendations() {
+  try {
+    recommendations.value = await getMusicRecommendations()
+  } catch (e) {
+    console.error('Failed to load recommendations:', e)
+  }
+}
+
 onMounted(() => {
   loadTracks()
+  loadFavoriteCount()
+  loadCategoryCounts()
+  loadRecommendations()
   document.addEventListener('click', closeContextMenu)
 })
 onUnmounted(() => {
@@ -453,6 +557,34 @@ onUnmounted(() => {
 
 .header-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rescan-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.rescan-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.rescan-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .content-area {
@@ -753,6 +885,11 @@ onUnmounted(() => {
   transform: translateY(-2px);
 }
 
+.category-card.active {
+  background: color-mix(in srgb, var(--dynamic-color) 10%, transparent);
+  border-color: var(--dynamic-color);
+}
+
 .cat-icon {
   width: 40px;
   height: 40px;
@@ -772,6 +909,74 @@ onUnmounted(() => {
 
 .cat-info p {
   font-size: 12px;
+  color: var(--text-muted);
+}
+
+.playlist-scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.playlist-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.playlist-card {
+  flex-shrink: 0;
+  width: 140px;
+  cursor: pointer;
+}
+
+.pl-img-wrap {
+  position: relative;
+  width: 100%;
+  height: 140px;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+  background: var(--bg-tertiary);
+}
+
+.pl-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pl-play {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: #fff;
+  color: #000;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.playlist-card:hover .pl-play {
+  opacity: 1;
+}
+
+.pl-info h4 {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pl-info p {
+  font-size: 11px;
   color: var(--text-muted);
 }
 

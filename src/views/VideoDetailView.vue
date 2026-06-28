@@ -98,32 +98,72 @@
         </div>
 
         <div class="section">
-          <h3>剧集列表</h3>
-          <div class="episode-list">
+          <div class="section-header">
+            <h3>剧集</h3>
+            <div class="view-mode-toggle">
+              <button :class="{ active: episodeViewMode === 'poster' }" @click="episodeViewMode = 'poster'" title="海报预览">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="13" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="18" x2="12" y2="21"/></svg>
+              </button>
+              <button :class="{ active: episodeViewMode === 'compact' }" @click="episodeViewMode = 'compact'" title="紧凑视图">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 海报预览视图 -->
+          <div v-if="episodeViewMode === 'poster'" class="episode-poster-grid">
             <div
               v-for="episode in series.episodes"
               :key="episode.id"
-              class="episode-item"
+              class="episode-poster-card"
               :class="{ active: episode.id === video?.id }"
               @click="selectEpisode(episode)"
             >
-              <div class="episode-number">{{ episode.episodeNumber }}</div>
-              <div class="episode-info">
-                <div class="episode-title">{{ episode.title }} - 第 {{ episode.episodeNumber }} 集</div>
-                <div class="episode-file">{{ episode.fileName }}</div>
-                <div v-if="episode.watchProgressPercent! > 0" class="episode-progress">
+              <div class="poster-thumb">
+                <img
+                  v-if="episode.backdropUrl"
+                  :src="episode.backdropUrl"
+                  :alt="'第 ' + episode.episodeNumber + ' 集'"
+                  draggable="false"
+                />
+                <img
+                  v-else
+                  :src="getVideoFanartUrl(episode.id)"
+                  :alt="'第 ' + episode.episodeNumber + ' 集'"
+                  draggable="false"
+                  @error="onImageError"
+                />
+                <div class="poster-overlay">
+                  <div class="poster-play-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                  </div>
+                </div>
+                <div v-if="episode.watchProgressPercent! > 0" class="poster-progress">
                   <div class="progress-bar">
                     <div class="progress-fill" :style="{ width: Math.min(episode.watchProgressPercent!, 100) + '%' }"></div>
                   </div>
-                  <span v-if="episode.watched" class="progress-text watched">已看完</span>
-                  <span v-else class="progress-text">{{ Math.round(episode.watchProgressPercent!) }}%</span>
                 </div>
+                <div v-if="episode.watched" class="poster-watched-badge">已看完</div>
               </div>
-              <div class="episode-play">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
+              <div class="poster-info">
+                <div class="poster-ep-num">第 {{ episode.episodeNumber }} 集</div>
+                <div class="poster-title">{{ episode.title }}</div>
               </div>
+            </div>
+          </div>
+
+          <!-- 紧凑视图 -->
+          <div v-else class="episode-compact-list">
+            <div
+              v-for="episode in series.episodes"
+              :key="episode.id"
+              class="compact-item"
+              :class="{ active: episode.id === video?.id, watched: episode.watched }"
+              @click="selectEpisode(episode)"
+            >
+              {{ episode.episodeNumber }}
             </div>
           </div>
         </div>
@@ -346,6 +386,8 @@ const series = ref<SeriesDTO | null>(null)
 const loading = ref(false)
 const error = ref('')
 const showPlayer = ref(false)
+type EpisodeViewMode = 'poster' | 'compact'
+const episodeViewMode = ref<EpisodeViewMode>('poster')
 
 async function loadVideo() {
   const id = Number(route.params.id)
@@ -527,12 +569,14 @@ onMounted(loadVideo)
 
 .hero-section {
   position: relative;
-  min-height: 380px;
 }
 
 .backdrop {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 800px;
   overflow: hidden;
 }
 
@@ -548,7 +592,7 @@ onMounted(loadVideo)
   background: linear-gradient(
     to bottom,
     rgba(0, 0, 0, 0.3) 0%,
-    rgba(0, 0, 0, 0.6) 50%,
+    rgba(0, 0, 0, 0.5) 60%,
     var(--bg-primary) 100%
   );
 }
@@ -748,6 +792,8 @@ onMounted(loadVideo)
   max-width: 1200px;
   margin: 0 auto;
   padding: 0 48px 48px;
+  position: relative;
+  z-index: 3;
 }
 
 .overview-section {
@@ -763,13 +809,6 @@ onMounted(loadVideo)
 
 .section {
   margin-bottom: 32px;
-}
-
-.section h3 {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 16px;
 }
 
 .actor-list {
@@ -1023,5 +1062,197 @@ onMounted(loadVideo)
 
 .episode-item:hover .episode-play {
   color: var(--accent);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0;
+}
+
+.view-mode-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 2px;
+}
+
+.view-mode-toggle button {
+  width: 32px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--transition);
+}
+
+.view-mode-toggle button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.view-mode-toggle button:hover {
+  color: var(--text-primary);
+}
+
+.view-mode-toggle button.active {
+  background: var(--accent);
+  color: white;
+}
+
+.episode-poster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.episode-poster-card {
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.episode-poster-card:hover {
+  transform: translateY(-4px);
+}
+
+.episode-poster-card.active .poster-thumb {
+  outline: 2px solid var(--accent);
+}
+
+.poster-thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  margin-bottom: 8px;
+}
+
+.poster-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.poster-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.episode-poster-card:hover .poster-overlay {
+  opacity: 1;
+}
+
+.poster-play-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.poster-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.poster-progress .progress-bar {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.poster-progress .progress-fill {
+  background: var(--accent);
+}
+
+.poster-watched-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 8px;
+  background: rgba(46, 204, 113, 0.9);
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 4px;
+}
+
+.poster-info {
+  padding: 0 2px;
+}
+
+.poster-ep-num {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.poster-title {
+  font-size: 13px;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.episode-compact-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
+  gap: 8px;
+}
+
+.compact-item {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.compact-item:hover {
+  background: var(--bg-hover);
+}
+
+.compact-item.active {
+  background: var(--accent);
+  color: white;
+}
+
+.compact-item.watched {
+  opacity: 0.5;
 }
 </style>

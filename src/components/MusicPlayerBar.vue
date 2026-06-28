@@ -64,7 +64,7 @@ const props = defineProps<{
   accentColor?: string
 }>()
 
-defineEmits(['toggle-lyrics'])
+const emit = defineEmits(['toggle-lyrics', 'favorite-changed'])
 
 const accentColor = computed(() => props.accentColor || 'var(--accent)')
 
@@ -100,6 +100,7 @@ async function toggleFavoriteStatus() {
   } catch (e) {
     console.error('Failed to toggle favorite:', e)
   }
+  emit('favorite-changed')
 }
 
 function setVolume(e: Event) {

@@ -235,45 +235,6 @@
       <div class="section-title">音乐</div>
       <div class="setting-item">
         <div class="item-info">
-          <h3 class="item-label">刮削总开关</h3>
-          <p class="item-description">启用或禁用音乐刮削功能</p>
-        </div>
-        <button
-          class="toggle-switch"
-          :class="{ active: musicScrapeEnabled }"
-          @click="toggleMusicSetting('music.scrape.enabled', musicScrapeEnabled)"
-        >
-          <span class="toggle-thumb"></span>
-        </button>
-      </div>
-      <div class="setting-item">
-        <div class="item-info">
-          <h3 class="item-label">自动刮削</h3>
-          <p class="item-description">扫描音乐时自动刮削歌词和封面</p>
-        </div>
-        <button
-          class="toggle-switch"
-          :class="{ active: musicAutoScrape }"
-          @click="toggleMusicSetting('music.scrape.auto-scrape', musicAutoScrape)"
-        >
-          <span class="toggle-thumb"></span>
-        </button>
-      </div>
-      <div class="setting-item">
-        <div class="item-info">
-          <h3 class="item-label">元数据回写</h3>
-          <p class="item-description">将刮削到的元数据写回音频文件</p>
-        </div>
-        <button
-          class="toggle-switch"
-          :class="{ active: musicAutoWriteback }"
-          @click="toggleMusicSetting('music.auto-writeback', musicAutoWriteback)"
-        >
-          <span class="toggle-thumb"></span>
-        </button>
-      </div>
-      <div class="setting-item">
-        <div class="item-info">
           <h3 class="item-label">按文件夹整理</h3>
           <p class="item-description">按艺术家文件夹结构整理音乐</p>
         </div>
@@ -466,9 +427,6 @@ const comicAutoScrape = ref(false)
 const comicMinScore = ref(0)
 
 // Music settings
-const musicScrapeEnabled = ref(true)
-const musicAutoScrape = ref(false)
-const musicAutoWriteback = ref(true)
 const musicUseFolderStructure = ref(true)
 const musicDefaultArtist = ref('')
 const musicLyricsFallback = ref(true)
@@ -496,9 +454,6 @@ async function loadSettings() {
       getSetting('anilist.min-score'),
       getSetting('comic.auto-scrape'),
       getSetting('comic.min-score'),
-      getSetting('music.scrape.enabled'),
-      getSetting('music.scrape.auto-scrape'),
-      getSetting('music.auto-writeback'),
       getSetting('music.use-folder-structure'),
       getSetting('music.default-artist'),
       getSetting('music.scrape.lyrics-fallback'),
@@ -519,16 +474,13 @@ async function loadSettings() {
     if (settings[9]) anilistMinScore.value = parseFloat(settings[9].value) || 0
     if (settings[10]) comicAutoScrape.value = settings[10].value === 'true'
     if (settings[11]) comicMinScore.value = parseFloat(settings[11].value) || 0
-    if (settings[12]) musicScrapeEnabled.value = settings[12].value !== 'false'
-    if (settings[13]) musicAutoScrape.value = settings[13].value === 'true'
-    if (settings[14]) musicAutoWriteback.value = settings[14].value !== 'false'
-    if (settings[15]) musicUseFolderStructure.value = settings[15].value !== 'false'
-    if (settings[16]) musicDefaultArtist.value = settings[16].value
-    if (settings[17]) musicLyricsFallback.value = settings[17].value !== 'false'
-    if (settings[18]) musicCoverFallback.value = settings[18].value !== 'false'
-    if (settings[19]) periodicScan.value = settings[19].value === 'true'
+    if (settings[12]) musicUseFolderStructure.value = settings[12].value !== 'false'
+    if (settings[13]) musicDefaultArtist.value = settings[13].value
+    if (settings[14]) musicLyricsFallback.value = settings[14].value !== 'false'
+    if (settings[15]) musicCoverFallback.value = settings[15].value !== 'false'
+    if (settings[16]) periodicScan.value = settings[16].value === 'true'
 
-    const perfSettings = settings[20]
+    const perfSettings = settings[17]
     if (perfSettings) {
       periodicScanInterval.value = perfSettings['watcher.periodic-scan-interval'] || 300
       scraperThreads.value = perfSettings['hub.tmdb.scraper-threads'] || 1
@@ -605,9 +557,6 @@ async function saveMusicSetting(key: string, value: string) {
 async function toggleMusicSetting(key: string, currentValue: boolean) {
   const newValue = !currentValue
   await updateSetting(key, String(newValue))
-  if (key === 'music.scrape.enabled') musicScrapeEnabled.value = newValue
-  if (key === 'music.scrape.auto-scrape') musicAutoScrape.value = newValue
-  if (key === 'music.auto-writeback') musicAutoWriteback.value = newValue
   if (key === 'music.use-folder-structure') musicUseFolderStructure.value = newValue
   if (key === 'music.scrape.lyrics-fallback') musicLyricsFallback.value = newValue
   if (key === 'music.scrape.cover-fallback') musicCoverFallback.value = newValue

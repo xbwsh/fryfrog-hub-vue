@@ -343,3 +343,13 @@ export interface TmdbStatus {
   'auto-scrape': boolean
   'include-adult': boolean
 }
+
+export interface MusicPlaylist {
+  id: number
+  name: string
+  description: string | null
+  trackCount: number
+  createdAt: string
+  updatedAt: string
+}
+
