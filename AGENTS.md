@@ -48,6 +48,7 @@ npm run build        # vue-tsc -b && vite build
 - **视频**：`/videos` — MoviesView.vue
   - 视频详情：`/videos/:id` — VideoDetailView.vue
 - **设置**：`/settings` — SettingsView.vue
+- **资源库**：`/media-libraries` — MediaLibraryView.vue
 - **图标库**：`/icons` — IconLibrary.vue
 
 ## 注意事项

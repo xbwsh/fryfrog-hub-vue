@@ -77,12 +77,36 @@
                 </svg>
                 从头播放
               </button>
-              <button class="icon-btn" v-if="series.rating! > 0" :title="'评分 ' + series.rating">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-              </button>
+              <Tooltip content="刮削元数据" placement="bottom">
+                <button class="icon-btn scrape-btn" @click="showTmdbSearch = true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                </button>
+              </Tooltip>
+              <Tooltip content="刷新元数据" placement="bottom">
+                <button class="icon-btn" v-if="series.tmdbId" @click="handleRefreshTmdb" :disabled="refreshing">
+                  <svg v-if="!refreshing" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  <div v-else class="scrape-spinner-small"></div>
+                </button>
+              </Tooltip>
+              <Tooltip content="解绑 TMDB" placement="bottom">
+                <button class="icon-btn" v-if="series.tmdbId" @click="handleUnbindTmdb">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </Tooltip>
+              <Tooltip content="复制播放链接" placement="bottom">
+                <button class="icon-btn" @click="copyStreamUrl">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </button>
+              </Tooltip>
             </div>
 
             <div class="rating-row" v-if="series.rating! > 0">
@@ -95,6 +119,25 @@
       <div class="detail-body">
         <div class="overview-section" v-if="currentDisplayInfo.overview">
           <p>{{ currentDisplayInfo.overview }}</p>
+        </div>
+
+        <div class="section" v-if="actors.length > 0">
+          <h3>演职人员</h3>
+          <div class="actor-list">
+            <div class="actor-item" v-for="actor in actors" :key="actor.id">
+              <img v-if="actor.imagePath || actor.imageUrl" :src="getVideoActorImageUrl(actor.id)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
+              <div v-else class="actor-avatar-placeholder">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </div>
+              <div class="actor-info">
+                <span class="actor-name">{{ actor.name }}</span>
+                <span class="actor-character" v-if="actor.character">{{ actor.character }}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="section">
@@ -270,22 +313,47 @@
                 </svg>
                 从头播放
               </button>
-              <button
-                class="icon-btn"
-                :class="{ active: video.favorite }"
-                @click="handleToggleFavorite"
-                :title="video.favorite ? '取消收藏' : '收藏'"
-              >
+              <Tooltip content="刮削元数据" placement="bottom">
+                <button class="icon-btn scrape-btn" @click="showTmdbSearch = true">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                  </svg>
+                </button>
+              </Tooltip>
+              <Tooltip content="刷新元数据" placement="bottom">
+                <button class="icon-btn" v-if="video.tmdbId" @click="handleRefreshTmdb" :disabled="refreshing">
+                  <svg v-if="!refreshing" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                  </svg>
+                  <div v-else class="scrape-spinner-small"></div>
+                </button>
+              </Tooltip>
+              <Tooltip content="解绑 TMDB" placement="bottom">
+                <button class="icon-btn" v-if="video.tmdbId" @click="handleUnbindTmdb">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </Tooltip>
+              <Tooltip :content="video.favorite ? '取消收藏' : '收藏'" placement="bottom">
+                <button
+                  class="icon-btn"
+                  :class="{ active: video.favorite }"
+                  @click="handleToggleFavorite"
+                >
                 <svg width="18" height="18" viewBox="0 0 24 24" :fill="video.favorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                 </svg>
               </button>
-              <button class="icon-btn" v-if="video.rating! > 0" :title="'评分 ' + video.rating">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-              </button>
+              </Tooltip>
+              <Tooltip content="复制播放链接" placement="bottom">
+                <button class="icon-btn" @click="copyStreamUrl">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                  </svg>
+                </button>
+              </Tooltip>
             </div>
 
             <div class="rating-row" v-if="video.rating! > 0">
@@ -301,17 +369,21 @@
           <p>{{ video.overview }}</p>
         </div>
 
-        <div class="section" v-if="video.actors">
+        <div class="section" v-if="actors.length > 0">
           <h3>演职人员</h3>
           <div class="actor-list">
-            <div class="actor-item" v-for="actor in video.actors.split(/[,，、]/)" :key="actor">
-              <div class="actor-avatar">
+            <div class="actor-item" v-for="actor in actors" :key="actor.id">
+              <img v-if="actor.imagePath || actor.imageUrl" :src="getVideoActorImageUrl(actor.id)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
+              <div v-else class="actor-avatar-placeholder">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                   <circle cx="12" cy="7" r="4"/>
                 </svg>
               </div>
-              <span class="actor-name">{{ actor.trim() }}</span>
+              <div class="actor-info">
+                <span class="actor-name">{{ actor.name }}</span>
+                <span class="actor-character" v-if="actor.character">{{ actor.character }}</span>
+              </div>
             </div>
           </div>
         </div>
@@ -366,17 +438,86 @@
       v-if="showPlayer && currentPlayVideo"
       :video-id="currentPlayVideo.id"
       :video-title="currentPlayVideo.title"
+      :episodes="series?.episodes || []"
+      :current-episode-id="currentPlayVideo.id"
+      :subtitle-files="subtitleFiles"
       @close="showPlayer = false"
+      @episode-change="handleEpisodeChange"
+      @extract-subtitles="handleExtractSubtitles"
     />
+
+    <Teleport to="body">
+      <div v-if="showTmdbSearch" class="modal-overlay" @click.self="showTmdbSearch = false">
+        <div class="tmdb-modal">
+          <div class="modal-header">
+            <h2>搜索 TMDB 元数据</h2>
+            <button class="modal-close" @click="showTmdbSearch = false">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="search-row">
+              <input
+                v-model="tmdbSearchQuery"
+                class="tmdb-input"
+                :placeholder="`搜索 ${video?.title || ''}...`"
+                @keydown.enter="handleTmdbSearch"
+              />
+              <button class="search-btn" :disabled="tmdbSearching || !tmdbSearchQuery.trim()" @click="handleTmdbSearch">
+                {{ tmdbSearching ? '搜索中...' : '搜索' }}
+              </button>
+            </div>
+
+            <div v-if="tmdbSearchError" class="tmdb-error">{{ tmdbSearchError }}</div>
+
+            <div v-if="tmdbResults.length > 0" class="tmdb-results">
+              <div
+                v-for="item in tmdbResults"
+                :key="item.id"
+                class="tmdb-card"
+                :class="{ binding: bindingId === item.id }"
+              >
+                <img v-if="item.poster_path" :src="`https://image.tmdb.org/t/p/w200${item.poster_path}`" class="tmdb-poster" draggable="false" />
+                <div v-else class="tmdb-poster-placeholder"></div>
+                <div class="tmdb-info">
+                  <div class="tmdb-title">{{ item.title || item.name }}</div>
+                  <div class="tmdb-meta">
+                    <span v-if="item.release_date || item.first_air_date">{{ (item.release_date || item.first_air_date)?.substring(0, 4) }}</span>
+                    <span v-if="item.vote_average">评分 {{ item.vote_average.toFixed(1) }}</span>
+                    <span class="tmdb-type">{{ item.media_type === 'tv' ? '电视剧' : '电影' }}</span>
+                  </div>
+                  <div class="tmdb-overview" v-if="item.overview">{{ item.overview.substring(0, 100) }}...</div>
+                </div>
+                <button
+                  class="bind-btn"
+                  :disabled="bindingId !== null"
+                  @click="handleBindTmdb(item)"
+                >
+                  {{ bindingId === item.id ? '绑定中...' : '绑定' }}
+                </button>
+              </div>
+            </div>
+
+            <div v-else-if="tmdbSearched && !tmdbSearching" class="tmdb-empty">
+              未找到相关结果
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { VideoDTO, SeriesDTO } from '@/types/backend'
-import { getVideoById, getSeriesById, toggleVideoFavorite, getVideoPosterUrl, getVideoFanartUrl, getSeriesPosterUrl, getSeriesFanartUrl, deleteVideoProgress } from '@/api/backend'
+import type { VideoDTO, SeriesDTO, VideoActor } from '@/types/backend'
+import { getVideoById, getSeriesById, toggleVideoFavorite, getVideoPosterUrl, getVideoFanartUrl, getSeriesPosterUrl, getSeriesFanartUrl, deleteVideoProgress, getVideoActors, getVideoActorImageUrl, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, getSubtitleFiles, extractSubtitles } from '@/api/backend'
+import { useConnectionStore } from '@/stores/connection'
+import { useToast } from '@/composables/useToast'
+import Tooltip from '@/components/Tooltip.vue'
 import VideoPlayer from '@/views/VideoPlayer.vue'
+
+const connectionStore = useConnectionStore()
+const toast = useToast()
 
 const router = useRouter()
 const route = useRoute()
@@ -388,6 +529,18 @@ const error = ref('')
 const showPlayer = ref(false)
 type EpisodeViewMode = 'poster' | 'compact'
 const episodeViewMode = ref<EpisodeViewMode>('poster')
+const actors = ref<VideoActor[]>([])
+const subtitleFiles = ref<string[]>([])
+
+// TMDB search
+const showTmdbSearch = ref(false)
+const tmdbSearchQuery = ref('')
+const tmdbResults = ref<any[]>([])
+const tmdbSearching = ref(false)
+const tmdbSearched = ref(false)
+const tmdbSearchError = ref('')
+const bindingId = ref<number | null>(null)
+const refreshing = ref(false)
 
 async function loadVideo() {
   const id = Number(route.params.id)
@@ -397,6 +550,8 @@ async function loadVideo() {
   error.value = ''
   series.value = null
   video.value = null
+  actors.value = []
+  subtitleFiles.value = []
 
   try {
     const data = await getVideoById(id)
@@ -407,6 +562,16 @@ async function loadVideo() {
         if (seriesData) {
           series.value = seriesData
         }
+      }
+      try {
+        actors.value = await getVideoActors(id)
+      } catch {
+        actors.value = []
+      }
+      try {
+        subtitleFiles.value = await getSubtitleFiles(id)
+      } catch {
+        subtitleFiles.value = []
       }
     } else {
       error.value = '视频不存在'
@@ -421,6 +586,33 @@ async function loadVideo() {
 
 function selectEpisode(episode: VideoDTO) {
   video.value = episode
+}
+
+function handleEpisodeChange(episode: VideoDTO) {
+  video.value = episode
+  showPlayer.value = true
+  loadSubtitleFiles()
+}
+
+async function loadSubtitleFiles() {
+  const id = video.value?.id || series.value?.episodes[0]?.id
+  if (!id) return
+  try {
+    subtitleFiles.value = await getSubtitleFiles(id)
+  } catch {
+    subtitleFiles.value = []
+  }
+}
+
+async function handleExtractSubtitles() {
+  const id = video.value?.id || series.value?.episodes[0]?.id
+  if (!id) return
+  try {
+    await extractSubtitles(id)
+    await loadSubtitleFiles()
+  } catch (e) {
+    console.error('Failed to extract subtitles:', e)
+  }
 }
 
 function playEpisode(episode: VideoDTO) {
@@ -451,6 +643,71 @@ async function handleToggleFavorite() {
   }
 }
 
+async function handleTmdbSearch() {
+  if (!tmdbSearchQuery.value.trim()) return
+  tmdbSearching.value = true
+  tmdbSearchError.value = ''
+  tmdbSearched.value = false
+  try {
+    tmdbResults.value = await searchTmdb(tmdbSearchQuery.value.trim())
+    tmdbSearched.value = true
+  } catch (e) {
+    tmdbSearchError.value = '搜索失败'
+    console.error('TMDB search failed:', e)
+  } finally {
+    tmdbSearching.value = false
+  }
+}
+
+async function handleBindTmdb(item: any) {
+  const targetId = video.value?.id || series.value?.episodes[0]?.id
+  if (!targetId || bindingId.value !== null) return
+  bindingId.value = item.id
+  tmdbSearchError.value = ''
+  try {
+    const updated = await bindTmdb(targetId, item.id, item.media_type)
+    if (updated) {
+      showTmdbSearch.value = false
+      await loadVideo()
+    }
+  } catch (e) {
+    tmdbSearchError.value = '绑定失败'
+    console.error('Bind TMDB failed:', e)
+  } finally {
+    bindingId.value = null
+  }
+}
+
+async function handleRefreshTmdb() {
+  const targetId = video.value?.id || series.value?.episodes[0]?.id
+  if (!targetId || refreshing.value) return
+  refreshing.value = true
+  try {
+    const updated = await refreshTmdb(targetId)
+    if (updated) {
+      await loadVideo()
+    }
+  } catch (e) {
+    console.error('Refresh TMDB failed:', e)
+  } finally {
+    refreshing.value = false
+  }
+}
+
+async function handleUnbindTmdb() {
+  const targetId = video.value?.id || series.value?.episodes[0]?.id
+  if (!targetId) return
+  if (!confirm('确定要解绑 TMDB 元数据吗？')) return
+  try {
+    const updated = await unbindTmdb(targetId)
+    if (updated) {
+      await loadVideo()
+    }
+  } catch (e) {
+    console.error('Unbind TMDB failed:', e)
+  }
+}
+
 function formatDuration(minutes: number): string {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
@@ -466,6 +723,22 @@ function formatFileSize(bytes: number): string {
 
 function onImageError(e: Event) {
   (e.target as HTMLImageElement).style.display = 'none'
+}
+
+function onActorImageError(e: Event) {
+  (e.target as HTMLImageElement).style.display = 'none'
+}
+
+function copyStreamUrl() {
+  const id = video.value?.id || series.value?.episodes[0]?.id
+  if (!id) return
+  const baseUrl = connectionStore.backendUrl || ''
+  const url = `${baseUrl}/api/v1/video/${id}/stream`
+  navigator.clipboard.writeText(url).then(() => {
+    toast.success('播放链接已复制到剪贴板')
+  }).catch(() => {
+    toast.error('复制失败')
+  })
 }
 
 const currentPlayVideo = computed(() => {
@@ -573,11 +846,9 @@ onMounted(loadVideo)
 
 .backdrop {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 800px;
+  inset: 0;
   overflow: hidden;
+  min-height: 380px;
 }
 
 .backdrop img {
@@ -665,12 +936,14 @@ onMounted(loadVideo)
   color: var(--text-primary);
   margin-bottom: 4px;
   line-height: 1.2;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .video-original-title {
   font-size: 15px;
   color: var(--text-secondary);
   margin-bottom: 12px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .meta-line {
@@ -681,6 +954,7 @@ onMounted(loadVideo)
   color: var(--text-secondary);
   margin-bottom: 12px;
   flex-wrap: wrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .meta-sep {
@@ -798,6 +1072,9 @@ onMounted(loadVideo)
 
 .overview-section {
   margin-bottom: 32px;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 16px;
+  border-radius: var(--radius-md);
 }
 
 .overview-section p {
@@ -805,6 +1082,7 @@ onMounted(loadVideo)
   line-height: 1.8;
   color: var(--text-secondary);
   white-space: pre-wrap;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .section {
@@ -822,18 +1100,7 @@ onMounted(loadVideo)
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: 80px;
-}
-
-.actor-avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--bg-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
+  width: 100px;
 }
 
 .actor-name {
@@ -843,225 +1110,271 @@ onMounted(loadVideo)
   word-break: break-all;
 }
 
-.file-card,
-.info-card {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  overflow: hidden;
+.actor-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.file-row {
-  display: flex;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border);
-}
-
-.file-row:last-child {
-  border-bottom: none;
-}
-
-.file-label {
-  font-size: 13px;
-  color: var(--text-muted);
-  width: 80px;
-  flex-shrink: 0;
-}
-
-.file-value {
-  font-size: 13px;
-  color: var(--text-primary);
-  font-family: monospace;
-  word-break: break-all;
-}
-
-.info-card {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-}
-
-.info-col-item {
-  padding: 16px;
-  border-right: 1px solid var(--border);
-}
-
-.info-col-item:last-child {
-  border-right: none;
-}
-
-.info-col-icon {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  margin-bottom: 6px;
-}
-
-.info-col-detail {
-  font-size: 13px;
-  color: var(--text-primary);
-}
-
-@media screen and (max-width: 767px) {
-  .hero-body {
-    flex-direction: column;
-    align-items: center;
-    padding: 40px 16px 24px;
-    gap: 20px;
-  }
-
-  .poster-img {
-    width: 150px;
-  }
-
-  .poster-placeholder {
-    width: 150px;
-  }
-
-  .info-col {
-    align-items: center;
-    text-align: center;
-  }
-
-  .video-title {
-    font-size: 24px;
-  }
-
-  .meta-line,
-  .tag-row,
-  .action-row,
-  .rating-row {
-    justify-content: center;
-  }
-
-  .detail-body {
-    padding: 0 16px 32px;
-  }
-
-  .actor-list {
-    justify-content: center;
-  }
-
-  .info-card {
-    grid-template-columns: 1fr;
-  }
-
-  .info-col-item {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .info-col-item:last-child {
-    border-bottom: none;
-  }
-}
-
-.episode-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.episode-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.episode-item:hover {
-  background: var(--bg-hover);
-}
-
-.episode-item.active {
-  background: var(--accent-glow);
-  border: 1px solid var(--accent);
-}
-
-.episode-number {
-  width: 32px;
-  height: 32px;
+.actor-avatar-placeholder {
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   background: var(--bg-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  flex-shrink: 0;
+  color: var(--text-muted);
+  overflow: hidden;
 }
 
-.episode-item.active .episode-number {
-  background: var(--accent);
-  color: white;
+.actor-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  width: 100%;
 }
 
-.episode-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.episode-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 2px;
-}
-
-.episode-file {
-  font-size: 12px;
+.actor-character {
+  font-size: 11px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 100%;
 }
 
-.episode-progress {
+.scrape-spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
-.progress-bar {
-  flex: 1;
-  height: 4px;
-  background: var(--bg-tertiary);
-  border-radius: 2px;
+.tmdb-modal {
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
-.progress-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 2px;
-  transition: width 0.3s ease;
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
 }
 
-.progress-text {
-  font-size: 11px;
+.modal-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-secondary);
   color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.progress-text.watched {
-  color: #2ecc71;
-}
-
-.episode-play {
-  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: var(--transition);
 }
 
-.episode-item:hover .episode-play {
-  color: var(--accent);
+.modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.search-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.tmdb-input {
+  flex: 1;
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  color: var(--text-primary);
+  outline: none;
+  transition: var(--transition);
+}
+
+.tmdb-input:focus {
+  border-color: var(--accent);
+}
+
+.search-btn {
+  padding: 10px 20px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.search-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.search-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tmdb-error {
+  padding: 12px;
+  background: rgba(231, 76, 60, 0.1);
+  color: #e74c3c;
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.tmdb-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tmdb-card {
+  display: flex;
+  gap: 16px;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  transition: var(--transition);
+}
+
+.tmdb-card.binding {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.tmdb-poster {
+  width: 80px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.tmdb-poster-placeholder {
+  width: 80px;
+  height: 120px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.tmdb-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.tmdb-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.tmdb-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.tmdb-type {
+  padding: 2px 8px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.tmdb-overview {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.bind-btn {
+  padding: 8px 16px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition);
+  align-self: center;
+  white-space: nowrap;
+}
+
+.bind-btn:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.bind-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tmdb-empty {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+  font-size: 14px;
 }
 
 .section-header {
@@ -1254,5 +1567,119 @@ onMounted(loadVideo)
 
 .compact-item.watched {
   opacity: 0.5;
+}
+
+.file-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.file-row:last-child {
+  border-bottom: none;
+}
+
+.file-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  width: 80px;
+  flex-shrink: 0;
+}
+
+.file-value {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-family: monospace;
+  word-break: break-all;
+}
+
+.info-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.info-col-item {
+  padding: 16px;
+  border-right: 1px solid var(--border);
+}
+
+.info-col-item:last-child {
+  border-right: none;
+}
+
+.info-col-icon {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.info-col-detail {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+@media screen and (max-width: 767px) {
+  .hero-body {
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 16px 24px;
+    gap: 20px;
+  }
+
+  .poster-img {
+    width: 150px;
+  }
+
+  .poster-placeholder {
+    width: 150px;
+  }
+
+  .info-col {
+    align-items: center;
+    text-align: center;
+  }
+
+  .video-title {
+    font-size: 24px;
+  }
+
+  .meta-line,
+  .tag-row,
+  .action-row,
+  .rating-row {
+    justify-content: center;
+  }
+
+  .detail-body {
+    padding: 0 16px 32px;
+  }
+
+  .actor-list {
+    justify-content: center;
+  }
+
+  .info-card {
+    grid-template-columns: 1fr;
+  }
+
+  .info-col-item {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .info-col-item:last-child {
+    border-bottom: none;
+  }
 }
 </style>

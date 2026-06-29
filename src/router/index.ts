@@ -59,6 +59,11 @@ const router = createRouter({
       component: () => import('@/views/SettingsView.vue'),
     },
     {
+      path: '/media-libraries',
+      name: 'media-libraries',
+      component: () => import('@/views/MediaLibraryView.vue'),
+    },
+    {
       path: '/icons',
       name: 'icons',
       component: () => import('@/components/IconLibrary.vue'),

@@ -28,6 +28,7 @@
       <p>正在恢复连接...</p>
     </div>
   </div>
+  <ToastContainer />
 </template>
 
 <script setup lang="ts">
@@ -36,6 +37,7 @@ import { useConnectionStore } from '@/stores/connection'
 import ServerConnect from '@/components/ServerConnect.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import AppIcon from '@/components/AppIcon.vue'
+import ToastContainer from '@/components/ToastContainer.vue'
 import { useRouter } from 'vue-router'
 
 const connectionStore = useConnectionStore()

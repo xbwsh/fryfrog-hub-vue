@@ -37,6 +37,10 @@
 
     <div class="nav-section">
       <h3 class="nav-label">系统</h3>
+      <router-link to="/media-libraries" class="nav-item" active-class="active">
+        <AppIcon name="folder" :size="20" />
+        资源库
+      </router-link>
       <router-link to="/settings" class="nav-item" active-class="active">
         <AppIcon name="settings" :size="20" />
         设置

@@ -73,6 +73,7 @@ export interface ComicVolume {
   summary: string | null
   releaseDate: string | null
   favorite: boolean
+  updatedAt?: string
 }
 
 export interface ComicSeries {
@@ -161,6 +162,7 @@ export interface VideoDTO {
   watchPosition: number | null
   watchProgressPercent: number | null
   watched: boolean | null
+  libraryId: number | null
 }
 
 export interface VideoProgress {
@@ -351,5 +353,76 @@ export interface MusicPlaylist {
   trackCount: number
   createdAt: string
   updatedAt: string
+}
+
+export interface MediaInfo {
+  videoCodec: string
+  videoCodecLong: string
+  audioCodec: string
+  audioCodecLong: string
+  audioChannels: number
+  audioSampleRate: string
+  resolution: string
+  frameRate: number
+  bitrateKbps: number
+  durationSeconds: number
+  durationMinutes: number
+  format: string
+}
+
+export interface SubtitleTrack {
+  index: number
+  codec: string
+  language: string
+  title: string | null
+  default: boolean
+}
+
+export interface ExtractedSubtitle {
+  index: number
+  language: string
+  codec: string
+  title: string | null
+  defaultStream: boolean
+  filePath: string
+  fileName: string
+}
+
+export type MediaLibraryType = 'MOVIE' | 'TV' | 'MIXED'
+
+export interface MediaLibrary {
+  id: number
+  name: string
+  path: string
+  type: MediaLibraryType
+  enabled: boolean
+  sortOrder: number
+  description: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateMediaLibraryRequest {
+  name: string
+  path: string
+  type: MediaLibraryType
+  enabled?: boolean
+  sortOrder?: number
+  description?: string
+}
+
+export interface UpdateMediaLibraryRequest {
+  name?: string
+  path?: string
+  type?: MediaLibraryType
+  enabled?: boolean
+  sortOrder?: number
+  description?: string
+}
+
+export interface DirectoryItem {
+  name: string
+  path: string
+  writable: boolean
 }
 

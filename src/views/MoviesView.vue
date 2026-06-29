@@ -6,6 +6,19 @@
         <p class="view-subtitle">管理你的视频库</p>
       </div>
       <div class="header-actions">
+        <button class="view-toggle-btn" @click="toggleViewMode" :title="showBackdrop ? '切换为海报' : '切换为背景图'">
+          <svg v-if="showBackdrop" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <circle cx="8.5" cy="8.5" r="1.5"/>
+            <polyline points="21 15 16 10 5 21"/>
+          </svg>
+          {{ showBackdrop ? '背景图' : '海报' }}
+        </button>
         <div class="search-bar">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/>
@@ -36,10 +49,10 @@
       <p>暂无视频</p>
     </div>
 
-    <div v-else class="content-grid">
+    <div v-else class="content-grid" :class="{ 'backdrop-mode': showBackdrop }">
       <div v-for="series in seriesList" :key="series.id" class="content-card" @click="viewSeries(series)">
-        <div class="card-cover video-cover">
-          <img :src="series.posterUrl || getSeriesPosterUrl(series.id)" :alt="series.title" draggable="false" @error="onImageError" />
+        <div class="card-cover video-cover" :class="{ 'backdrop-cover': showBackdrop }">
+          <img :src="getImageUrl(series)" :alt="series.title" draggable="false" @error="onImageError" />
           <div class="play-icon">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="5 3 19 12 5 21 5 3"/>
@@ -78,6 +91,11 @@ const seriesList = ref<SeriesDTO[]>([])
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
+const showBackdrop = ref(false)
+
+function toggleViewMode() {
+  showBackdrop.value = !showBackdrop.value
+}
 
 async function loadVideos() {
   loading.value = true
@@ -116,6 +134,13 @@ async function handleSearch() {
 function onImageError(e: Event) {
   const img = e.target as HTMLImageElement
   img.style.display = 'none'
+}
+
+function getImageUrl(series: SeriesDTO): string {
+  if (showBackdrop.value && series.backdropUrl) {
+    return series.backdropUrl
+  }
+  return series.posterUrl || getSeriesPosterUrl(series.id)
 }
 
 function viewSeries(series: SeriesDTO) {
@@ -168,6 +193,29 @@ onMounted(loadVideos)
 
 .header-actions {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+  white-space: nowrap;
+}
+
+.view-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .search-bar {
@@ -249,11 +297,15 @@ onMounted(loadVideos)
 .content-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   grid-auto-rows: max-content;
   gap: 16px;
   padding: 0 32px 32px;
   overflow-y: auto;
+}
+
+.content-grid.backdrop-mode {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 }
 
 .content-card {
@@ -270,13 +322,17 @@ onMounted(loadVideos)
 }
 
 .card-cover {
-  aspect-ratio: 16/9;
+  aspect-ratio: 2/3;
   display: flex;
   align-items: center;
   justify-content: center;
   color: rgba(255, 255, 255, 0.6);
   overflow: hidden;
   position: relative;
+}
+
+.backdrop-cover {
+  aspect-ratio: 2/1;
 }
 
 .card-cover img {
@@ -430,14 +486,32 @@ onMounted(loadVideos)
     flex-direction: column;
   }
 
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .view-toggle-btn {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .search-bar {
+    flex: 1;
+  }
+
   .search-bar input {
     width: 100%;
   }
 
   .content-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     gap: 12px;
     padding: 0 16px 16px;
+  }
+
+  .content-grid.backdrop-mode {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
 </style>

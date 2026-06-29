@@ -105,7 +105,10 @@
             <div class="section-header">
               <h3>快速分类</h3>
             </div>
-            <div class="category-grid">
+            <div v-if="loadingCategories" class="section-loading">
+              <div class="loading-spinner"></div>
+            </div>
+            <div v-else class="category-grid">
               <div class="category-card" v-for="cat in categories" :key="cat.name" :class="{ active: activeCategory === cat.name }" @click="filterByCategory(cat.name)">
                 <div class="cat-icon" :style="{ background: cat.bg, color: cat.color }">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" v-html="cat.icon"/>
@@ -123,7 +126,13 @@
             <div class="section-header">
               <h3>推荐歌单</h3>
             </div>
-            <div class="playlist-scroll">
+            <div v-if="loadingRecommendations" class="section-loading">
+              <div class="loading-spinner"></div>
+            </div>
+            <div v-else-if="Object.keys(recommendations).length === 0" class="section-empty">
+              <p>暂无推荐</p>
+            </div>
+            <div v-else class="playlist-scroll">
               <div
                 v-for="(tracks, category) in recommendations"
                 :key="category"
@@ -155,59 +164,64 @@
 
       <!-- 右侧面板 -->
       <div class="right-panel">
-        <div class="panel-section">
-          <div class="panel-header">
-            <h3>歌手榜</h3>
-          </div>
-          <div class="rank-scroll">
-            <div v-for="(artist, index) in artistRanking" :key="artist.name" class="rank-item">
-              <div class="rank-num">{{ index + 1 }}</div>
-              <div class="rank-avatar" :style="{ background: artist.color }">
-                <img :src="getArtistImageUrl(artist.trackId)" :alt="artist.name" @error="($event.target as HTMLImageElement).style.display='none'" />
+        <div v-if="loadingRightPanel" class="panel-loading">
+          <div class="loading-spinner"></div>
+        </div>
+        <template v-else>
+          <div class="panel-section">
+            <div class="panel-header">
+              <h3>歌手榜</h3>
+            </div>
+            <div class="rank-scroll">
+              <div v-for="(artist, index) in artistRanking" :key="artist.name" class="rank-item">
+                <div class="rank-num">{{ index + 1 }}</div>
+                <div class="rank-avatar" :style="{ background: artist.color }">
+                  <img :src="getArtistImageUrl(artist.trackId)" :alt="artist.name" @error="($event.target as HTMLImageElement).style.display='none'" />
+                </div>
+                <div class="rank-info">
+                  <div class="rank-name">{{ artist.name }}</div>
+                  <div class="rank-count">{{ artist.count }} 首歌曲</div>
+                </div>
               </div>
-              <div class="rank-info">
-                <div class="rank-name">{{ artist.name }}</div>
-                <div class="rank-count">{{ artist.count }} 首歌曲</div>
+            </div>
+          </div>
+
+          <div class="panel-section">
+            <div class="panel-header">
+              <h3>音乐风格</h3>
+            </div>
+            <div class="tags">
+              <span v-for="(tag, index) in genreTags" :key="tag.name" class="tag" :class="'tag-' + (index % 4)">
+                {{ tag.name }} ({{ tag.count }})
+              </span>
+            </div>
+          </div>
+
+          <div class="panel-section stats-panel">
+            <div class="panel-header">
+              <h3>音乐统计</h3>
+            </div>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <div class="stat-num">{{ tracks.length.toLocaleString() }}</div>
+                <div class="stat-label">歌曲总数</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-num">{{ albumCount }}</div>
+                <div class="stat-label">专辑数量</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-num">{{ artistCount }}</div>
+                <div class="stat-label">歌手数量</div>
+              </div>
+              <div class="stat-item">
+                <div class="stat-num">{{ totalSize }}</div>
+                <div class="stat-label">占用空间</div>
               </div>
             </div>
+            <div class="stats-footer">最后更新：{{ lastUpdateTime }}</div>
           </div>
-        </div>
-
-        <div class="panel-section">
-          <div class="panel-header">
-            <h3>音乐风格</h3>
-          </div>
-          <div class="tags">
-            <span v-for="(tag, index) in genreTags" :key="tag.name" class="tag" :class="'tag-' + (index % 4)">
-              {{ tag.name }} ({{ tag.count }})
-            </span>
-          </div>
-        </div>
-
-        <div class="panel-section stats-panel">
-          <div class="panel-header">
-            <h3>音乐统计</h3>
-          </div>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <div class="stat-num">{{ tracks.length.toLocaleString() }}</div>
-              <div class="stat-label">歌曲总数</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-num">{{ albumCount }}</div>
-              <div class="stat-label">专辑数量</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-num">{{ artistCount }}</div>
-              <div class="stat-label">歌手数量</div>
-            </div>
-            <div class="stat-item">
-              <div class="stat-num">{{ totalSize }}</div>
-              <div class="stat-label">占用空间</div>
-            </div>
-          </div>
-          <div class="stats-footer">最后更新：{{ lastUpdateTime }}</div>
-        </div>
+        </template>
       </div>
     </div>
 
@@ -248,6 +262,9 @@ const showLyrics = ref(false)
 const rescanning = ref(false)
 const reorganizing = ref(false)
 const searchQuery = ref('')
+const loadingRecommendations = ref(false)
+const loadingCategories = ref(false)
+const loadingRightPanel = ref(false)
 
 const trackColors: Record<string, string> = {
   'LiSA': '#d63031',
@@ -381,6 +398,7 @@ async function handleSearch() {
 
 async function loadTracks() {
   loading.value = true
+  loadingRightPanel.value = true
   error.value = ''
   try {
     allTracks.value = await getAllTracks()
@@ -390,19 +408,24 @@ async function loadTracks() {
     console.error('Failed to load tracks:', e)
   } finally {
     loading.value = false
+    loadingRightPanel.value = false
   }
 }
 
 async function loadFavoriteCount() {
+  loadingCategories.value = true
   try {
     const favorites = await getFavorites()
     favoriteCount.value = favorites.length
   } catch (e) {
     console.error('Failed to load favorites:', e)
+  } finally {
+    loadingCategories.value = false
   }
 }
 
 async function loadCategoryCounts() {
+  loadingCategories.value = true
   try {
     const [recent, popular, added] = await Promise.all([
       getRecentlyPlayed(),
@@ -414,6 +437,8 @@ async function loadCategoryCounts() {
     recentlyAddedCount.value = added.length
   } catch (e) {
     console.error('Failed to load category counts:', e)
+  } finally {
+    loadingCategories.value = false
   }
 }
 
@@ -507,10 +532,13 @@ function formatDuration(seconds: number): string {
 }
 
 async function loadRecommendations() {
+  loadingRecommendations.value = true
   try {
     recommendations.value = await getMusicRecommendations()
   } catch (e) {
     console.error('Failed to load recommendations:', e)
+  } finally {
+    loadingRecommendations.value = false
   }
 }
 
@@ -1202,12 +1230,23 @@ onUnmounted(() => {
 
 /* 其他 */
 .loading-state,
-.empty-state {
-  flex: 1;
+.empty-state,
+.section-loading,
+.section-empty,
+.panel-loading {
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-secondary);
+}
+
+.section-loading,
+.section-empty {
+  min-height: 120px;
+}
+
+.panel-loading {
+  min-height: 200px;
 }
 
 .loading-spinner {

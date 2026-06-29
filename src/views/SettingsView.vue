@@ -459,6 +459,8 @@ async function loadSettings() {
       getSetting('music.scrape.lyrics-fallback'),
       getSetting('music.scrape.cover-fallback'),
       getSetting('watcher.periodic-scan'),
+      getSetting('watcher.periodic-scan-interval'),
+      getSetting('hub.tmdb.scraper-threads'),
       getPerformanceSettings(),
     ])
 
@@ -480,9 +482,17 @@ async function loadSettings() {
     if (settings[15]) musicCoverFallback.value = settings[15].value !== 'false'
     if (settings[16]) periodicScan.value = settings[16].value === 'true'
 
-    const perfSettings = settings[17]
-    if (perfSettings) {
+    const perfScanIntervalSetting = settings[17]
+    const perfScraperThreadsSetting = settings[18]
+    const perfSettings = settings[19]
+    if (perfScanIntervalSetting) {
+      periodicScanInterval.value = parseInt(perfScanIntervalSetting.value) || 300
+    } else if (perfSettings) {
       periodicScanInterval.value = perfSettings['watcher.periodic-scan-interval'] || 300
+    }
+    if (perfScraperThreadsSetting) {
+      scraperThreads.value = parseInt(perfScraperThreadsSetting.value) || 1
+    } else if (perfSettings) {
       scraperThreads.value = perfSettings['hub.tmdb.scraper-threads'] || 1
     }
   } catch (error) {

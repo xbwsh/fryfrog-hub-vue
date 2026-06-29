@@ -23,6 +23,13 @@ import type {
   ComicCharacter,
   VideoActor,
   MusicPlaylist,
+  MediaInfo,
+  SubtitleTrack,
+  ExtractedSubtitle,
+  MediaLibrary,
+  CreateMediaLibraryRequest,
+  UpdateMediaLibraryRequest,
+  DirectoryItem,
 } from '@/types/backend'
 
 const client = axios.create({
@@ -338,6 +345,16 @@ export async function toggleVideoFavorite(id: number, status: boolean): Promise<
   return response.data.data
 }
 
+export async function toggleVideoWatched(id: number, watched: boolean): Promise<VideoDTO | undefined> {
+  if (watched) {
+    const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/watched`)
+    return response.data.data
+  } else {
+    const response = await client.delete<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/watched`)
+    return response.data.data
+  }
+}
+
 export async function getVideoFavorites(): Promise<VideoDTO[]> {
   const response = await client.get<ApiResponse<VideoDTO[]>>('/api/v1/video/favorites')
   return response.data.data || []
@@ -389,6 +406,10 @@ export function getVideoStreamUrl(id: number): string {
   return `${config.url}/api/v1/video/${id}/stream`
 }
 
+export function getVideoSubtitleUrl(id: number, fileName: string): string {
+  return `/api/v1/video/${id}/subtitles/${encodeURIComponent(fileName)}`
+}
+
 export async function cleanupVideoRecords(): Promise<Record<string, number>> {
   const response = await client.post<ApiResponse<Record<string, number>>>('/api/v1/video/cleanup')
   return response.data.data
@@ -428,6 +449,26 @@ export async function refreshTmdb(id: number): Promise<VideoDTO | undefined> {
 export async function unbindTmdb(id: number): Promise<VideoDTO | undefined> {
   const response = await client.post<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/tmdb/unbind`)
   return response.data.data
+}
+
+export async function getMediaInfo(id: number): Promise<MediaInfo | null> {
+  const response = await client.get<ApiResponse<MediaInfo>>(`/api/v1/video/${id}/media-info`)
+  return response.data.data || null
+}
+
+export async function getSubtitleTracks(id: number): Promise<SubtitleTrack[]> {
+  const response = await client.get<ApiResponse<SubtitleTrack[]>>(`/api/v1/video/${id}/subtitles`)
+  return response.data.data || []
+}
+
+export async function extractSubtitles(id: number): Promise<ExtractedSubtitle[]> {
+  const response = await client.post<ApiResponse<ExtractedSubtitle[]>>(`/api/v1/video/${id}/subtitles/extract`)
+  return response.data.data || []
+}
+
+export async function getSubtitleFiles(id: number): Promise<string[]> {
+  const response = await client.get<ApiResponse<string[]>>(`/api/v1/video/${id}/subtitles/files`)
+  return response.data.data || []
 }
 
 export async function getNfoContent(id: number): Promise<string> {
@@ -647,4 +688,45 @@ export interface PerformanceSettings {
 export async function getPerformanceSettings(): Promise<PerformanceSettings> {
   const response = await client.get<ApiResponse<PerformanceSettings>>('/api/v1/settings/performance')
   return response.data.data
+}
+
+export async function getAllMediaLibraries(): Promise<MediaLibrary[]> {
+  const response = await client.get<ApiResponse<MediaLibrary[]>>('/api/v1/media-libraries')
+  return response.data.data || []
+}
+
+export async function getMediaLibraryById(id: number): Promise<MediaLibrary | undefined> {
+  const response = await client.get<ApiResponse<MediaLibrary>>(`/api/v1/media-libraries/${id}`)
+  return response.data.data
+}
+
+export async function createMediaLibrary(data: CreateMediaLibraryRequest): Promise<MediaLibrary> {
+  const response = await client.post<ApiResponse<MediaLibrary>>('/api/v1/media-libraries', data)
+  return response.data.data
+}
+
+export async function updateMediaLibrary(id: number, data: UpdateMediaLibraryRequest): Promise<MediaLibrary> {
+  const response = await client.put<ApiResponse<MediaLibrary>>(`/api/v1/media-libraries/${id}`, data)
+  return response.data.data
+}
+
+export async function deleteMediaLibrary(id: number): Promise<void> {
+  await client.delete(`/api/v1/media-libraries/${id}`)
+}
+
+export async function toggleMediaLibrary(id: number): Promise<MediaLibrary> {
+  const response = await client.put<ApiResponse<MediaLibrary>>(`/api/v1/media-libraries/${id}/toggle`)
+  return response.data.data
+}
+
+export async function rescanVideos(): Promise<LibraryRescanResult> {
+  const response = await client.post<ApiResponse<LibraryRescanResult>>('/api/v1/video/rescan')
+  return response.data.data
+}
+
+export async function browseDirectory(path?: string): Promise<DirectoryItem[]> {
+  const response = await client.get<ApiResponse<DirectoryItem[]>>('/api/v1/media-libraries/browse', {
+    params: path ? { path } : {},
+  })
+  return response.data.data || []
 }
