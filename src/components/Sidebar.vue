@@ -49,6 +49,10 @@
         <AppIcon name="grid" :size="20" />
         图标库
       </router-link>
+      <router-link to="/colors" class="nav-item" active-class="active">
+        <AppIcon name="dropper" :size="20" />
+        色彩
+      </router-link>
     </div>
 
     <div class="sidebar-footer">

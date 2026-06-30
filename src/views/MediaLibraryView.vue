@@ -6,6 +6,14 @@
         <p class="view-subtitle">管理媒体文件目录和刮削类型</p>
       </div>
       <div class="header-actions">
+        <button class="btn-scan" :disabled="scanningAll" @click="handleScanAll">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          {{ scanningAll ? '扫描中...' : '扫描全部' }}
+        </button>
         <button class="btn-add" @click="showAddDialog">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="12" y1="5" x2="12" y2="19"/>
@@ -47,7 +55,17 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="lib in sortedLibraries" :key="lib.id" :class="{ disabled: !lib.enabled }">
+          <tr
+            v-for="lib in sortedLibraries"
+            :key="lib.id"
+            :class="{ disabled: !lib.enabled, 'drag-over': dragOverId === lib.id, dragging: draggingId === lib.id }"
+            draggable="true"
+            @dragstart="onDragStart($event, lib)"
+            @dragover="onDragOver($event, lib)"
+            @dragleave="onDragLeave"
+            @drop="onDrop($event, lib)"
+            @dragend="onDragEnd"
+          >
             <td class="col-sort">
               <span class="sort-handle">☰</span>
               <span class="sort-number">{{ lib.sortOrder }}</span>
@@ -61,7 +79,7 @@
             </td>
             <td class="col-type">
               <span class="type-badge" :class="lib.type.toLowerCase()">
-                {{ getTypeLabel(lib.type) }}
+                {{ getTypeLabel(lib.type, lib.subType) }}
               </span>
             </td>
             <td class="col-status">
@@ -75,6 +93,17 @@
               </button>
             </td>
             <td class="col-actions">
+              <button
+                class="action-btn scan-btn"
+                @click="handleScanOne(lib)"
+                :disabled="scanningId !== null"
+                title="扫描"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="23 4 23 10 17 10"/>
+                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+              </button>
               <button class="action-btn edit-btn" @click="showEditDialog(lib)" title="编辑">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
@@ -135,22 +164,52 @@
           <div class="form-group">
             <label class="form-label">类型 <span class="required">*</span></label>
             <select v-model="form.type" class="form-select">
-              <option value="MOVIE">MOVIE - 电影</option>
-              <option value="TV">TV - 电视剧</option>
-              <option value="MIXED">MIXED - 混合影片</option>
+              <option value="VIDEO">VIDEO - 视频</option>
+              <option value="MUSIC">MUSIC - 音乐</option>
+              <option value="COMIC">COMIC - 漫画</option>
+              <option value="EBOOK">EBOOK - 电子书</option>
             </select>
+            <div v-if="form.type === 'VIDEO'" class="sub-type-group">
+              <label class="form-label">视频子类型</label>
+              <select v-model="form.subType" class="form-select">
+                <option value="MOVIE">电影 - TMDB 搜电影</option>
+                <option value="TV">电视剧 - TMDB 搜电视剧</option>
+                <option value="MIXED">混合 - 两者都搜</option>
+              </select>
+            </div>
             <div class="type-info">
-              <div v-if="form.type === 'MOVIE'" class="type-desc">
-                <span class="type-icon">🎬</span>
-                <span>仅搜索 TMDB 电影，避免误匹配电视剧</span>
+              <div v-if="form.type === 'VIDEO'" class="type-desc">
+                <svg class="type-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
+                  <line x1="7" y1="2" x2="7" y2="22"/>
+                  <line x1="17" y1="2" x2="17" y2="22"/>
+                  <line x1="2" y1="12" x2="22" y2="12"/>
+                </svg>
+                <span>扫描视频文件，按子类型刮削 TMDB 元数据</span>
               </div>
-              <div v-else-if="form.type === 'TV'" class="type-desc">
-                <span class="type-icon">📺</span>
-                <span>仅搜索 TMDB 电视剧，避免误匹配电影</span>
+              <div v-else-if="form.type === 'MUSIC'" class="type-desc">
+                <svg class="type-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 18V5l12-2v13"/>
+                  <circle cx="6" cy="18" r="3"/>
+                  <circle cx="18" cy="16" r="3"/>
+                </svg>
+                <span>扫描音频文件，提取标签信息</span>
               </div>
-              <div v-else class="type-desc">
-                <span class="type-icon">🎥</span>
-                <span>同时搜索两者，按评分排序选择最佳匹配</span>
+              <div v-else-if="form.type === 'COMIC'" class="type-desc">
+                <svg class="type-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+                <span>扫描漫画文件，支持 CBZ/CBR 格式</span>
+              </div>
+              <div v-else-if="form.type === 'EBOOK'" class="type-desc">
+                <svg class="type-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                  <line x1="8" y1="7" x2="16" y2="7"/>
+                  <line x1="8" y1="11" x2="16" y2="11"/>
+                </svg>
+                <span>扫描电子书文件，支持 EPUB/MOBI 格式</span>
               </div>
             </div>
           </div>
@@ -239,7 +298,10 @@
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
                 </svg>
                 <span class="dir-name">{{ dir.name }}</span>
-                <span v-if="!dir.writable" class="dir-lock">🔒</span>
+                <svg v-if="!dir.writable" class="dir-lock" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="5" y="11" width="14" height="10" rx="2"/>
+                  <path d="M8 11V7a4 4 0 0 1 8 0v4"/>
+                </svg>
               </div>
             </template>
           </div>
@@ -267,7 +329,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import type { MediaLibrary, MediaLibraryType, DirectoryItem } from '@/types/backend'
+import type { MediaLibrary, MediaLibraryType, VideoSubType, DirectoryItem } from '@/types/backend'
+import { useToast } from '@/composables/useToast'
 import {
   getAllMediaLibraries,
   createMediaLibrary,
@@ -275,7 +338,11 @@ import {
   deleteMediaLibrary,
   toggleMediaLibrary,
   browseDirectory,
+  scanAllLibraries,
+  scanLibraryById,
 } from '@/api/backend'
+
+const toast = useToast()
 
 const libraries = ref<MediaLibrary[]>([])
 const loading = ref(false)
@@ -293,11 +360,16 @@ const currentDirPath = ref('')
 const directories = ref<DirectoryItem[]>([])
 const dirLoading = ref(false)
 const dirError = ref('')
+const draggingId = ref<number | null>(null)
+const dragOverId = ref<number | null>(null)
+const scanningAll = ref(false)
+const scanningId = ref<number | null>(null)
 
 const form = ref({
   name: '',
   path: '',
-  type: 'MOVIE' as MediaLibraryType,
+  type: 'VIDEO' as MediaLibraryType,
+  subType: 'MOVIE' as VideoSubType,
   enabled: true,
   description: '',
 })
@@ -310,11 +382,16 @@ const sortedLibraries = computed(() => {
   return [...libraries.value].sort((a, b) => a.sortOrder - b.sortOrder)
 })
 
-function getTypeLabel(type: MediaLibraryType): string {
+function getTypeLabel(type: MediaLibraryType, subType?: VideoSubType | null): string {
   const labels: Record<MediaLibraryType, string> = {
-    MOVIE: '电影',
-    TV: '电视剧',
-    MIXED: '混合',
+    VIDEO: '视频',
+    MUSIC: '音乐',
+    COMIC: '漫画',
+    EBOOK: '电子书',
+  }
+  if (type === 'VIDEO' && subType) {
+    const subLabels: Record<VideoSubType, string> = { MOVIE: '电影', TV: '电视剧', MIXED: '混合' }
+    return `${labels[type]}·${subLabels[subType]}`
   }
   return labels[type]
 }
@@ -323,7 +400,13 @@ async function loadLibraries() {
   loading.value = true
   error.value = ''
   try {
-    libraries.value = await getAllMediaLibraries()
+    const list = await getAllMediaLibraries()
+    const needsInit = list.every(l => l.sortOrder === 0)
+    if (needsInit) {
+      list.forEach((lib, i) => { lib.sortOrder = i })
+      await Promise.all(list.map((lib, i) => updateMediaLibrary(lib.id, { sortOrder: i })))
+    }
+    libraries.value = list
   } catch (e) {
     error.value = '加载资源库失败'
     console.error('Failed to load libraries:', e)
@@ -332,11 +415,59 @@ async function loadLibraries() {
   }
 }
 
-async function loadDirectories(path?: string) {
+function onDragStart(e: DragEvent, lib: MediaLibrary) {
+  draggingId.value = lib.id
+  if (e.dataTransfer) {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(lib.id))
+  }
+}
+
+function onDragOver(e: DragEvent, lib: MediaLibrary) {
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'move'
+  dragOverId.value = lib.id
+}
+
+function onDragLeave() {
+  dragOverId.value = null
+}
+
+function onDragEnd() {
+  draggingId.value = null
+  dragOverId.value = null
+}
+
+async function onDrop(e: DragEvent, targetLib: MediaLibrary) {
+  e.preventDefault()
+  dragOverId.value = null
+  if (draggingId.value === null || draggingId.value === targetLib.id) return
+
+  const fromIdx = libraries.value.findIndex(l => l.id === draggingId.value)
+  const toIdx = libraries.value.findIndex(l => l.id === targetLib.id)
+  if (fromIdx === -1 || toIdx === -1) return
+
+  const reordered = [...libraries.value]
+  const [moved] = reordered.splice(fromIdx, 1)
+  reordered.splice(toIdx, 0, moved)
+
+  reordered.forEach((lib, i) => { lib.sortOrder = i })
+  libraries.value = reordered
+
+  try {
+    await Promise.all(reordered.map((lib, i) => updateMediaLibrary(lib.id, { sortOrder: i })))
+  } catch (err) {
+    console.error('Failed to save sort order:', err)
+    await loadLibraries()
+  }
+  draggingId.value = null
+}
+
+async function loadDirectories(path?: string, type?: MediaLibraryType) {
   dirLoading.value = true
   dirError.value = ''
   try {
-    directories.value = await browseDirectory(path)
+    directories.value = await browseDirectory(path, type)
     currentDirPath.value = path || ''
   } catch (e) {
     dirError.value = '加载目录失败'
@@ -348,7 +479,11 @@ async function loadDirectories(path?: string) {
 
 function openDirBrowser() {
   showDirBrowser.value = true
-  loadDirectories(form.value.path || undefined)
+  if (form.value.path) {
+    loadDirectories(form.value.path)
+  } else {
+    loadDirectories(undefined, form.value.type)
+  }
 }
 
 function closeDirBrowser() {
@@ -380,7 +515,8 @@ function showAddDialog() {
   form.value = {
     name: '',
     path: '',
-    type: 'MOVIE',
+    type: 'VIDEO',
+    subType: 'MOVIE',
     enabled: true,
     description: '',
   }
@@ -393,6 +529,7 @@ function showEditDialog(lib: MediaLibrary) {
     name: lib.name,
     path: lib.path,
     type: lib.type,
+    subType: lib.subType || 'MOVIE',
     enabled: lib.enabled,
     description: lib.description || '',
   }
@@ -414,6 +551,7 @@ async function handleSubmit() {
         name: form.value.name.trim(),
         path: form.value.path.trim(),
         type: form.value.type,
+        subType: form.value.type === 'VIDEO' ? form.value.subType : undefined,
         enabled: form.value.enabled,
         description: form.value.description.trim() || undefined,
       })
@@ -426,6 +564,7 @@ async function handleSubmit() {
         name: form.value.name.trim(),
         path: form.value.path.trim(),
         type: form.value.type,
+        subType: form.value.type === 'VIDEO' ? form.value.subType : undefined,
         enabled: form.value.enabled,
         description: form.value.description.trim() || undefined,
       })
@@ -434,7 +573,7 @@ async function handleSubmit() {
     closeDialog()
   } catch (e) {
     console.error('Failed to save library:', e)
-    alert(editingLibrary.value ? '更新失败' : '创建失败')
+    toast.error(editingLibrary.value ? '更新失败' : '创建失败')
   } finally {
     submitting.value = false
   }
@@ -475,13 +614,39 @@ async function handleDelete() {
     cancelDelete()
   } catch (e) {
     console.error('Failed to delete library:', e)
-    alert('删除失败')
+    toast.error('删除失败')
   } finally {
     deleting.value = false
   }
 }
 
 onMounted(loadLibraries)
+
+async function handleScanAll() {
+  if (scanningAll.value) return
+  scanningAll.value = true
+  try {
+    const result = await scanAllLibraries()
+    toast.htmlSuccess(`<div class="toast-title">扫描完成</div><div class="toast-time">耗时 ${result.elapsedMs}ms</div>`, 3000)
+  } catch {
+    toast.error('扫描失败，请检查后端连接')
+  } finally {
+    scanningAll.value = false
+  }
+}
+
+async function handleScanOne(lib: MediaLibrary) {
+  if (scanningId.value !== null) return
+  scanningId.value = lib.id
+  try {
+    const result = await scanLibraryById(lib.id)
+    toast.htmlSuccess(`<div class="toast-title">「${lib.name}」扫描完成</div><div class="toast-time">耗时 ${result.elapsedMs}ms</div>`, 3000)
+  } catch {
+    toast.error('扫描失败，请检查后端连接')
+  } finally {
+    scanningId.value = null
+  }
+}
 </script>
 
 <style scoped>
@@ -514,6 +679,9 @@ onMounted(loadLibraries)
 
 .header-actions {
   flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .btn-add {
@@ -531,6 +699,30 @@ onMounted(loadLibraries)
 
 .btn-add:hover {
   background: var(--accent-hover);
+}
+
+.btn-scan {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.btn-scan:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-scan:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .loading-state,
@@ -600,7 +792,7 @@ thead {
 }
 
 th {
-  text-align: left;
+  text-align: center;
   padding: 12px 16px;
   font-size: 12px;
   font-weight: 600;
@@ -612,6 +804,7 @@ th {
 td {
   padding: 16px;
   border-bottom: 1px solid var(--border);
+  text-align: center;
 }
 
 tr:last-child td {
@@ -620,6 +813,14 @@ tr:last-child td {
 
 tr.disabled {
   opacity: 0.5;
+}
+
+tr.dragging {
+  opacity: 0.4;
+}
+
+tr.drag-over {
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 .col-sort {
@@ -646,12 +847,14 @@ tr.disabled {
   color: var(--text-primary);
   display: block;
   margin-bottom: 2px;
+  text-align: center;
 }
 
 .lib-desc {
   font-size: 12px;
   color: var(--text-muted);
   display: block;
+  text-align: center;
 }
 
 .col-path {
@@ -668,7 +871,8 @@ tr.disabled {
 }
 
 .col-type {
-  width: 100px;
+  width: 120px;
+  white-space: nowrap;
 }
 
 .type-badge {
@@ -677,21 +881,27 @@ tr.disabled {
   border-radius: 12px;
   font-size: 12px;
   font-weight: 500;
+  white-space: nowrap;
 }
 
-.type-badge.movie {
+.type-badge.video {
   background: rgba(52, 152, 219, 0.15);
   color: #3498db;
 }
 
-.type-badge.tv {
-  background: rgba(46, 204, 113, 0.15);
-  color: #2ecc71;
+.type-badge.music {
+  background: rgba(232, 197, 71, 0.15);
+  color: #e8c547;
 }
 
-.type-badge.mixed {
-  background: rgba(155, 89, 182, 0.15);
-  color: #9b59b6;
+.type-badge.comic {
+  background: rgba(240, 108, 108, 0.15);
+  color: #f06c6c;
+}
+
+.type-badge.ebook {
+  background: rgba(61, 214, 200, 0.15);
+  color: #3dd6c8;
 }
 
 .col-status {
@@ -735,7 +945,7 @@ tr.disabled {
 }
 
 .col-actions {
-  width: 100px;
+  width: 150px;
 }
 
 .action-btn {
@@ -761,6 +971,10 @@ tr.disabled {
 
 .delete-btn:hover {
   color: #e74c3c;
+}
+
+.scan-btn:hover {
+  color: var(--success);
 }
 
 .dialog-overlay {
@@ -882,6 +1096,10 @@ tr.disabled {
   margin-top: 8px;
 }
 
+.sub-type-group {
+  margin-top: 10px;
+}
+
 .type-desc {
   display: flex;
   align-items: center;
@@ -891,7 +1109,8 @@ tr.disabled {
 }
 
 .type-icon {
-  font-size: 16px;
+  flex-shrink: 0;
+  color: var(--text-muted);
 }
 
 .form-checkbox {
@@ -1090,7 +1309,8 @@ tr.disabled {
 }
 
 .dir-lock {
-  font-size: 12px;
+  color: var(--text-muted);
+  flex-shrink: 0;
 }
 
 .btn-primary {

@@ -15,7 +15,7 @@ import type {
   ComicProgress,
   EbookProgress,
   EbookSeries,
-  LibraryRescanResult,
+  LibraryScanResult,
   AnilistMediaItem,
   BangumiItem,
   SystemSetting,
@@ -30,6 +30,7 @@ import type {
   CreateMediaLibraryRequest,
   UpdateMediaLibraryRequest,
   DirectoryItem,
+  MediaLibraryType,
 } from '@/types/backend'
 
 const client = axios.create({
@@ -612,14 +613,14 @@ export async function removeTrackFromPlaylist(playlistId: number, trackId: numbe
   await client.delete(`/api/v1/music/playlists/${playlistId}/tracks/${trackId}`)
 }
 
-export async function rescanLibrary(): Promise<LibraryRescanResult> {
-  const response = await client.post<ApiResponse<LibraryRescanResult>>('/api/v1/library/rescan')
+export async function scanAllLibraries(): Promise<LibraryScanResult> {
+  const response = await client.post<ApiResponse<LibraryScanResult>>('/api/v1/media-libraries/scan')
   return response.data.data
 }
 
-export async function rescanMusic(): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/music/rescan')
-  return response.data.data || ''
+export async function scanLibraryById(libraryId: number): Promise<LibraryScanResult> {
+  const response = await client.post<ApiResponse<LibraryScanResult>>(`/api/v1/media-libraries/${libraryId}/scan`)
+  return response.data.data
 }
 
 export async function reorganizeMusic(): Promise<number> {
@@ -679,17 +680,6 @@ export async function getTmdbStatus(): Promise<TmdbStatus> {
   return response.data.data
 }
 
-export interface PerformanceSettings {
-  'watcher.periodic-scan': boolean
-  'watcher.periodic-scan-interval': number
-  'hub.tmdb.scraper-threads': number
-}
-
-export async function getPerformanceSettings(): Promise<PerformanceSettings> {
-  const response = await client.get<ApiResponse<PerformanceSettings>>('/api/v1/settings/performance')
-  return response.data.data
-}
-
 export async function getAllMediaLibraries(): Promise<MediaLibrary[]> {
   const response = await client.get<ApiResponse<MediaLibrary[]>>('/api/v1/media-libraries')
   return response.data.data || []
@@ -719,14 +709,9 @@ export async function toggleMediaLibrary(id: number): Promise<MediaLibrary> {
   return response.data.data
 }
 
-export async function rescanVideos(): Promise<LibraryRescanResult> {
-  const response = await client.post<ApiResponse<LibraryRescanResult>>('/api/v1/video/rescan')
-  return response.data.data
-}
-
-export async function browseDirectory(path?: string): Promise<DirectoryItem[]> {
+export async function browseDirectory(path?: string, type?: MediaLibraryType): Promise<DirectoryItem[]> {
   const response = await client.get<ApiResponse<DirectoryItem[]>>('/api/v1/media-libraries/browse', {
-    params: path ? { path } : {},
+    params: { ...(path ? { path } : {}), ...(type ? { type } : {}) },
   })
   return response.data.data || []
 }

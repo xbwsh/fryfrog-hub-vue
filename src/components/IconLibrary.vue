@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { iconData, type IconItem } from '@/icons'
 import { useThemeStore } from '@/stores/theme'
+import { useToast } from '@/composables/useToast'
 
 type CategoryKey = 'general' | 'music' | 'comic' | 'audiobook' | 'ebook' | 'video'
 
@@ -59,10 +60,8 @@ const tabLabels: Record<CategoryKey, string> = {
 const tabOrder: CategoryKey[] = ['general', 'music', 'comic', 'audiobook', 'ebook', 'video']
 
 const currentTab = ref<CategoryKey>('general')
-const toastMessage = ref('')
-const toastVisible = ref(false)
 const copiedId = ref('')
-let toastTimer: ReturnType<typeof setTimeout> | null = null
+const toast = useToast()
 
 const currentIcons = computed(() => (iconData[currentTab.value] || []) as IconItem[])
 const currentAccent = computed(() => accentColors[currentTab.value])
@@ -80,7 +79,7 @@ async function copySVG(icon: IconItem) {
   const svgCode = buildSvg(icon)
   try {
     await navigator.clipboard.writeText(svgCode)
-    showToast(`Copied: ${icon.id}`)
+    toast.success(`已复制: ${icon.id}`)
   } catch {
     const textarea = document.createElement('textarea')
     textarea.value = svgCode
@@ -89,17 +88,10 @@ async function copySVG(icon: IconItem) {
     textarea.select()
     document.execCommand('copy')
     document.body.removeChild(textarea)
-    showToast('Copied!')
+    toast.success('已复制!')
   }
   copiedId.value = icon.id
   setTimeout(() => { copiedId.value = '' }, 1800)
-}
-
-function showToast(msg: string) {
-  if (toastTimer) clearTimeout(toastTimer)
-  toastMessage.value = msg
-  toastVisible.value = true
-  toastTimer = setTimeout(() => { toastVisible.value = false }, 2000)
 }
 </script>
 
@@ -151,8 +143,6 @@ function showToast(msg: string) {
       <p>所有图标 · <span>24×24</span> · 描边 1.5 · 圆角端点与连接</p>
       <p style="margin-top:6px;">点击图标复制 SVG 代码到剪贴板</p>
     </footer>
-
-    <div class="il-toast" :class="{ show: toastVisible }">{{ toastMessage }}</div>
   </div>
 </template>
 
@@ -325,29 +315,6 @@ function showToast(msg: string) {
   font-size: 0.55rem;
   color: var(--il-icon-id-color);
   letter-spacing: 0.06em;
-}
-
-.il-toast {
-  position: fixed;
-  bottom: 32px;
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  background: v-bind(currentAccent);
-  color: #0a0a0a;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s ease;
-  z-index: 999;
-}
-
-.il-toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
 }
 
 .il-footer {

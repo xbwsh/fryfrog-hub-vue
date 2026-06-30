@@ -4,7 +4,7 @@ import type { MusicTrack } from '@/types/backend'
 import {
   getAllTracks,
   getLyrics,
-  rescanLibrary,
+  scanAllLibraries,
 } from '@/api/backend'
 
 export const useLibraryStore = defineStore('library', () => {
@@ -94,16 +94,15 @@ export const useLibraryStore = defineStore('library', () => {
     loading.value = true
     error.value = null
     try {
-      const result = await rescanLibrary()
-      const modules = ['音乐', '漫画', '视频', '电子书']
-      const keys = ['music', 'comic', 'video', 'ebook'] as const
-      const messages = keys.map((key, i) => {
-        const mod = result[key]
-        return `${modules[i]}: ${mod.scanStatus}（清理 ${mod.cleanedCount} 条）`
-      })
+      const result = await scanAllLibraries()
+      const messages: string[] = []
+      for (const [key, value] of Object.entries(result.scan)) {
+        messages.push(`${key}: ${value}`)
+      }
+      messages.push(`耗时: ${result.elapsedMs}ms`)
       return messages.join('\n')
     } catch (e) {
-      error.value = '整理媒体库失败'
+      error.value = '扫描媒体库失败'
       throw e
     } finally {
       loading.value = false

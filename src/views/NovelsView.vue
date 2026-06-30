@@ -41,38 +41,31 @@
       <p>暂无电子书</p>
     </div>
 
-    <div v-else class="series-list">
+    <div v-else class="content-grid">
       <div
         v-for="series in seriesList"
         :key="series.name"
-        class="series-group"
+        class="content-card"
+        @click="viewSeries(series)"
       >
-        <div
-          class="series-header"
-          @click="viewSeries(series)"
-        >
-          <div class="series-cover">
-            <img
-              :src="getSeriesCoverUrl(series.coverArtPath)"
-              :alt="series.name"
-              draggable="false"
-              @error="onImageError"
-            />
-          </div>
-          <div class="series-info">
-            <h3 class="series-name">{{ series.name }}</h3>
-            <p class="series-meta">{{ series.author }} · {{ series.volumeCount }} 卷</p>
-            <div v-if="getSeriesProgress(series)" class="series-progress">
-              <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: getSeriesProgress(series)!.percent + '%' }"></div>
-              </div>
-              <span class="progress-text">{{ getSeriesProgress(series)!.text }}</span>
+        <div class="card-cover">
+          <img
+            :src="getSeriesCoverUrl(series.coverArtPath)"
+            :alt="series.name"
+            draggable="false"
+            @error="onImageError"
+          />
+          <div class="card-badge" v-if="series.volumeCount">{{ series.volumeCount }} 卷</div>
+          <div v-if="getSeriesProgress(series)" class="card-progress">
+            <div class="card-progress-bar">
+              <div class="card-progress-fill" :style="{ width: getSeriesProgress(series)!.percent + '%' }"></div>
             </div>
           </div>
-          <div class="series-arrow">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
+        </div>
+        <div class="card-info">
+          <div class="card-title">{{ series.name }}</div>
+          <div class="card-meta">
+            <span v-if="series.author">{{ series.author }}</span>
           </div>
         </div>
       </div>
@@ -383,99 +376,93 @@ watch(() => route.query.read, () => {
   background: var(--accent-hover);
 }
 
-.series-list {
+.content-grid {
   flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-auto-rows: max-content;
+  gap: 20px;
+  padding: 20px 32px 80px;
   overflow-y: auto;
-  padding: 0 32px 32px;
 }
 
-.series-group {
-  margin-bottom: 24px;
+.content-card {
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   overflow: hidden;
-}
-
-.series-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 16px;
   cursor: pointer;
   transition: var(--transition);
-}
-
-.series-header:hover {
-  background: var(--bg-hover);
-}
-
-.series-header:hover .series-arrow {
-  color: var(--accent);
-}
-
-.series-cover {
-  width: 50px;
-  height: 68px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  flex-shrink: 0;
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-
-.series-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.series-info {
-  flex: 1;
   min-width: 0;
 }
 
-.series-name {
-  font-size: 15px;
+.content-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+  position: relative;
+}
+
+.card-cover {
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-tertiary);
+}
+
+.card-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.card-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  color: white;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.card-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.card-progress-bar {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.card-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+.card-info {
+  padding: 12px;
+}
+
+.card-title {
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  margin: 0 0 4px;
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.series-meta {
-  font-size: 12px;
+.card-meta {
+  font-size: 11px;
   color: var(--text-muted);
-  margin: 0;
-}
-
-.series-progress {
-  margin-top: 6px;
-}
-
-.progress-bar {
-  height: 3px;
-  background: var(--border);
-  border-radius: 2px;
-  overflow: hidden;
-  margin-bottom: 4px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-.progress-text {
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
-.series-arrow {
-  color: var(--text-muted);
-  flex-shrink: 0;
 }
 
 .dialog-overlay {
@@ -576,8 +563,8 @@ watch(() => route.query.read, () => {
     width: 100%;
   }
 
-  .series-list {
-    padding: 0 16px 16px;
+  .content-grid {
+    padding: 16px 16px 60px;
   }
 }
 </style>

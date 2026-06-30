@@ -1,6 +1,7 @@
 <template>
   <Toast
     :message="toast.state.value.message"
+    :message-html="toast.state.value.messageHtml"
     :type="toast.state.value.type"
     :visible="toast.state.value.visible"
     @update:visible="toast.hide"

@@ -248,7 +248,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { MusicTrack } from '@/types/backend'
-import { getAllTracks, getMusicCoverArtUrl, getArtistImageUrl, searchMusic, getFavorites, getRecentlyPlayed, getMostPlayed, getRecentlyAdded, recordMusicPlay, getMusicRecommendations, rescanMusic, reorganizeMusic } from '@/api/backend'
+import { getAllTracks, getMusicCoverArtUrl, getArtistImageUrl, searchMusic, getFavorites, getRecentlyPlayed, getMostPlayed, getRecentlyAdded, recordMusicPlay, getMusicRecommendations, scanAllLibraries, reorganizeMusic } from '@/api/backend'
 import { usePlayerStore } from '@/stores/player'
 import MusicPlayerBar from '@/components/MusicPlayerBar.vue'
 import LyricsPanel from '@/components/LyricsPanel.vue'
@@ -500,7 +500,7 @@ async function handleRescan() {
   if (rescanning.value) return
   rescanning.value = true
   try {
-    await rescanMusic()
+    await scanAllLibraries()
     await loadTracks()
     loadCategoryCounts()
     loadFavoriteCount()

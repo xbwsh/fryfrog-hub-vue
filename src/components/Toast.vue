@@ -17,7 +17,8 @@
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
           </svg>
         </div>
-        <span class="toast-message">{{ message }}</span>
+        <span v-if="messageHtml" class="toast-message toast-html" v-html="messageHtml"></span>
+        <span v-else class="toast-message">{{ message }}</span>
       </div>
     </Transition>
   </Teleport>
@@ -28,6 +29,7 @@ import { onMounted, watch } from 'vue'
 
 const props = defineProps<{
   message: string
+  messageHtml?: string
   type?: 'success' | 'error' | 'info'
   duration?: number
   visible: boolean
@@ -105,7 +107,25 @@ onMounted(() => {
 }
 
 .toast-message {
-  white-space: nowrap;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.toast-html :deep(.toast-title) {
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.toast-html :deep(.toast-detail) {
+  font-size: 13px;
+  opacity: 0.85;
+}
+
+.toast-html :deep(.toast-time) {
+  font-size: 12px;
+  opacity: 0.6;
+  margin-top: 4px;
 }
 
 .toast-enter-active,

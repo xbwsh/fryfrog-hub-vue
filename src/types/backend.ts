@@ -266,6 +266,7 @@ export interface EbookProgress {
 
 export interface SeriesDTO {
   id: number
+  type: 'series' | 'standalone'
   title: string
   originalTitle: string | null
   overview: string | null
@@ -317,16 +318,10 @@ export interface BackendConfig {
   authenticated: boolean
 }
 
-export interface ModuleRescanResult {
-  cleanedCount: number
-  scanStatus: string
-}
-
-export interface LibraryRescanResult {
-  music: ModuleRescanResult
-  comic: ModuleRescanResult
-  ebook: ModuleRescanResult
-  video: ModuleRescanResult
+export interface LibraryScanResult {
+  scan: Record<string, string>
+  organize: Record<string, string> | null
+  elapsedMs: number
 }
 
 export interface SystemSetting {
@@ -388,13 +383,15 @@ export interface ExtractedSubtitle {
   fileName: string
 }
 
-export type MediaLibraryType = 'MOVIE' | 'TV' | 'MIXED'
+export type MediaLibraryType = 'VIDEO' | 'MUSIC' | 'COMIC' | 'EBOOK'
+export type VideoSubType = 'MOVIE' | 'TV' | 'MIXED'
 
 export interface MediaLibrary {
   id: number
   name: string
   path: string
   type: MediaLibraryType
+  subType: VideoSubType | null
   enabled: boolean
   sortOrder: number
   description: string | null
@@ -406,6 +403,7 @@ export interface CreateMediaLibraryRequest {
   name: string
   path: string
   type: MediaLibraryType
+  subType?: VideoSubType
   enabled?: boolean
   sortOrder?: number
   description?: string
@@ -415,6 +413,7 @@ export interface UpdateMediaLibraryRequest {
   name?: string
   path?: string
   type?: MediaLibraryType
+  subType?: VideoSubType
   enabled?: boolean
   sortOrder?: number
   description?: string

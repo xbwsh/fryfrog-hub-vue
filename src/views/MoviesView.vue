@@ -6,6 +6,11 @@
         <p class="view-subtitle">管理你的视频库</p>
       </div>
       <div class="header-actions">
+        <div class="filter-tabs">
+          <button :class="{ active: filterType === 'all' }" @click="filterType = 'all'">全部</button>
+          <button :class="{ active: filterType === 'movie' }" @click="filterType = 'movie'">电影</button>
+          <button :class="{ active: filterType === 'tv' }" @click="filterType = 'tv'">电视剧</button>
+        </div>
         <button class="view-toggle-btn" @click="toggleViewMode" :title="showBackdrop ? '切换为海报' : '切换为背景图'">
           <svg v-if="showBackdrop" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
@@ -39,7 +44,7 @@
       <button @click="loadVideos">重试</button>
     </div>
 
-    <div v-else-if="seriesList.length === 0" class="empty-state">
+    <div v-else-if="filteredList.length === 0" class="empty-state">
       <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
         <line x1="7" y1="2" x2="7" y2="22"/>
@@ -50,7 +55,7 @@
     </div>
 
     <div v-else class="content-grid" :class="{ 'backdrop-mode': showBackdrop }">
-      <div v-for="series in seriesList" :key="series.id" class="content-card" @click="viewSeries(series)">
+      <div v-for="series in filteredList" :key="series.id" class="content-card" @click="viewSeries(series)">
         <div class="card-cover video-cover" :class="{ 'backdrop-cover': showBackdrop }">
           <img :src="getImageUrl(series)" :alt="series.title" draggable="false" @error="onImageError" />
           <div class="play-icon">
@@ -58,7 +63,8 @@
               <polygon points="5 3 19 12 5 21 5 3"/>
             </svg>
           </div>
-          <div class="card-badge" v-if="series.episodes && series.episodes.length > 0">{{ series.episodes.length }} 集</div>
+          <div class="card-badge" v-if="series.type === 'standalone'">独立</div>
+          <div class="card-badge" v-else-if="series.episodes && series.episodes.length > 0">{{ series.episodes.length }} 集</div>
           <div v-if="getSeriesProgress(series) > 0" class="card-progress">
             <div class="card-progress-bar">
               <div class="card-progress-fill" :style="{ width: Math.min(getSeriesProgress(series), 100) + '%' }"></div>
@@ -67,7 +73,12 @@
           <div v-if="isSeriesWatched(series)" class="card-watched-badge">已看完</div>
         </div>
         <div class="card-info">
-          <div class="card-title">{{ series.title }}</div>
+          <div class="card-title-row">
+            <span class="card-title">{{ series.title }}</span>
+            <span v-if="series.mediaType" class="media-type-badge" :class="series.mediaType">
+              {{ series.mediaType === 'movie' ? '电影' : '电视剧' }}
+            </span>
+          </div>
           <div class="card-meta">
             <span v-if="series.year">{{ series.year }}</span>
             <span v-if="series.episodes && series.episodes.length > 0" class="meta-sep">·</span>
@@ -81,7 +92,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { SeriesDTO } from '@/types/backend'
 import { getAllSeries, getSeriesPosterUrl } from '@/api/backend'
@@ -92,6 +103,12 @@ const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
 const showBackdrop = ref(false)
+const filterType = ref<'all' | 'movie' | 'tv'>('all')
+
+const filteredList = computed(() => {
+  if (filterType.value === 'all') return seriesList.value
+  return seriesList.value.filter(s => s.mediaType === filterType.value)
+})
 
 function toggleViewMode() {
   showBackdrop.value = !showBackdrop.value
@@ -246,6 +263,54 @@ onMounted(loadVideos)
   border-color: var(--accent);
   outline: none;
   box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+  padding: 3px;
+}
+
+.filter-tabs button {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.filter-tabs button:hover {
+  color: var(--text-primary);
+}
+
+.filter-tabs button.active {
+  background: var(--accent);
+  color: white;
+}
+
+.media-type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.media-type-badge.movie {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+}
+
+.media-type-badge.tv {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
 }
 
 .loading-state,
@@ -447,14 +512,21 @@ onMounted(loadVideos)
   padding: 12px;
 }
 
+.card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
 .card-title {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
-  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .card-meta {

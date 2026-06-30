@@ -68,6 +68,11 @@ const router = createRouter({
       name: 'icons',
       component: () => import('@/components/IconLibrary.vue'),
     },
+    {
+      path: '/colors',
+      name: 'colors',
+      component: () => import('@/components/ColorPalette.vue'),
+    },
   ],
 })
 
