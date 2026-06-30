@@ -31,6 +31,7 @@ import type {
   UpdateMediaLibraryRequest,
   DirectoryItem,
   MediaLibraryType,
+  LogFileInfo,
 } from '@/types/backend'
 
 const client = axios.create({
@@ -714,4 +715,13 @@ export async function browseDirectory(path?: string, type?: MediaLibraryType): P
     params: { ...(path ? { path } : {}), ...(type ? { type } : {}) },
   })
   return response.data.data || []
+}
+
+export async function getLogFiles(): Promise<LogFileInfo[]> {
+  const response = await client.get<ApiResponse<LogFileInfo[]>>('/api/v1/logs')
+  return response.data.data || []
+}
+
+export function getLogDownloadUrl(fileName: string): string {
+  return `${config.url}/api/v1/logs/${encodeURIComponent(fileName)}`
 }

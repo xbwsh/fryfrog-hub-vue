@@ -53,6 +53,10 @@
         <AppIcon name="dropper" :size="20" />
         色彩
       </router-link>
+      <router-link to="/logs" class="nav-item" active-class="active">
+        <AppIcon name="file-text" :size="20" />
+        日志
+      </router-link>
     </div>
 
     <div class="sidebar-footer">

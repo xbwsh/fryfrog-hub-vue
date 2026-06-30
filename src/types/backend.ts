@@ -425,3 +425,9 @@ export interface DirectoryItem {
   writable: boolean
 }
 
+export interface LogFileInfo {
+  name: string
+  size: number
+  lastModified: string
+}
+

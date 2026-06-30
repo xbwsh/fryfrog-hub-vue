@@ -73,6 +73,11 @@ const router = createRouter({
       name: 'colors',
       component: () => import('@/components/ColorPalette.vue'),
     },
+    {
+      path: '/logs',
+      name: 'logs',
+      component: () => import('@/views/LogsView.vue'),
+    },
   ],
 })
 
