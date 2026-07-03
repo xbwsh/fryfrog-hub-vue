@@ -163,6 +163,7 @@ export interface VideoDTO {
   watchProgressPercent: number | null
   watched: boolean | null
   libraryId: number | null
+  audioIncompatible: boolean
 }
 
 export interface VideoProgress {
@@ -373,14 +374,11 @@ export interface SubtitleTrack {
   default: boolean
 }
 
-export interface ExtractedSubtitle {
-  index: number
-  language: string
-  codec: string
-  title: string | null
-  defaultStream: boolean
-  filePath: string
+export interface ExternalSubtitle {
   fileName: string
+  ext: string
+  path: string
+  language: string
 }
 
 export type MediaLibraryType = 'VIDEO' | 'MUSIC' | 'COMIC' | 'EBOOK'

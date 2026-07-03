@@ -969,6 +969,25 @@ onMounted(() => {
   50% { opacity: 0.4; }
 }
 
+/* 平板横屏 */
+@media screen and (min-width: 768px) and (max-width: 1279px) {
+  .section-body {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .setting-item {
+    padding: 8px 8px;
+  }
+
+  .url-input {
+    width: 160px;
+  }
+
+  .range-input {
+    width: 100px;
+  }
+}
+
 @media screen and (max-width: 767px) {
   .settings-view {
     padding: 16px 16px 60px;

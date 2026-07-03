@@ -249,6 +249,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { MusicTrack } from '@/types/backend'
 import { getAllTracks, getMusicCoverArtUrl, getArtistImageUrl, searchMusic, getFavorites, getRecentlyPlayed, getMostPlayed, getRecentlyAdded, recordMusicPlay, getMusicRecommendations, scanAllLibraries, reorganizeMusic } from '@/api/backend'
+import { formatDuration } from '@/utils/format'
 import { usePlayerStore } from '@/stores/player'
 import MusicPlayerBar from '@/components/MusicPlayerBar.vue'
 import LyricsPanel from '@/components/LyricsPanel.vue'
@@ -338,8 +339,8 @@ const artistCount = computed(() => {
 
 const totalSize = computed(() => {
   const total = tracks.value.reduce((sum, t) => sum + (t.fileSize || 0), 0)
-  const gb = total / (1024 * 1024 * 1024)
-  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(total / (1024 * 1024)).toFixed(0)} MB`
+  const gb = total / 1073741824
+  return gb >= 1 ? `${gb.toFixed(1)} GB` : `${(total / 1048576).toFixed(0)} MB`
 })
 
 const lastUpdateTime = computed(() => {
@@ -525,12 +526,6 @@ async function handleReorganize() {
   }
 }
 
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60)
-  const secs = seconds % 60
-  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
-}
-
 async function loadRecommendations() {
   loadingRecommendations.value = true
   try {
@@ -626,7 +621,8 @@ onUnmounted(() => {
 
 /* 左侧歌曲列表 */
 .list-panel {
-  width: 550px;
+  width: 320px;
+  min-width: 280px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -825,9 +821,9 @@ onUnmounted(() => {
 }
 
 .banner-text h2 {
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 500;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   line-height: 1.3;
 }
 
@@ -844,25 +840,25 @@ onUnmounted(() => {
 }
 
 .banner-img {
-  height: 140px;
+  height: 120px;
   object-fit: cover;
   border-radius: 10px;
   box-shadow: 0 10px 20px rgba(0,0,0,0.3);
 }
 
 .banner-img-left {
-  width: 140px;
+  width: 100px;
   transform: rotate(-8deg);
 }
 
 .banner-img-right {
-  width: 220px;
+  width: 160px;
   transform: rotate(-3deg);
 }
 
 .section {
-  margin-bottom: 28px;
-  padding: 16px;
+  margin-bottom: 20px;
+  padding: 14px;
   background: var(--bg-secondary);
   border-radius: 12px;
 }
@@ -892,7 +888,7 @@ onUnmounted(() => {
 
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 12px;
 }
 
@@ -1077,7 +1073,8 @@ onUnmounted(() => {
 
 /* 右侧面板 */
 .right-panel {
-  width: 400px;
+  width: 220px;
+  min-width: 200px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1089,7 +1086,7 @@ onUnmounted(() => {
 .panel-section {
   background: var(--bg-secondary);
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1164,8 +1161,8 @@ onUnmounted(() => {
 }
 
 .tags {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   max-height: 120px;
   overflow-y: auto;
@@ -1194,13 +1191,13 @@ onUnmounted(() => {
 .rank-scroll {
   flex: 1;
   overflow-y: auto;
-  max-height: 400px;
+  max-height: 300px;
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  gap: 16px;
   padding: 8px 0;
 }
 
@@ -1312,18 +1309,61 @@ onUnmounted(() => {
 }
 
 /* 响应式 */
-@media screen and (max-width: 1200px) {
+@media screen and (max-width: 1100px) {
   .right-panel {
     display: none;
   }
 }
 
-@media screen and (max-width: 900px) {
+@media screen and (max-width: 800px) {
   .list-panel {
     width: 100%;
+    min-width: 0;
   }
 
   .main-panel {
+    display: none;
+  }
+
+  .top-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .banner {
+    padding: 24px 16px;
+  }
+
+  .banner-text h2 {
+    font-size: 18px;
+  }
+
+  .banner-visual {
+    display: none;
+  }
+
+  .category-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .playlist-card {
+    width: 120px;
+  }
+
+  .pl-img-wrap {
+    height: 120px;
+  }
+}
+
+/* 平板横屏：隐藏左侧歌曲标题文字 */
+@media screen and (min-width: 801px) and (max-width: 1279px) {
+  .list-title {
     display: none;
   }
 }

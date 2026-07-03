@@ -18,7 +18,7 @@ async function fetchLogs() {
   try {
     logs.value = await getLogFiles()
   } catch (error) {
-    toast.error('获取日志列表失败')
+    toast.show('获取日志列表失败', 'error')
     console.error(error)
   } finally {
     loading.value = false
@@ -210,12 +210,14 @@ function downloadLog(fileName: string) {
 }
 
 .file-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-family: monospace;
   font-size: 13px;
   color: var(--text-primary);
+}
+
+.file-name :deep(svg) {
+  vertical-align: middle;
+  margin-right: 8px;
 }
 
 .file-size {

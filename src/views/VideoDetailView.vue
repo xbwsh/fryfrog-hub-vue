@@ -63,6 +63,17 @@
             </div>
 
             <div class="action-row">
+              <template v-if="currentDisplayInfo.audioIncompatible">
+                <div class="audio-incompatible-tip">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>音频格式不兼容浏览器，复制链接到本地播放器播放</span>
+                  <button class="tip-copy-btn" @click="copyStreamUrl">复制链接</button>
+                  <a class="tip-copy-btn" :href="`/api/v1/video/${video?.id}/playlist.m3u`" download>下载播放列表</a>
+                </div>
+              </template>
+              <template v-else>
               <button class="play-btn" @click="playEpisode(video || series.episodes[0])">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"/>
@@ -79,6 +90,7 @@
                 </svg>
                 从头播放
               </button>
+              </template>
               <Tooltip content="刮削元数据" placement="bottom">
                 <button class="icon-btn scrape-btn" @click="showTmdbSearch = true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -108,6 +120,13 @@
                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                   </svg>
                 </button>
+              </Tooltip>
+              <Tooltip content="下载播放列表 (PotPlayer)" placement="bottom">
+                <a class="icon-btn" :href="`/api/v1/video/${video?.id}/playlist.m3u`" download>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </a>
               </Tooltip>
             </div>
 
@@ -317,6 +336,17 @@
             </div>
 
             <div class="action-row">
+              <template v-if="video.audioIncompatible">
+                <div class="audio-incompatible-tip">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                  </svg>
+                  <span>音频格式不兼容浏览器，复制链接到本地播放器播放</span>
+                  <button class="tip-copy-btn" @click="copyStreamUrl">复制链接</button>
+                  <a class="tip-copy-btn" :href="`/api/v1/video/${video.id}/playlist.m3u`" download>下载播放列表</a>
+                </div>
+              </template>
+              <template v-else>
               <button class="play-btn" @click="showPlayer = true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"/>
@@ -333,6 +363,7 @@
                 </svg>
                 从头播放
               </button>
+              </template>
               <Tooltip content="刮削元数据" placement="bottom">
                 <button class="icon-btn scrape-btn" @click="showTmdbSearch = true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -374,7 +405,15 @@
                   </svg>
                 </button>
               </Tooltip>
+              <Tooltip content="下载播放列表 (PotPlayer)" placement="bottom">
+                <a class="icon-btn" :href="`/api/v1/video/${video.id}/playlist.m3u`" download>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </a>
+              </Tooltip>
             </div>
+
 
             <div class="rating-row" v-if="video.rating! > 0">
               <span class="rating-score">{{ video.rating!.toFixed(1) }}</span>
@@ -457,10 +496,10 @@
       :video-title="currentPlayVideo.title"
       :episodes="series?.episodes || []"
       :current-episode-id="currentPlayVideo.id"
-      :subtitle-files="subtitleFiles"
+      :subtitle-tracks="subtitleTracks"
+      :external-subtitles="externalSubtitles"
       @close="showPlayer = false"
       @episode-change="handleEpisodeChange"
-      @extract-subtitles="handleExtractSubtitles"
     />
 
     <Teleport to="body">
@@ -526,8 +565,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { VideoDTO, SeriesDTO, VideoActor } from '@/types/backend'
-import { getVideoById, getSeriesById, toggleVideoFavorite, getVideoPosterUrl, getVideoFanartUrl, getSeriesPosterUrl, getSeriesFanartUrl, deleteVideoProgress, getVideoActors, getVideoActorImageUrl, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, getSubtitleFiles, extractSubtitles } from '@/api/backend'
+import type { VideoDTO, SeriesDTO, VideoActor, SubtitleTrack, ExternalSubtitle } from '@/types/backend'
+import { getVideoById, getSeriesById, toggleVideoFavorite, getVideoPosterUrl, getVideoFanartUrl, getSeriesPosterUrl, getSeriesFanartUrl, deleteVideoProgress, getVideoActors, getVideoActorImageUrl, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, getSubtitleTracks, getExternalSubtitles } from '@/api/backend'
 import { useConnectionStore } from '@/stores/connection'
 import { useToast } from '@/composables/useToast'
 import Tooltip from '@/components/Tooltip.vue'
@@ -547,7 +586,8 @@ const showPlayer = ref(false)
 type EpisodeViewMode = 'poster' | 'compact'
 const episodeViewMode = ref<EpisodeViewMode>('poster')
 const actors = ref<VideoActor[]>([])
-const subtitleFiles = ref<string[]>([])
+const subtitleTracks = ref<SubtitleTrack[]>([])
+const externalSubtitles = ref<ExternalSubtitle[]>([])
 
 // TMDB search
 const showTmdbSearch = ref(false)
@@ -568,7 +608,7 @@ async function loadVideo() {
   series.value = null
   video.value = null
   actors.value = []
-  subtitleFiles.value = []
+  subtitleTracks.value = []
 
   try {
     const data = await getVideoById(id)
@@ -586,9 +626,10 @@ async function loadVideo() {
         actors.value = []
       }
       try {
-        subtitleFiles.value = await getSubtitleFiles(id)
+        subtitleTracks.value = await getSubtitleTracks(id)
       } catch {
-        subtitleFiles.value = []
+  subtitleTracks.value = []
+  externalSubtitles.value = []
       }
     } else {
       error.value = '视频不存在'
@@ -608,27 +649,21 @@ function selectEpisode(episode: VideoDTO) {
 function handleEpisodeChange(episode: VideoDTO) {
   video.value = episode
   showPlayer.value = true
-  loadSubtitleFiles()
+  loadSubtitleTracks()
 }
 
-async function loadSubtitleFiles() {
+async function loadSubtitleTracks() {
   const id = video.value?.id || series.value?.episodes[0]?.id
   if (!id) return
   try {
-    subtitleFiles.value = await getSubtitleFiles(id)
+    subtitleTracks.value = await getSubtitleTracks(id)
   } catch {
-    subtitleFiles.value = []
+    subtitleTracks.value = []
   }
-}
-
-async function handleExtractSubtitles() {
-  const id = video.value?.id || series.value?.episodes[0]?.id
-  if (!id) return
   try {
-    await extractSubtitles(id)
-    await loadSubtitleFiles()
-  } catch (e) {
-    console.error('Failed to extract subtitles:', e)
+    externalSubtitles.value = await getExternalSubtitles(id)
+  } catch {
+    externalSubtitles.value = []
   }
 }
 
@@ -781,9 +816,9 @@ function copyStreamUrl() {
   const baseUrl = connectionStore.backendUrl || ''
   const url = `${baseUrl}/api/v1/video/${id}/stream`
   navigator.clipboard.writeText(url).then(() => {
-    toast.success('播放链接已复制到剪贴板')
+    toast.show('播放链接已复制到剪贴板', 'success')
   }).catch(() => {
-    toast.error('复制失败')
+    toast.show('复制失败', 'error')
   })
 }
 
@@ -804,7 +839,8 @@ const currentDisplayInfo = computed(() => {
       backdropUrl: (video.value?.backdropUrl || (video.value?.id ? getVideoFanartUrl(video.value.id) : '')) || series.value.backdropUrl || getSeriesFanartUrl(series.value.id),
       overview: series.value.overview,
       year: series.value.year,
-      genre: video.value?.genre || null
+      genre: video.value?.genre || null,
+      audioIncompatible: video.value?.audioIncompatible ?? false
     }
   }
   if (video.value) {
@@ -815,7 +851,8 @@ const currentDisplayInfo = computed(() => {
       backdropUrl: video.value.backdropUrl || getVideoFanartUrl(video.value.id),
       overview: video.value.overview,
       year: video.value.year,
-      genre: video.value.genre
+      genre: video.value.genre,
+      audioIncompatible: video.value.audioIncompatible
     }
   }
   return {
@@ -825,7 +862,8 @@ const currentDisplayInfo = computed(() => {
     backdropUrl: '',
     overview: '',
     year: 0,
-    genre: null
+    genre: null,
+    audioIncompatible: false
   }
 })
 
@@ -1038,6 +1076,7 @@ onMounted(loadVideo)
 .action-row {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -1080,9 +1119,10 @@ onMounted(loadVideo)
   align-items: center;
   justify-content: center;
   color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(4px);
   border: none;
-  cursor: pointer;
+
   transition: var(--transition);
 }
 
@@ -1852,6 +1892,81 @@ onMounted(loadVideo)
   letter-spacing: -0.02em;
 }
 
+.audio-incompatible-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(234, 122, 122, 0.4);
+  border-radius: 10px;
+  color: #ea7a7a;
+  font-size: 13px;
+}
+
+.tip-copy-btn {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(234, 122, 122, 0.5);
+  background: rgba(234, 122, 122, 0.2);
+  color: #ea7a7a;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.tip-copy-btn:hover {
+  background: rgba(234, 122, 122, 0.35);
+}
+
+/* 平板通用 (768px ~ 1024px) */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+  .hero-body {
+    gap: 28px;
+    padding: 60px 32px 40px;
+  }
+
+  .poster-img, .poster-placeholder {
+    width: 200px;
+  }
+
+  .video-title {
+    font-size: 26px;
+  }
+
+  .action-row {
+    flex-wrap: wrap;
+  }
+
+  .detail-body {
+    padding: 0 24px 32px;
+  }
+
+  .episode-poster-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+
+  .hero-overview {
+    max-width: 100%;
+  }
+
+  .hero-overview p {
+    font-size: 14px;
+  }
+}
+
+/* 平板大横屏 (1025px ~ 1279px) */
+@media screen and (min-width: 1025px) and (max-width: 1279px) {
+  .hero-overview {
+    max-width: 100%;
+  }
+}
+
 @media screen and (max-width: 767px) {
   .hero-body {
     flex-direction: column;
@@ -1898,6 +2013,47 @@ onMounted(loadVideo)
 
   .media-card-filename {
     font-size: 13px;
+  }
+
+  .video-title {
+    font-size: 20px;
+  }
+
+  .play-btn {
+    font-size: 14px;
+    padding: 10px 20px;
+  }
+
+  .hero-overview p {
+    font-size: 14px;
+  }
+
+  .rating-score {
+    font-size: 20px;
+  }
+
+  .meta-line, .tag-row {
+    font-size: 13px;
+  }
+
+  .audio-incompatible-tip {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+
+  .hero-overview {
+    max-width: 100%;
+  }
+
+  .hero-overview p {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
 </style>

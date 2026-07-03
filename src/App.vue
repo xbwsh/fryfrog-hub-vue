@@ -2,6 +2,7 @@
   <div class="app-container" v-if="connected">
     <Sidebar
       :mobile="showMobileMenuBtn"
+      :tablet="isTablet"
       :show="showMobileSidebar"
       @close="showMobileSidebar = false"
     />
@@ -28,7 +29,13 @@
       <p>正在恢复连接...</p>
     </div>
   </div>
-  <ToastContainer />
+  <Toast
+    :message="toast.state.value.message"
+    :message-html="toast.state.value.messageHtml"
+    :type="toast.state.value.type"
+    :visible="toast.state.value.visible"
+    @update:visible="toast.hide"
+  />
 </template>
 
 <script setup lang="ts">
@@ -37,22 +44,29 @@ import { useConnectionStore } from '@/stores/connection'
 import ServerConnect from '@/components/ServerConnect.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import AppIcon from '@/components/AppIcon.vue'
-import ToastContainer from '@/components/ToastContainer.vue'
+import Toast from '@/components/Toast.vue'
+import { useToast } from '@/composables/useToast'
 import { useRouter } from 'vue-router'
 
 const connectionStore = useConnectionStore()
 const router = useRouter()
+const toast = useToast()
 
 const connected = computed(() => connectionStore.connected)
 const restoring = ref(false)
 const showMobileSidebar = ref(false)
 const showMobileMenuBtn = ref(false)
+const isTablet = ref(false)
 
 function checkMobile() {
-  const isMobile = window.innerWidth < 768 ||
-                   (window.innerWidth >= 768 && window.innerWidth <= 1024 && window.innerHeight < 1024)
+  const w = window.innerWidth
+  const h = window.innerHeight
+  const isMobile = w < 768 ||
+                   (w >= 768 && w <= 1024 && h < 1024)
+  const isTabletDevice = !isMobile && w >= 768 && w < 1280
 
   showMobileMenuBtn.value = isMobile
+  isTablet.value = isTabletDevice
   if (showMobileMenuBtn.value) {
     showMobileSidebar.value = false
   } else {

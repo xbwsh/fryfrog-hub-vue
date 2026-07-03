@@ -10,13 +10,7 @@
         <div class="section-title">
           <h2>音乐</h2>
           <span v-if="playerStore.currentTrack" class="now-playing-hint">
-            <span v-if="playerStore.isPlaying" class="eq-bars">
-              <span class="eq-bar"></span>
-              <span class="eq-bar"></span>
-              <span class="eq-bar"></span>
-            </span>
-            <span v-else class="pause-icon">&#9646;&#9646;</span>
-            正在播放：{{ playerStore.currentTrack.title }} - {{ playerStore.currentTrack.artist }}
+            正在播放：{{ playerStore.currentTrack.title }} · {{ playerStore.currentTrack.artist }}
           </span>
         </div>
         <router-link to="/music" class="see-all">查看全部</router-link>
@@ -716,5 +710,51 @@ function handleWheel(e: WheelEvent, section: 'music' | 'comics' | 'ebooks' | 'vi
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+@media screen and (max-width: 767px) {
+  .welcome-section {
+    margin-bottom: 20px;
+  }
+
+  .welcome-title {
+    font-size: 22px;
+  }
+
+  .welcome-subtitle {
+    font-size: 13px;
+  }
+
+  .content-section {
+    margin-bottom: 28px;
+  }
+
+  .section-header {
+    margin-bottom: 12px;
+  }
+
+  .section-header h2 {
+    font-size: 16px;
+  }
+
+  .content-card {
+    min-width: 120px;
+    max-width: 120px;
+  }
+
+  .content-grid {
+    gap: 10px;
+  }
+
+  .section-title {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .now-playing-hint {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 </style>

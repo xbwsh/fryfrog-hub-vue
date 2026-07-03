@@ -25,7 +25,7 @@ import type {
   MusicPlaylist,
   MediaInfo,
   SubtitleTrack,
-  ExtractedSubtitle,
+  ExternalSubtitle,
   MediaLibrary,
   CreateMediaLibraryRequest,
   UpdateMediaLibraryRequest,
@@ -37,6 +37,11 @@ import type {
 const client = axios.create({
   timeout: 30000,
 })
+
+function dedupeById<T extends { id: number }>(...arrays: T[][]): T[] {
+  const seen = new Set<number>()
+  return arrays.flat().filter(item => !seen.has(item.id) && (seen.add(item.id), true))
+}
 
 let config: BackendConfig = {
   url: '',
@@ -94,18 +99,7 @@ export async function searchMusic(query: string): Promise<MusicTrack[]> {
     searchByTitle(query),
     searchByArtist(query),
   ])
-
-  const seen = new Set<number>()
-  const results: MusicTrack[] = []
-
-  for (const track of [...titleResults, ...artistResults]) {
-    if (!seen.has(track.id)) {
-      seen.add(track.id)
-      results.push(track)
-    }
-  }
-
-  return results
+  return dedupeById(titleResults, artistResults)
 }
 
 export function getStreamUrl(id: number): string {
@@ -169,18 +163,7 @@ export async function searchComics(query: string): Promise<Comic[]> {
     searchComicByTitle(query),
     searchComicByAuthor(query),
   ])
-
-  const seen = new Set<number>()
-  const results: Comic[] = []
-
-  for (const comic of [...titleResults, ...authorResults]) {
-    if (!seen.has(comic.id)) {
-      seen.add(comic.id)
-      results.push(comic)
-    }
-  }
-
-  return results
+  return dedupeById(titleResults, authorResults)
 }
 
 export function getComicCoverUrl(id: number): string {
@@ -285,15 +268,7 @@ export async function searchEbooks(query: string): Promise<Ebook[]> {
     searchEbookByTitle(query),
     searchEbookByAuthor(query),
   ])
-  const seen = new Set<number>()
-  const results: Ebook[] = []
-  for (const book of [...titleResults, ...authorResults]) {
-    if (!seen.has(book.id)) {
-      seen.add(book.id)
-      results.push(book)
-    }
-  }
-  return results
+  return dedupeById(titleResults, authorResults)
 }
 
 export function getEbookCoverUrl(id: number): string {
@@ -381,15 +356,7 @@ export async function searchVideos(query: string): Promise<VideoDTO[]> {
     searchVideoByTitle(query),
     searchVideoByDirector(query),
   ])
-  const seen = new Set<number>()
-  const results: VideoDTO[] = []
-  for (const video of [...titleResults, ...directorResults]) {
-    if (!seen.has(video.id)) {
-      seen.add(video.id)
-      results.push(video)
-    }
-  }
-  return results
+  return dedupeById(titleResults, directorResults)
 }
 
 export function getVideoCoverUrl(id: number): string {
@@ -406,10 +373,6 @@ export function getVideoFanartUrl(id: number): string {
 
 export function getVideoStreamUrl(id: number): string {
   return `${config.url}/api/v1/video/${id}/stream`
-}
-
-export function getVideoSubtitleUrl(id: number, fileName: string): string {
-  return `/api/v1/video/${id}/subtitles/${encodeURIComponent(fileName)}`
 }
 
 export async function cleanupVideoRecords(): Promise<Record<string, number>> {
@@ -463,13 +426,16 @@ export async function getSubtitleTracks(id: number): Promise<SubtitleTrack[]> {
   return response.data.data || []
 }
 
-export async function extractSubtitles(id: number): Promise<ExtractedSubtitle[]> {
-  const response = await client.post<ApiResponse<ExtractedSubtitle[]>>(`/api/v1/video/${id}/subtitles/extract`)
-  return response.data.data || []
+export function getSubtitleVttUrl(id: number, streamIndex: number): string {
+  return `/api/v1/video/${id}/subtitle/vtt?index=${streamIndex}`
 }
 
-export async function getSubtitleFiles(id: number): Promise<string[]> {
-  const response = await client.get<ApiResponse<string[]>>(`/api/v1/video/${id}/subtitles/files`)
+export function getExternalSubtitleVttUrl(id: number, fileName: string): string {
+  return `/api/v1/video/${id}/subtitle/vtt?file=${encodeURIComponent(fileName)}`
+}
+
+export async function getExternalSubtitles(id: number): Promise<ExternalSubtitle[]> {
+  const response = await client.get<ApiResponse<ExternalSubtitle[]>>(`/api/v1/video/${id}/subtitle/external`)
   return response.data.data || []
 }
 

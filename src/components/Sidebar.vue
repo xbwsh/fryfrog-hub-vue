@@ -1,5 +1,5 @@
 <template>
-  <nav class="sidebar" :class="{ mobile, open: mobile && show }">
+  <nav class="sidebar" :class="{ mobile, tablet, open: mobile && show }">
     <div class="sidebar-header">
       <div class="header-info" v-show="!mobile">
         <span class="logo-text">Fryfrog Hub</span>
@@ -80,6 +80,7 @@ const router = useRouter()
 defineProps<{
   show?: boolean
   mobile?: boolean
+  tablet?: boolean
 }>()
 
 defineEmits<{
@@ -114,7 +115,12 @@ function handleDisconnect() {
   transition: transform 0.3s ease;
 }
 
+.sidebar.tablet {
+  width: 150px;
+}
+
 .sidebar.mobile {
+  width: 150px;
   position: fixed;
   top: 0;
   left: 0;
