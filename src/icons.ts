@@ -166,11 +166,7 @@ export const iconData: Record<string, IconItem[]> = {
   general, music, comic, audiobook, ebook, video,
 }
 
-const _iconMap = new Map<string, IconItem>()
+export const iconMap = new Map<string, IconItem>()
 for (const cat of Object.values(iconData)) {
-  for (const icon of cat) _iconMap.set(icon.id, icon)
-}
-
-export function getIcon(id: string): IconItem | undefined {
-  return _iconMap.get(id)
+  for (const icon of cat) iconMap.set(icon.id, icon)
 }

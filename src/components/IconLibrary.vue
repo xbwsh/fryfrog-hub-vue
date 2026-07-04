@@ -79,7 +79,7 @@ async function copySVG(icon: IconItem) {
   const svgCode = buildSvg(icon)
   try {
     await navigator.clipboard.writeText(svgCode)
-    toast.success(`已复制: ${icon.id}`)
+    toast.show(`已复制: ${icon.id}`, 'success')
   } catch {
     const textarea = document.createElement('textarea')
     textarea.value = svgCode
@@ -88,7 +88,7 @@ async function copySVG(icon: IconItem) {
     textarea.select()
     document.execCommand('copy')
     document.body.removeChild(textarea)
-    toast.success('已复制!')
+    toast.show('已复制!', 'success')
   }
   copiedId.value = icon.id
   setTimeout(() => { copiedId.value = '' }, 1800)

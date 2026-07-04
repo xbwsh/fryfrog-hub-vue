@@ -26,7 +26,6 @@
         </div>
 
         <p v-if="errorMsg" class="error-msg">{{ errorMsg }}</p>
-        <p class="hint-msg">默认账号: 666 / 密码: 666</p>
       </form>
     </div>
   </div>

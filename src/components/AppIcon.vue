@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { getIcon } from '@/icons'
+import { iconMap } from '@/icons'
 
 const props = withDefaults(defineProps<{
   name: string
@@ -11,7 +11,7 @@ const props = withDefaults(defineProps<{
   filled: false,
 })
 
-const icon = computed(() => getIcon(props.name))
+const icon = computed(() => iconMap.get(props.name))
 const resolvedSize = computed(() => typeof props.size === 'number' ? `${props.size}px` : props.size)
 </script>
 

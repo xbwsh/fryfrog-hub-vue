@@ -96,8 +96,8 @@ const serverDisplay = computed(() => {
   }
 })
 
-function handleDisconnect() {
-  connectionStore.disconnect()
+async function handleDisconnect() {
+  await connectionStore.disconnect()
   router.push('/')
 }
 </script>

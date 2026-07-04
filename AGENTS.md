@@ -25,7 +25,7 @@ npm run build        # vue-tsc -b && vite build
 - **状态管理**：Pinia 2.3.0
 - **路由**：Vue Router 4.5.0
 - **HTTP 客户端**：axios 1.7.9
-- **开发工具**：http-proxy-middleware 4.1.0
+- **开发工具**：typescript ~5.7.2
 
 ## 规范
 
@@ -34,6 +34,8 @@ npm run build        # vue-tsc -b && vite build
 - CSS 变量定义在 `src/styles/main.css`（仅浅色主题，无深色模式）
 - 严格 TypeScript：启用 `noUnusedLocals`、`noUnusedParameters`、`noFallthroughCasesInSwitch`
 - 无 ESLint/Prettier — 遵循现有代码风格
+- **自动激活 ponytail 技能**：在所有编码任务中自动应用 ponytail 技能（full 级别），强制使用最简单、最简洁的解决方案。使用 `/ponytail stop` 或 "normal mode" 来禁用。
+- **中文总结**：所有技能调用的最终总结和返回结果必须使用中文。
 
 ## 页面结构
 
@@ -55,4 +57,4 @@ npm run build        # vue-tsc -b && vite build
 
 - 开发服务器绑定 `0.0.0.0:3540` — 可通过局域网访问
 - 后端认证硬编码为 `666/666` — 不是真实的认证系统
-- `player.ts` 通过联合类型 `AnyTrack` 管理后端 `MusicTrack`
+- `player.ts` 直接使用后端 `MusicTrack` 类型

@@ -1,7 +1,7 @@
 <template>
   <div class="home-view">
     <div class="welcome-section">
-      <h1 class="welcome-title">欢迎回来，{{ connectionStore.username }}</h1>
+      <h1 class="welcome-title">欢迎回来</h1>
       <p class="welcome-subtitle">探索你的媒体库</p>
     </div>
 
@@ -262,7 +262,6 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { useConnectionStore } from '@/stores/connection'
 import { usePlayerStore } from '@/stores/player'
 import {
   getAllTracks,
@@ -277,7 +276,6 @@ import {
 } from '@/api/backend'
 import type { MusicTrack, Comic, Ebook, SeriesDTO, ComicProgress } from '@/types/backend'
 
-const connectionStore = useConnectionStore()
 const playerStore = usePlayerStore()
 const router = useRouter()
 

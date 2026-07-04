@@ -573,7 +573,7 @@ async function handleSubmit() {
     closeDialog()
   } catch (e) {
     console.error('Failed to save library:', e)
-    toast.error(editingLibrary.value ? '更新失败' : '创建失败')
+    toast.show(editingLibrary.value ? '更新失败' : '创建失败', 'error')
   } finally {
     submitting.value = false
   }
@@ -614,7 +614,7 @@ async function handleDelete() {
     cancelDelete()
   } catch (e) {
     console.error('Failed to delete library:', e)
-    toast.error('删除失败')
+    toast.show('删除失败', 'error')
   } finally {
     deleting.value = false
   }
@@ -627,9 +627,9 @@ async function handleScanAll() {
   scanningAll.value = true
   try {
     const result = await scanAllLibraries()
-    toast.htmlSuccess(`<div class="toast-title">扫描完成</div><div class="toast-time">耗时 ${result.elapsedMs}ms</div>`, 3000)
+    toast.showHtml(`<div class="toast-title">扫描完成</div><div class="toast-time">耗时 ${result.elapsedMs}ms</div>`, 'success', 3000)
   } catch {
-    toast.error('扫描失败，请检查后端连接')
+    toast.show('扫描失败，请检查后端连接', 'error')
   } finally {
     scanningAll.value = false
   }
@@ -640,9 +640,9 @@ async function handleScanOne(lib: MediaLibrary) {
   scanningId.value = lib.id
   try {
     const result = await scanLibraryById(lib.id)
-    toast.htmlSuccess(`<div class="toast-title">「${lib.name}」扫描完成</div><div class="toast-time">耗时 ${result.elapsedMs}ms</div>`, 3000)
+    toast.showHtml(`<div class="toast-title">「${lib.name}」扫描完成</div><div class="toast-time">耗时 ${result.elapsedMs}ms</div>`, 'success', 3000)
   } catch {
-    toast.error('扫描失败，请检查后端连接')
+    toast.show('扫描失败，请检查后端连接', 'error')
   } finally {
     scanningId.value = null
   }

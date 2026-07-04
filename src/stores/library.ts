@@ -50,14 +50,9 @@ export const useLibraryStore = defineStore('library', () => {
   }
 
   async function loadFeatured() {
-    try {
-      // 随机选择30首歌曲作为推荐
-      if (allTracks.value.length > 0) {
-        const shuffled = [...allTracks.value].sort(() => 0.5 - Math.random())
-        featuredTracks.value = shuffled.slice(0, 30)
-      }
-    } catch {
-      // silent fail
+    if (allTracks.value.length > 0) {
+      const shuffled = [...allTracks.value].sort(() => 0.5 - Math.random())
+      featuredTracks.value = shuffled.slice(0, 30)
     }
   }
 

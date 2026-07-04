@@ -185,7 +185,7 @@ async function copyColor(hex: string) {
     document.execCommand('copy')
     document.body.removeChild(ta)
   }
-  toast.success(`已复制 ${value}`)
+  toast.show(`已复制 ${value}`, 'success')
   copiedHex.value = hex
   if (copyTimer) clearTimeout(copyTimer)
   copyTimer = setTimeout(() => { copiedHex.value = '' }, 1500)

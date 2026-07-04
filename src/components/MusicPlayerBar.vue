@@ -2,7 +2,7 @@
   <div class="music-player-bar" :style="{ '--player-color': accentColor }" v-if="playerStore.currentTrack">
     <div class="player-left">
       <div class="track-cover" @click="$emit('toggle-lyrics')">
-        <img v-if="playerStore.currentTrack" :src="playerStore.getTrackCoverArt(playerStore.currentTrack, 60)"
+        <img v-if="playerStore.currentTrack" :src="playerStore.getTrackCoverArt(playerStore.currentTrack)"
           alt="封面" draggable="false" />
       </div>
       <div class="track-info">

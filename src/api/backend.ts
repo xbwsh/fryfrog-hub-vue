@@ -34,9 +34,48 @@ import type {
   LogFileInfo,
 } from '@/types/backend'
 
+const TOKEN_KEY = 'fryfrog-token'
+
+let onAuthRequired: (() => void) | null = null
+
+export function setOnAuthRequired(handler: () => void) {
+  onAuthRequired = handler
+}
+
+export function getStoredToken(): string | null {
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+export function setStoredToken(token: string) {
+  localStorage.setItem(TOKEN_KEY, token)
+}
+
+export function clearStoredToken() {
+  localStorage.removeItem(TOKEN_KEY)
+}
+
 const client = axios.create({
   timeout: 30000,
 })
+
+client.interceptors.request.use((cfg) => {
+  const token = localStorage.getItem(TOKEN_KEY)
+  if (token) {
+    cfg.headers.Authorization = `Bearer ${token}`
+  }
+  return cfg
+})
+
+client.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401) {
+      clearStoredToken()
+      onAuthRequired?.()
+    }
+    return Promise.reject(err)
+  },
+)
 
 function dedupeById<T extends { id: number }>(...arrays: T[][]): T[] {
   const seen = new Set<number>()
@@ -690,4 +729,41 @@ export async function getLogFiles(): Promise<LogFileInfo[]> {
 
 export function getLogDownloadUrl(fileName: string): string {
   return `${config.url}/api/v1/logs/${encodeURIComponent(fileName)}`
+}
+
+export async function authLogin(username: string, password: string): Promise<string> {
+  const response = await client.post<{ token: string; success: boolean }>('/api/v1/auth/login', {
+    username,
+    password,
+  })
+  const token = response.data.token
+  if (!token) throw new Error('登录失败：未获取到 token')
+  setStoredToken(token)
+  return token
+}
+
+export async function authLogout(): Promise<void> {
+  try {
+    await client.post('/api/v1/auth/logout')
+  } finally {
+    clearStoredToken()
+  }
+}
+
+export async function authStatus(): Promise<boolean> {
+  try {
+    const response = await client.get<{ enabled: boolean }>('/api/v1/auth/status')
+    return response.data.enabled === true
+  } catch {
+    return false
+  }
+}
+
+export async function verifyToken(): Promise<boolean> {
+  try {
+    await client.get('/api/v1/settings')
+    return true
+  } catch {
+    return false
+  }
 }

@@ -3,15 +3,15 @@ import { ref, computed } from 'vue'
 import type { MusicTrack } from '@/types/backend'
 import { getStreamUrl, getMusicCoverArtUrl } from '@/api/backend'
 
-type AnyTrack = MusicTrack
+type PlayMode = 'order' | 'shuffle' | 'repeat_all' | 'repeat_one'
 
 export const usePlayerStore = defineStore('player', () => {
-  const currentTrack = ref<AnyTrack | null>(null)
-  const queue = ref<AnyTrack[]>([])
+  const currentTrack = ref<MusicTrack | null>(null)
+  const queue = ref<MusicTrack[]>([])
   const currentIndex = ref(-1)
   const isPlaying = ref(false)
   const volume = ref(0.8)
-  const playMode = ref<'order' | 'shuffle' | 'repeat_all' | 'repeat_one'>('order')
+  const playMode = ref<PlayMode>('order')
   const currentObjectUrl = ref<string | null>(null)
   const downloadEnabled = ref(false)
   const downloadedTracks = ref<Map<string, string>>(new Map())
@@ -83,7 +83,7 @@ export const usePlayerStore = defineStore('player', () => {
     }
   }
 
-  async function playTrack(track: AnyTrack, trackList?: AnyTrack[]) {
+  async function playTrack(track: MusicTrack, trackList?: MusicTrack[]) {
     initAudio()
     isLoading.value = true
     error.value = ''
@@ -107,8 +107,7 @@ export const usePlayerStore = defineStore('player', () => {
           currentObjectUrl.value = null
         }
         
-        let streamUrl: string
-        streamUrl = getStreamUrl(track.id as number)
+        const streamUrl = getStreamUrl(track.id as number)
 
         audio.value.src = streamUrl
         audio.value.load()
@@ -142,7 +141,7 @@ export const usePlayerStore = defineStore('player', () => {
       }
       const savedPlayMode = localStorage.getItem('playMode')
       if (savedPlayMode) {
-        playMode.value = savedPlayMode as 'order' | 'shuffle' | 'repeat_all' | 'repeat_one'
+        playMode.value = savedPlayMode as PlayMode
       }
     } catch (e) {
       console.warn('Failed to load downloaded tracks from localStorage:', e)
@@ -261,23 +260,23 @@ export const usePlayerStore = defineStore('player', () => {
     }
   }
 
-  function setPlayMode(mode: 'order' | 'shuffle' | 'repeat_all' | 'repeat_one') {
+  function setPlayMode(mode: PlayMode) {
     playMode.value = mode
     localStorage.setItem('playMode', mode)
   }
 
   function cyclePlayMode() {
-    const modes: ('order' | 'shuffle' | 'repeat_all' | 'repeat_one')[] = ['order', 'shuffle', 'repeat_all', 'repeat_one']
+    const modes: PlayMode[] = ['order', 'shuffle', 'repeat_all', 'repeat_one']
     const modeIndex = modes.indexOf(playMode.value)
     playMode.value = modes[(modeIndex + 1) % modes.length]
     localStorage.setItem('playMode', playMode.value)
   }
 
-  function getTrackCoverArt(track: AnyTrack, _size = 300): string {
+  function getTrackCoverArt(track: MusicTrack): string {
     return getMusicCoverArtUrl(track.id)
   }
 
-  function getTrackId(track: AnyTrack): string {
+  function getTrackId(track: MusicTrack): string {
     return String(track.id)
   }
 
