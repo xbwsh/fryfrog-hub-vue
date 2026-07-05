@@ -95,7 +95,24 @@
         <span class="time-display">{{ formatTime(currentTime) }} / {{ formatTime(duration) }}</span>
 
         <!-- 音量 -->
-        <div class="hover-group" @mouseenter="showVolumeSlider = true" @mouseleave="showVolumeSlider = false">
+        <div class="volume-group" @mouseenter="showVolumeSlider = true" @mouseleave="showVolumeSlider = false">
+          <transition name="fade">
+            <div v-if="showVolumeSlider" class="volume-menu hover-panel">
+              <div class="volume-menu-label">{{ Math.round(volume * 100) }}</div>
+              <div class="volume-slider-track">
+                <input
+                  type="range"
+                  class="volume-slider"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  :value="volume"
+                  @input="onVolumeChange"
+                />
+                <div class="volume-slider-fill" :style="{ height: (volume * 100) + '%' }"></div>
+              </div>
+            </div>
+          </transition>
           <button class="ctrl-btn" @click="toggleMute">
             <svg v-if="isMuted || volume === 0" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/>
@@ -110,20 +127,6 @@
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
             </svg>
           </button>
-          <transition name="fade">
-            <div v-if="showVolumeSlider" class="volume-menu hover-panel">
-              <div class="volume-menu-label">{{ Math.round(volume * 100) }}%</div>
-              <input
-                type="range"
-                class="volume-slider"
-                min="0"
-                max="1"
-                step="0.05"
-                :value="volume"
-                @input="onVolumeChange"
-              />
-            </div>
-          </transition>
         </div>
 
         <!-- 倍速 -->
@@ -180,8 +183,7 @@
                   @click="switchEpisode(ep)"
                 >
                   <div class="poster-thumb">
-                    <img v-if="ep.backdropUrl" :src="ep.backdropUrl" :alt="'第 ' + ep.episodeNumber + ' 集'" draggable="false" />
-                    <img v-else :src="getVideoFanartUrl(ep.id)" :alt="'第 ' + ep.episodeNumber + ' 集'" draggable="false" />
+                    <img v-if="ep.fanartUrl" :src="resolveApiUrl(ep.fanartUrl)" :alt="'第 ' + ep.episodeNumber + ' 集'" draggable="false" />
                     <div class="poster-overlay">
                       <div class="poster-play-btn">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -281,7 +283,7 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import type { VideoDTO, SubtitleTrack, ExternalSubtitle } from '@/types/backend'
-import { getVideoStreamUrl, getSubtitleVttUrl, getExternalSubtitleVttUrl, getVideoProgress, saveVideoProgress, getVideoFanartUrl } from '@/api/backend'
+import { getVideoStreamUrl, getSubtitleVttUrl, getExternalSubtitleVttUrl, getVideoProgress, saveVideoProgress, resolveApiUrl } from '@/api/backend'
 
 interface SubtitleOption {
   type: 'internal' | 'external'
@@ -294,6 +296,7 @@ interface SubtitleOption {
 const props = defineProps<{
   videoId: number
   videoTitle: string
+  streamUrl?: string | null
   episodes?: VideoDTO[]
   currentEpisodeId?: number
   subtitleTracks?: SubtitleTrack[]
@@ -311,7 +314,7 @@ const videoEl = ref<HTMLVideoElement>()
 const progressRef = ref<HTMLElement>()
 
 // state
-const streamUrl = getVideoStreamUrl(props.videoId)
+const streamUrl = computed(() => resolveApiUrl(props.streamUrl) || getVideoStreamUrl(props.videoId))
 const isPlaying = ref(false)
 const isMuted = ref(false)
 const volume = ref(1)
@@ -957,6 +960,10 @@ onUnmounted(() => {
 }
 
 /* --- 音量 --- */
+.volume-group {
+  position: relative;
+}
+
 .volume-menu {
   position: absolute;
   bottom: 42px;
@@ -964,51 +971,89 @@ onUnmounted(() => {
   transform: translateX(-50%);
   background: rgba(0, 0, 0, 0.92);
   backdrop-filter: blur(16px);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border-radius: 12px;
+  padding: 12px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   z-index: 200;
-  min-width: 60px;
+  width: 40px;
 }
 
 .volume-menu-label {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.volume-slider-track {
+  position: relative;
+  width: 4px;
+  height: 100px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+}
+
+.volume-slider-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: var(--accent, #e85d4a);
+  border-radius: 2px;
+  pointer-events: none;
+  transition: height 0.05s linear;
 }
 
 .volume-slider {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: 100px;
-  height: 4px;
+  height: 40px;
+  margin-left: -50px;
+  margin-top: -20px;
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
+  background: transparent;
   outline: none;
   cursor: pointer;
+  z-index: 1;
+  transform: rotate(-90deg);
 }
 
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--accent, #e85d4a);
-  box-shadow: 0 0 4px rgba(232, 93, 74, 0.4);
+  background: #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
   cursor: pointer;
+  margin-top: -5px;
 }
 
 .volume-slider::-moz-range-thumb {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--accent, #e85d4a);
-  box-shadow: 0 0 4px rgba(232, 93, 74, 0.4);
+  background: #fff;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
   border: none;
   cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 4px;
+}
+
+.volume-slider::-moz-range-track {
+  background: transparent;
+  height: 4px;
 }
 
 /* --- 侧边面板 --- */

@@ -63,17 +63,20 @@
             </div>
 
             <div class="action-row">
-              <template v-if="currentDisplayInfo.audioIncompatible">
-                <div class="audio-incompatible-tip">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  <span>音频格式不兼容浏览器，复制链接到本地播放器播放</span>
-                  <button class="tip-copy-btn" @click="copyStreamUrl">复制链接</button>
-                  <a class="tip-copy-btn" :href="`/api/v1/video/${video?.id}/playlist.m3u`" download>下载播放列表</a>
-                </div>
-              </template>
-              <template v-else>
+              <div v-if="currentDisplayInfo.audioIncompatible" class="audio-incompatible-tip">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>音频格式可能不兼容浏览器</span>
+                <button class="tip-copy-btn" @click="handleTranscodeAudio" :disabled="transcoding">
+                  {{ transcoding ? '转码中...' : '转码为 AAC' }}
+                </button>
+                <button class="tip-copy-btn" @click="copyStreamUrl">复制链接</button>
+                <a class="tip-copy-btn" :href="`/api/v1/video/${video?.id}/playlist.m3u`" download>下载播放列表</a>
+              </div>
+              <div v-if="transcodingError" class="audio-incompatible-tip" style="color: #e74c3c;">
+                {{ transcodingError }}
+              </div>
               <button class="play-btn" @click="playEpisode(video || series.episodes[0])">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"/>
@@ -90,7 +93,6 @@
                 </svg>
                 从头播放
               </button>
-              </template>
               <Tooltip content="刮削元数据" placement="bottom">
                 <button class="icon-btn scrape-btn" @click="showTmdbSearch = true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -150,7 +152,7 @@
             <h3>演职人员</h3>
             <div class="actor-list">
             <div class="actor-item" v-for="actor in actors" :key="actor.id">
-              <img v-if="actor.imagePath || actor.imageUrl" :src="getVideoActorImageUrl(actor.id)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
+              <img v-if="actor.imageUrl" :src="resolveApiUrl(actor.imageUrl)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
               <div v-else class="actor-avatar-placeholder">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -191,14 +193,7 @@
             >
               <div class="poster-thumb">
                 <img
-                  v-if="episode.backdropUrl"
-                  :src="episode.backdropUrl"
-                  :alt="'第 ' + episode.episodeNumber + ' 集'"
-                  draggable="false"
-                />
-                <img
-                  v-else
-                  :src="getVideoFanartUrl(episode.id)"
+                  :src="resolveApiUrl(episode.fanartUrl)"
                   :alt="'第 ' + episode.episodeNumber + ' 集'"
                   draggable="false"
                   @error="onImageError"
@@ -280,7 +275,7 @@
     <div v-else-if="video" class="detail-content">
       <div class="hero-section">
         <div class="backdrop">
-          <img v-if="video.backdropUrl || video.id" :src="video.backdropUrl || getVideoFanartUrl(video.id)" :alt="video.title" draggable="false" @error="onImageError" />
+          <img v-if="video.fanartUrl" :src="resolveApiUrl(video.fanartUrl)" :alt="video.title" draggable="false" @error="onImageError" />
           <div class="backdrop-overlay"></div>
         </div>
 
@@ -294,8 +289,8 @@
         <div class="hero-body">
           <div class="poster-col">
             <img
-              v-if="video.posterUrl || video.id"
-              :src="video.posterUrl || getVideoPosterUrl(video.id)"
+              v-if="video.coverUrl"
+              :src="resolveApiUrl(video.coverUrl)"
               :alt="video.title"
               class="poster-img"
               draggable="false"
@@ -336,17 +331,20 @@
             </div>
 
             <div class="action-row">
-              <template v-if="video.audioIncompatible">
-                <div class="audio-incompatible-tip">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  <span>音频格式不兼容浏览器，复制链接到本地播放器播放</span>
-                  <button class="tip-copy-btn" @click="copyStreamUrl">复制链接</button>
-                  <a class="tip-copy-btn" :href="`/api/v1/video/${video.id}/playlist.m3u`" download>下载播放列表</a>
-                </div>
-              </template>
-              <template v-else>
+              <div v-if="video.audioIncompatible" class="audio-incompatible-tip">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+                <span>音频格式可能不兼容浏览器</span>
+                <button class="tip-copy-btn" @click="handleTranscodeAudio" :disabled="transcoding">
+                  {{ transcoding ? '转码中...' : '转码为 AAC' }}
+                </button>
+                <button class="tip-copy-btn" @click="copyStreamUrl">复制链接</button>
+                <a class="tip-copy-btn" :href="`/api/v1/video/${video.id}/playlist.m3u`" download>下载播放列表</a>
+              </div>
+              <div v-if="transcodingError" class="audio-incompatible-tip" style="color: #e74c3c;">
+                {{ transcodingError }}
+              </div>
               <button class="play-btn" @click="showPlayer = true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"/>
@@ -363,7 +361,6 @@
                 </svg>
                 从头播放
               </button>
-              </template>
               <Tooltip content="刮削元数据" placement="bottom">
                 <button class="icon-btn scrape-btn" @click="showTmdbSearch = true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -435,7 +432,7 @@
             <h3>演职人员</h3>
             <div class="actor-list">
             <div class="actor-item" v-for="actor in actors" :key="actor.id">
-              <img v-if="actor.imagePath || actor.imageUrl" :src="getVideoActorImageUrl(actor.id)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
+              <img v-if="actor.imageUrl" :src="resolveApiUrl(actor.imageUrl)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
               <div v-else class="actor-avatar-placeholder">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -494,6 +491,7 @@
       v-if="showPlayer && currentPlayVideo"
       :video-id="currentPlayVideo.id"
       :video-title="currentPlayVideo.title"
+      :stream-url="currentPlayVideo.streamUrl"
       :episodes="series?.episodes || []"
       :current-episode-id="currentPlayVideo.id"
       :subtitle-tracks="subtitleTracks"
@@ -566,7 +564,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { VideoDTO, SeriesDTO, VideoActor, SubtitleTrack, ExternalSubtitle } from '@/types/backend'
-import { getVideoById, getSeriesById, toggleVideoFavorite, getVideoPosterUrl, getVideoFanartUrl, getSeriesPosterUrl, getSeriesFanartUrl, deleteVideoProgress, getVideoActors, getVideoActorImageUrl, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, getSubtitleTracks, getExternalSubtitles } from '@/api/backend'
+import { getVideoById, getSeriesById, toggleVideoFavorite, getSeriesPosterUrl, getSeriesFanartUrl, deleteVideoProgress, getVideoActors, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, getSubtitleTracks, getExternalSubtitles, transcodeAudio, resolveApiUrl } from '@/api/backend'
 import { useConnectionStore } from '@/stores/connection'
 import { useToast } from '@/composables/useToast'
 import Tooltip from '@/components/Tooltip.vue'
@@ -598,6 +596,25 @@ const tmdbSearched = ref(false)
 const tmdbSearchError = ref('')
 const bindingId = ref<number | null>(null)
 const refreshing = ref(false)
+const transcoding = ref(false)
+const transcodingError = ref('')
+
+async function handleTranscodeAudio() {
+  const targetId = video.value?.id || series.value?.episodes[0]?.id
+  if (!targetId || transcoding.value) return
+  transcoding.value = true
+  transcodingError.value = ''
+  try {
+    await transcodeAudio(targetId)
+    toast.show('音频转码完成，可以正常播放了', 'success')
+    await loadVideo()
+  } catch (e) {
+    transcodingError.value = '转码失败'
+    console.error('Transcode failed:', e)
+  } finally {
+    transcoding.value = false
+  }
+}
 
 async function loadVideo() {
   const id = Number(route.params.id)
@@ -628,8 +645,12 @@ async function loadVideo() {
       try {
         subtitleTracks.value = await getSubtitleTracks(id)
       } catch {
-  subtitleTracks.value = []
-  externalSubtitles.value = []
+        subtitleTracks.value = []
+      }
+      try {
+        externalSubtitles.value = await getExternalSubtitles(id)
+      } catch {
+        externalSubtitles.value = []
       }
     } else {
       error.value = '视频不存在'
@@ -835,8 +856,8 @@ const currentDisplayInfo = computed(() => {
     return {
       title: series.value.title,
       originalTitle: series.value.originalTitle,
-      posterUrl: video.value?.posterUrl || series.value.posterUrl || getSeriesPosterUrl(series.value.id),
-      backdropUrl: (video.value?.backdropUrl || (video.value?.id ? getVideoFanartUrl(video.value.id) : '')) || series.value.backdropUrl || getSeriesFanartUrl(series.value.id),
+      posterUrl: resolveApiUrl(video.value?.coverUrl) || series.value.coverUrl || getSeriesPosterUrl(series.value.id),
+      backdropUrl: resolveApiUrl(video.value?.fanartUrl) || resolveApiUrl(series.value.fanartUrl) || getSeriesFanartUrl(series.value.id),
       overview: series.value.overview,
       year: series.value.year,
       genre: video.value?.genre || null,
@@ -847,8 +868,8 @@ const currentDisplayInfo = computed(() => {
     return {
       title: video.value.title,
       originalTitle: video.value.originalTitle,
-      posterUrl: video.value.posterUrl || getVideoPosterUrl(video.value.id),
-      backdropUrl: video.value.backdropUrl || getVideoFanartUrl(video.value.id),
+      posterUrl: resolveApiUrl(video.value.coverUrl) || '',
+      backdropUrl: resolveApiUrl(video.value.fanartUrl) || '',
       overview: video.value.overview,
       year: video.value.year,
       genre: video.value.genre,
