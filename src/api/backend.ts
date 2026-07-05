@@ -92,6 +92,12 @@ export function setBackendConfig(newConfig: BackendConfig) {
   client.defaults.baseURL = newConfig.url
 }
 
+export function resolveApiUrl(path: string | null | undefined): string {
+  if (!path) return ''
+  if (path.startsWith('http')) return path
+  return `${config.url}${path}`
+}
+
 export async function testConnection(): Promise<boolean> {
   try {
     const response = await client.get<ApiResponse<any[]>>('/api/v1/music')
@@ -150,7 +156,7 @@ export function getMusicCoverArtUrl(id: number): string {
 }
 
 export function getArtistImageUrl(id: number): string {
-  return `${config.url}/api/v1/music/${id}/artist-image`
+  return `${config.url}/api/v1/music/${id}/artist/image`
 }
 
 export async function getLyrics(id: number): Promise<string> {
@@ -209,10 +215,10 @@ export function getComicCoverUrl(id: number): string {
   return `${config.url}/api/v1/comic/${id}/cover`
 }
 
-export function getSeriesCoverUrl(coverUrl: string): string {
-  if (!coverUrl) return ''
-  if (coverUrl.startsWith('http')) return coverUrl
-  return `${config.url}${coverUrl}`
+export function getSeriesCoverUrl(coverPath: string | null | undefined): string {
+  if (!coverPath) return ''
+  if (coverPath.startsWith('http')) return coverPath
+  return `${config.url}${coverPath}`
 }
 
 export function getComicCoverUrlWithCache(id: number, updatedAt?: string): string {
@@ -342,8 +348,8 @@ export async function getEbookChapterContent(id: number, chapterNum: number): Pr
   return response.data
 }
 
-export function getEpubImageUrl(filePath: string, file: string): string {
-  return `${config.url}/api/v1/ebook/epub-image?filePath=${encodeURIComponent(filePath)}&file=${encodeURIComponent(file)}`
+export function getEpubImageUrl(ebookId: number, file: string): string {
+  return `${config.url}/api/v1/ebook/${ebookId}/image?file=${encodeURIComponent(file)}`
 }
 
 export async function getAllVideos(): Promise<VideoDTO[]> {
@@ -400,10 +406,6 @@ export async function searchVideos(query: string): Promise<VideoDTO[]> {
 
 export function getVideoCoverUrl(id: number): string {
   return `${config.url}/api/v1/video/${id}/cover`
-}
-
-export function getVideoPosterUrl(id: number): string {
-  return `${config.url}/api/v1/video/${id}/poster`
 }
 
 export function getVideoFanartUrl(id: number): string {
@@ -478,6 +480,15 @@ export async function getExternalSubtitles(id: number): Promise<ExternalSubtitle
   return response.data.data || []
 }
 
+export async function transcodeAudio(id: number): Promise<string> {
+  const response = await client.post<ApiResponse<string>>(`/api/v1/video/${id}/audio/transcode`)
+  return response.data.data
+}
+
+export function getVideoTranscodeStreamUrl(id: number): string {
+  return `${config.url}/api/v1/video/${id}/stream?transcoded=true`
+}
+
 export async function getNfoContent(id: number): Promise<string> {
   const response = await client.get<ApiResponse<string>>(`/api/v1/video/${id}/nfo`)
   return response.data.data
@@ -546,7 +557,7 @@ export async function getSeriesById(id: number): Promise<SeriesDTO | undefined> 
 }
 
 export function getSeriesPosterUrl(id: number): string {
-  return `${config.url}/api/v1/video/series/${id}/poster`
+  return `${config.url}/api/v1/video/series/${id}/cover`
 }
 
 export function getSeriesFanartUrl(id: number): string {
@@ -731,9 +742,8 @@ export function getLogDownloadUrl(fileName: string): string {
   return `${config.url}/api/v1/logs/${encodeURIComponent(fileName)}`
 }
 
-export async function authLogin(username: string, password: string): Promise<string> {
+export async function authLogin(password: string): Promise<string> {
   const response = await client.post<{ token: string; success: boolean }>('/api/v1/auth/login', {
-    username,
     password,
   })
   const token = response.data.token

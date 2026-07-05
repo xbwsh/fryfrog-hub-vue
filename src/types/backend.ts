@@ -10,13 +10,11 @@ export interface MusicTrack {
   discNumber: number | null
   year: number | null
   genre: string
-  filePath: string
   fileName: string
   fileSize: number
   durationSeconds: number
   bitrateKbps: number
   format: string
-  coverArtPath: string
   coverSource: string | null
   lyrics: string
   lyricsSource: string | null
@@ -24,13 +22,14 @@ export interface MusicTrack {
   catalogNumber: string | null
   releaseDate: string | null
   musicBrainzId: string | null
-  artistImage: string | null
   artistBio: string | null
   scrapeStatus: string | null
   favorite: boolean
-  coverApiPath?: string
-  artistImageApiPath?: string
-  streamApiPath?: string
+  playCount: number
+  lastPlayedAt: string | null
+  coverUrl: string
+  imageUrl: string | null
+  streamUrl: string
 }
 
 export interface Comic {
@@ -48,13 +47,11 @@ export interface Comic {
   rating: number | null
   serializationStart: string | null
   releaseDate: string | null
-  filePath: string
   fileName: string
   fileSize: number
   pageCount: number
   format: string
-  coverArtPath: string
-  thumbnailDirPath: string
+  coverUrl: string | null
   favorite: boolean
 }
 
@@ -66,8 +63,7 @@ export interface ComicVolume {
   series: string
   year: number
   pageCount: number
-  coverArtPath: string
-  filePath: string
+  coverUrl: string | null
   fileName: string
   rating: number | null
   summary: string | null
@@ -79,8 +75,7 @@ export interface ComicVolume {
 export interface ComicSeries {
   name: string
   author: string
-  coverArtPath: string
-  coverUrl: string
+  coverUrl: string | null
   seriesSummary: string | null
   serializationStart: string | null
   volumeCount: number
@@ -95,7 +90,7 @@ export interface PageInfo {
 export interface EbookSeries {
   name: string
   author: string
-  coverArtPath: string
+  coverUrl: string
   volumeCount: number
   books: Ebook[]
 }
@@ -111,13 +106,14 @@ export interface Ebook {
   year: number
   genre: string | null
   description: string
-  filePath: string
   fileName: string
   fileSize: number
   format: string
   pageCount: number
   language: string
-  coverArtPath: string
+  coverUrl: string
+  downloadApiUrl: string
+  readApiUrl: string
   favorite: boolean
 }
 
@@ -142,17 +138,15 @@ export interface VideoDTO {
   favorite: boolean
   tmdbId: number | null
   mediaType: string | null
-  posterUrl: string | null
-  backdropUrl: string | null
   imdbId: string | null
   rating: number | null
   voteCount: number | null
   metadataSource: string
   metadataUpdatedAt: string | null
   metadataDir: string | null
-  nfoPath: string | null
-  posterPath: string | null
-  fanartPath: string | null
+  coverUrl: string | null
+  fanartUrl: string | null
+  streamUrl: string | null
   scraped: boolean
   isSeries: boolean
   seriesId: number | null
@@ -252,7 +246,6 @@ export interface VideoActor {
   videoId: number
   name: string
   character: string | null
-  imagePath: string | null
   imageUrl: string | null
   sourceActorId: number | null
 }
@@ -275,8 +268,8 @@ export interface SeriesDTO {
   tmdbId: number | null
   rating: number | null
   year: number | null
-  posterUrl: string | null
-  backdropUrl: string | null
+  coverUrl: string | null
+  fanartUrl: string | null
   seasonNumber: number | null
   totalEpisodes: number
   episodeCount: number

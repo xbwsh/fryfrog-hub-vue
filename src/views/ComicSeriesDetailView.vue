@@ -52,8 +52,7 @@
         <h2 class="section-title">角色</h2>
         <div class="characters-grid" @wheel.prevent="handleCharacterScroll">
           <div v-for="char in characters" :key="char.id" class="character-card">
-            <img v-if="char.imagePath || char.imageUrl" :src="getComicCharacterImageUrl(char.id)" :alt="char.name" class="character-avatar" draggable="false" @error="onCharacterImageError" />
-            <div v-else class="character-avatar-placeholder"></div>
+            <img :src="resolveApiUrl(char.imageUrl)" :alt="char.name" class="character-avatar" draggable="false" @error="onCharacterImageError" />
             <div class="character-info">
               <div class="character-name">{{ char.name }}</div>
               <div class="character-original" v-if="char.originalName">{{ char.originalName }}</div>
@@ -211,7 +210,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import type { ComicSeries, ComicVolume, ComicProgress, AnilistMediaItem, BangumiItem, ComicCharacter } from '@/types/backend'
-import { getComicSeries, getComicCoverUrlWithCache, getComicProgress, searchAnilistComics, bindAnilistMetadata, searchBangumiComics, bindBangumiMetadata, getComicCharacters, getComicCharacterImageUrl, getSeriesCoverUrl } from '@/api/backend'
+import { getComicSeries, getComicCoverUrlWithCache, getComicProgress, searchAnilistComics, bindAnilistMetadata, searchBangumiComics, bindBangumiMetadata, getComicCharacters, resolveApiUrl, getSeriesCoverUrl } from '@/api/backend'
 
 const router = useRouter()
 const route = useRoute()

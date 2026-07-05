@@ -112,7 +112,6 @@ import type { ChapterInfo } from '@/types/backend'
 const props = defineProps<{
   ebookId: number
   ebookTitle: string
-  ebookFilePath?: string
 }>()
 
 defineEmits<{
@@ -257,13 +256,11 @@ const currentChapterTitle = computed(() => {
 })
 
 function rewriteEpubImages(html: string): string {
-  const fp = props.ebookFilePath
-  if (!fp) return html
   return html.replace(/<img\s+([^>]*?)src="([^"]+)"([^>]*)>/gi, (match, before, src, after) => {
     if (src.startsWith('http://') || src.startsWith('https://') || src.startsWith('data:') || src.startsWith('/api/')) {
       return match
     }
-    const imageUrl = getEpubImageUrl(fp, src)
+    const imageUrl = getEpubImageUrl(props.ebookId, src)
     return `<img ${before}src="${imageUrl}"${after}>`
   })
 }

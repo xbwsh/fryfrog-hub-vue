@@ -33,7 +33,7 @@
         >
           <div v-for="track in musicTracks" :key="track.id" class="content-card" @click="playMusic(track)">
             <div class="card-cover music-cover">
-              <img loading="lazy" :src="getMusicCoverArtUrl(track.id)" alt="封面" draggable="false" />
+              <img loading="lazy" :src="resolveApiUrl(track.coverUrl)" alt="封面" draggable="false" />
             </div>
             <div class="card-info">
               <span class="card-title">{{ track.title }}</span>
@@ -97,7 +97,7 @@
         >
           <div v-for="comic in comics" :key="comic.id" class="content-card" @click="readComic(comic)">
             <div class="card-cover comic-cover">
-              <img loading="lazy" :src="getComicCoverUrl(comic.id)" alt="封面" draggable="false" @error="onImageError" />
+              <img loading="lazy" :src="resolveApiUrl(comic.coverUrl)" alt="封面" draggable="false" @error="onImageError" />
             </div>
             <div class="card-info">
               <span class="card-title">{{ comic.title }}</span>
@@ -219,7 +219,7 @@
         >
           <div v-for="series in seriesList" :key="series.id" class="content-card" @click="watchVideo(series)">
             <div class="card-cover video-cover">
-              <img loading="lazy" :src="series.posterUrl || getSeriesPosterUrl(series.id)" alt="封面" draggable="false" @error="onImageError" />
+              <img loading="lazy" :src="resolveApiUrl(series.coverUrl) || getSeriesPosterUrl(series.id)" alt="封面" draggable="false" @error="onImageError" />
             </div>
             <div class="card-info">
               <span class="card-title">{{ series.title }}</span>
@@ -268,8 +268,7 @@ import {
   getAllComics,
   getAllEbooks,
   getAllSeries,
-  getMusicCoverArtUrl,
-  getComicCoverUrl,
+  resolveApiUrl,
   getEbookCoverUrl,
   getSeriesPosterUrl,
   getComicProgress,

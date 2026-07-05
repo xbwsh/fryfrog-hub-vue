@@ -30,9 +30,9 @@ export const useConnectionStore = defineStore('connection', () => {
     applyBackendConfig()
   }
 
-  async function login(user: string, pass: string): Promise<boolean> {
+  async function login(password: string): Promise<boolean> {
     applyBackendConfig()
-    await authLogin(user, pass)
+    await authLogin(password)
     isAuthenticated.value = true
     connected.value = true
     return true

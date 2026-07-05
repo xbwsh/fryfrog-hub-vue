@@ -68,7 +68,7 @@
             @contextmenu="onContextMenu($event, track)"
           >
             <div class="track-cover-small">
-              <img loading="lazy" :src="getMusicCoverArtUrl(track.id)" alt="封面" draggable="false" />
+              <img loading="lazy" :src="resolveApiUrl(track.coverUrl)" alt="封面" draggable="false" />
             </div>
             <div class="track-playing" v-if="playerStore.currentTrack?.id === track.id && playerStore.isPlaying">
               <div class="eq-bar"></div>
@@ -142,7 +142,7 @@
                 <div class="pl-img-wrap">
                   <img
                     v-if="tracks.length > 0"
-                    :src="getMusicCoverArtUrl(tracks[0].id)"
+                    :src="resolveApiUrl(tracks[0].coverUrl)"
                     alt=""
                     draggable="false"
                   />
@@ -176,7 +176,7 @@
               <div v-for="(artist, index) in artistRanking" :key="artist.name" class="rank-item">
                 <div class="rank-num">{{ index + 1 }}</div>
                 <div class="rank-avatar" :style="{ background: artist.color }">
-                  <img :src="getArtistImageUrl(artist.trackId)" :alt="artist.name" @error="($event.target as HTMLImageElement).style.display='none'" />
+                  <img v-if="artist.imageUrl" :src="resolveApiUrl(artist.imageUrl)" :alt="artist.name" @error="($event.target as HTMLImageElement).style.display='none'" />
                 </div>
                 <div class="rank-info">
                   <div class="rank-name">{{ artist.name }}</div>
@@ -248,7 +248,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import type { MusicTrack } from '@/types/backend'
-import { getAllTracks, getMusicCoverArtUrl, getArtistImageUrl, searchMusic, getFavorites, getRecentlyPlayed, getMostPlayed, getRecentlyAdded, recordMusicPlay, getMusicRecommendations, scanAllLibraries, reorganizeMusic } from '@/api/backend'
+import { getAllTracks, searchMusic, getFavorites, getRecentlyPlayed, getMostPlayed, getRecentlyAdded, recordMusicPlay, getMusicRecommendations, scanAllLibraries, reorganizeMusic, resolveApiUrl } from '@/api/backend'
 import { formatDuration } from '@/utils/format'
 import { usePlayerStore } from '@/stores/player'
 import MusicPlayerBar from '@/components/MusicPlayerBar.vue'
@@ -309,20 +309,20 @@ const categories = computed(() => [
 const recommendations = ref<Record<string, MusicTrack[]>>({})
 
 const artistRanking = computed(() => {
-  const map = new Map<string, { count: number; trackId: number }>()
+  const map = new Map<string, { count: number; imageUrl: string | null }>()
   for (const track of tracks.value) {
     const existing = map.get(track.artist)
     if (existing) {
       existing.count++
     } else {
-      map.set(track.artist, { count: 1, trackId: track.id })
+      map.set(track.artist, { count: 1, imageUrl: track.imageUrl })
     }
   }
   return Array.from(map.entries())
     .map(([name, data]) => ({
       name,
       count: data.count,
-      trackId: data.trackId,
+      imageUrl: data.imageUrl,
       color: trackColors[name] || defaultColors[name.charCodeAt(0) % defaultColors.length],
     }))
     .sort((a, b) => b.count - a.count)
@@ -621,9 +621,9 @@ onUnmounted(() => {
 
 /* 左侧歌曲列表 */
 .list-panel {
-  width: 320px;
-  min-width: 280px;
-  flex-shrink: 0;
+  flex: 0 1 30%;
+  min-width: 220px;
+  max-width: 340px;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
@@ -796,7 +796,8 @@ onUnmounted(() => {
 
 /* 中间主内容 */
 .main-panel {
-  flex: 1;
+  flex: 1 1 0;
+  min-width: 0;
   overflow: hidden;
   background: var(--bg-primary);
 }
@@ -1073,9 +1074,9 @@ onUnmounted(() => {
 
 /* 右侧面板 */
 .right-panel {
-  width: 220px;
-  min-width: 200px;
-  flex-shrink: 0;
+  flex: 0 1 20%;
+  min-width: 180px;
+  max-width: 260px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -1313,12 +1314,16 @@ onUnmounted(() => {
   .right-panel {
     display: none;
   }
+  .list-panel {
+    flex: 0 1 32%;
+  }
 }
 
 @media screen and (max-width: 800px) {
   .list-panel {
-    width: 100%;
+    flex: 1 1 100%;
     min-width: 0;
+    max-width: none;
   }
 
   .main-panel {

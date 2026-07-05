@@ -25,7 +25,7 @@
         <div class="cover-section">
           <div class="cover-wrapper">
             <img
-              :src="getSeriesCoverUrl(series.coverArtPath)"
+              :src="getSeriesCoverUrl(series.coverUrl)"
               :alt="series.name"
               draggable="false"
               @error="onImageError"

@@ -95,7 +95,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import type { SeriesDTO } from '@/types/backend'
-import { getAllSeries, getSeriesPosterUrl } from '@/api/backend'
+import { getAllSeries, getSeriesPosterUrl, resolveApiUrl } from '@/api/backend'
 
 const router = useRouter()
 const seriesList = ref<SeriesDTO[]>([])
@@ -154,10 +154,10 @@ function onImageError(e: Event) {
 }
 
 function getImageUrl(series: SeriesDTO): string {
-  if (showBackdrop.value && series.backdropUrl) {
-    return series.backdropUrl
+  if (showBackdrop.value && series.fanartUrl) {
+    return resolveApiUrl(series.fanartUrl)
   }
-  return series.posterUrl || getSeriesPosterUrl(series.id)
+  return resolveApiUrl(series.coverUrl) || getSeriesPosterUrl(series.id)
 }
 
 function viewSeries(series: SeriesDTO) {

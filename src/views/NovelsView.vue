@@ -50,7 +50,7 @@
       >
         <div class="card-cover">
           <img
-            :src="getSeriesCoverUrl(series.coverArtPath)"
+            :src="getSeriesCoverUrl(series.coverUrl)"
             :alt="series.name"
             draggable="false"
             @error="onImageError"
@@ -75,7 +75,6 @@
       v-if="readingBook"
       :ebook-id="readingBook.id"
       :ebook-title="readingBook.title"
-      :ebook-file-path="readingBook.filePath"
       @close="readingBook = null"
     />
 
@@ -207,10 +206,10 @@ function viewSeries(series: EbookSeries) {
   router.push({ name: 'ebook-series', params: { name: series.name } })
 }
 
-function getSeriesCoverUrl(coverPath: string): string {
-  if (!coverPath) return ''
-  if (coverPath.startsWith('http')) return coverPath
-  return `/api/v1/ebook/cover-image?path=${encodeURIComponent(coverPath)}`
+function getSeriesCoverUrl(apiPath: string): string {
+  if (!apiPath) return ''
+  if (apiPath.startsWith('http')) return apiPath
+  return `${window.location.origin}${apiPath}`
 }
 
 function onImageError(e: Event) {

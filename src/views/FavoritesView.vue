@@ -105,7 +105,6 @@
       v-if="readingEbook"
       :ebook-id="readingEbook.id"
       :ebook-title="readingEbook.title"
-      :ebook-file-path="readingEbook.filePath"
       @close="readingEbook = null"
     />
 
@@ -127,7 +126,7 @@ import {
   getComicFavorites,
   getEbookFavorites,
   getVideoFavorites,
-  getMusicCoverArtUrl,
+  resolveApiUrl,
   getComicCoverUrl,
   getEbookCoverUrl,
   getVideoCoverUrl,
@@ -199,7 +198,7 @@ async function loadAll() {
 
 function getCoverUrl(item: FavItem): string {
   switch (item._type) {
-    case 'music': return getMusicCoverArtUrl(item.id)
+    case 'music': return resolveApiUrl((item as MusicTrack).coverUrl)
     case 'comic': return getComicCoverUrl(item.id)
     case 'ebook': return getEbookCoverUrl(item.id)
     case 'video': return getVideoCoverUrl(item.id)

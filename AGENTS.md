@@ -6,55 +6,59 @@ Vue 3 媒体中心前端（音乐、漫画、电子书、视频）。
 
 ```bash
 npm run dev          # Vite 开发服务器运行在 :3540，代理 /api → :20058
-npm run build        # vue-tsc -b && vite build
+npm run build        # vue-tsc -b && vite build（类型检查 + 构建）
 ```
 
 没有 lint、测试或格式化脚本。类型检查通过 `npm run build`（运行 `vue-tsc -b`）。
 
 ## 架构
 
-- **后端**：自定义 API (`/api`)
-- **API 客户端**：`src/api/backend.ts` — 管理配置/认证状态
-- **状态管理**：`src/stores/connection.ts`（认证）、`src/stores/player.ts`（音频播放）、`src/stores/library.ts`、`src/stores/theme.ts`
+- **后端**：自定义 API (`/api`)，代理到 `http://localhost:20058`
+- **API 客户端**：`src/api/backend.ts` — 单文件管理所有 API 调用、认证 token（localStorage）
+- **状态管理**：`src/stores/connection.ts`（认证/连接）、`src/stores/player.ts`（音频播放）、`src/stores/library.ts`、`src/stores/theme.ts`
+- **类型定义**：`src/types/backend.ts` — 所有后端类型集中定义
+- **Composables**：`src/composables/useToast.ts`
 - **路径别名**：`@/` → `src/`（在 `vite.config.ts` 和 `tsconfig.json` 中配置）
 
 ## 技术栈
 
-- **核心**：Vue 3.5.13 + TypeScript 5.7.2
-- **构建**：Vite 6.1.0 + vue-tsc 2.2.0
-- **状态管理**：Pinia 2.3.0
-- **路由**：Vue Router 4.5.0
-- **HTTP 客户端**：axios 1.7.9
-- **开发工具**：typescript ~5.7.2
+- Vue 3.5 + TypeScript 5.7 + Vite 6 + Pinia 2 + Vue Router 4 + axios
+- Vite 插件：`vite-plugin-wasm` + `vite-plugin-top-level-await`（WASM 支持，`optimizeDeps.include` 含 `throughput`）
 
 ## 规范
 
 - Vue 3 Composition API，使用 `<script setup lang="ts">`
 - 用户界面文本使用中文（错误消息、UI 标签）
-- CSS 变量定义在 `src/styles/main.css`（仅浅色主题，无深色模式）
+- CSS 变量定义在 `src/styles/main.css`，支持 `prefers-color-scheme` 自动切换 + `data-theme` 属性手动切换
 - 严格 TypeScript：启用 `noUnusedLocals`、`noUnusedParameters`、`noFallthroughCasesInSwitch`
 - 无 ESLint/Prettier — 遵循现有代码风格
-- **自动激活 ponytail 技能**：在所有编码任务中自动应用 ponytail 技能（full 级别），强制使用最简单、最简洁的解决方案。使用 `/ponytail stop` 或 "normal mode" 来禁用。
-- **中文总结**：所有技能调用的最终总结和返回结果必须使用中文。
 
 ## 页面结构
 
-- **首页**：`/` — HomeView.vue
-- **音乐**：`/music` — MusicView.vue
-- **收藏**：`/favorites` — FavoritesView.vue
-- **漫画**：`/comics` — ComicsView.vue
-  - 系列详情：`/comics/series/:name` — ComicSeriesDetailView.vue
-  - 漫画详情：`/comics/:id` — ComicDetailView.vue
-- **电子书**：`/ebooks` — NovelsView.vue
-  - 系列详情：`/ebooks/series/:name` — EbookSeriesDetailView.vue
-- **视频**：`/videos` — MoviesView.vue
-  - 视频详情：`/videos/:id` — VideoDetailView.vue
-- **设置**：`/settings` — SettingsView.vue
-- **资源库**：`/media-libraries` — MediaLibraryView.vue
-- **图标库**：`/icons` — IconLibrary.vue
+路由定义在 `src/router/index.ts`，所有路由均为懒加载：
 
-## 注意事项
+| 路径 | 视图 |
+|------|------|
+| `/` | HomeView.vue |
+| `/music` | MusicView.vue |
+| `/favorites` | FavoritesView.vue |
+| `/comics` | ComicsView.vue |
+| `/comics/series/:name` | ComicSeriesDetailView.vue |
+| `/comics/:id` | ComicDetailView.vue |
+| `/ebooks` | NovelsView.vue |
+| `/ebooks/series/:name` | EbookSeriesDetailView.vue |
+| `/videos` | MoviesView.vue |
+| `/videos/:id` | VideoDetailView.vue |
+| `/settings` | SettingsView.vue |
+| `/media-libraries` | MediaLibraryView.vue |
+| `/icons` | IconLibrary.vue |
+| `/colors` | ColorPalette.vue |
+| `/logs` | LogsView.vue |
 
-- 开发服务器绑定 `0.0.0.0:3540` — 可通过局域网访问
-- 后端认证硬编码为 `666/666` — 不是真实的认证系统
-- `player.ts` 直接使用后端 `MusicTrack` 类型
+`ComicReader.vue`、`EbookReader.vue`、`VideoPlayer.vue` 是嵌入在详情页中的子组件，不是独立路由。
+
+## 部署
+
+- Docker 构建：两阶段（node:20-alpine 构建 → nginx:alpine 运行），nginx 监听 3540 端口
+- Docker Compose 使用 host 网络模式，nginx 直接代理 `/api` → `127.0.0.1:20058`
+- CI（`.github/workflows/docker.yml`）：push 到 master 时构建并推送镜像到 GHCR + Docker Hub

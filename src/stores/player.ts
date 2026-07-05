@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { MusicTrack } from '@/types/backend'
-import { getStreamUrl, getMusicCoverArtUrl } from '@/api/backend'
+import { resolveApiUrl } from '@/api/backend'
 
 type PlayMode = 'order' | 'shuffle' | 'repeat_all' | 'repeat_one'
 
@@ -107,7 +107,7 @@ export const usePlayerStore = defineStore('player', () => {
           currentObjectUrl.value = null
         }
         
-        const streamUrl = getStreamUrl(track.id as number)
+        const streamUrl = resolveApiUrl(track.streamUrl)
 
         audio.value.src = streamUrl
         audio.value.load()
@@ -273,7 +273,7 @@ export const usePlayerStore = defineStore('player', () => {
   }
 
   function getTrackCoverArt(track: MusicTrack): string {
-    return getMusicCoverArtUrl(track.id)
+    return resolveApiUrl(track.coverUrl)
   }
 
   function getTrackId(track: MusicTrack): string {
