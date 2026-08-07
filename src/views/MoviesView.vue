@@ -64,27 +64,20 @@
             </svg>
           </div>
           <div class="card-badge" v-if="series.type === 'standalone'">独立</div>
-          <div class="card-badge" v-else-if="series.episodes && series.episodes.length > 0">{{ series.episodes.length }} 集</div>
-          <div v-if="getSeriesProgress(series) > 0" class="card-progress">
-            <div class="card-progress-bar">
-              <div class="card-progress-fill" :style="{ width: Math.min(getSeriesProgress(series), 100) + '%' }"></div>
-            </div>
-          </div>
-          <div v-if="isSeriesWatched(series)" class="card-watched-badge">已看完</div>
+          <div class="card-badge" v-else-if="getEpisodeCount(series) > 0">{{ getEpisodeCount(series) }} 集</div>
         </div>
         <div class="card-info">
           <div class="card-title-row">
             <span class="card-title">{{ series.title }}</span>
-            <span v-if="series.mediaType" class="media-type-badge" :class="series.mediaType">
-              {{ series.mediaType === 'movie' ? '电影' : '电视剧' }}
+            <span v-if="series.mediaType" class="media-type-badge" :class="mediaTypeClass(series.mediaType)">
+              {{ mediaTypeLabel(series.mediaType) }}
             </span>
           </div>
           <div class="card-meta">
             <span v-if="series.year">{{ series.year }}</span>
-            <span v-if="series.episodes && series.episodes.length > 0" class="meta-sep">·</span>
-            <span v-if="series.episodes && series.episodes.length > 0">{{ series.episodes.length }} 集</span>
+            <span v-if="getEpisodeCount(series) > 0" class="meta-sep">·</span>
+            <span v-if="getEpisodeCount(series) > 0">{{ getEpisodeCount(series) }} 集</span>
           </div>
-          <div class="card-overview" v-if="series.overview">{{ series.overview }}</div>
         </div>
       </div>
     </div>
@@ -94,11 +87,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import type { SeriesDTO } from '@/types/backend'
+import type { SeriesListDTO } from '@/types/backend'
 import { getAllSeries, getSeriesPosterUrl, resolveApiUrl } from '@/api/backend'
 
 const router = useRouter()
-const seriesList = ref<SeriesDTO[]>([])
+const seriesList = ref<SeriesListDTO[]>([])
 const loading = ref(false)
 const error = ref('')
 const searchQuery = ref('')
@@ -107,11 +100,23 @@ const filterType = ref<'all' | 'movie' | 'tv'>('all')
 
 const filteredList = computed(() => {
   if (filterType.value === 'all') return seriesList.value
-  return seriesList.value.filter(s => s.mediaType === filterType.value)
+  return seriesList.value.filter(s => mediaTypeClass(s.mediaType) === filterType.value)
 })
 
 function toggleViewMode() {
   showBackdrop.value = !showBackdrop.value
+}
+
+function mediaTypeClass(mediaType: string | null): 'movie' | 'tv' {
+  return (mediaType || '').toLowerCase().startsWith('movie') ? 'movie' : 'tv'
+}
+
+function mediaTypeLabel(mediaType: string | null): string {
+  return mediaTypeClass(mediaType) === 'movie' ? '电影' : '电视剧'
+}
+
+function getEpisodeCount(series: SeriesListDTO): number {
+  return series.totalEpisodes || series.episodeCount || 0
 }
 
 async function loadVideos() {
@@ -136,9 +141,10 @@ async function handleSearch() {
   error.value = ''
   try {
     const allSeries = await getAllSeries()
+    const q = searchQuery.value.toLowerCase()
     seriesList.value = allSeries.filter(s =>
-      s.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-      (s.originalTitle && s.originalTitle.toLowerCase().includes(searchQuery.value.toLowerCase()))
+      s.title.toLowerCase().includes(q) ||
+      (s.originalTitle && s.originalTitle.toLowerCase().includes(q))
     )
   } catch (e) {
     error.value = '搜索失败'
@@ -153,28 +159,15 @@ function onImageError(e: Event) {
   img.style.display = 'none'
 }
 
-function getImageUrl(series: SeriesDTO): string {
+function getImageUrl(series: SeriesListDTO): string {
   if (showBackdrop.value && series.fanartUrl) {
     return resolveApiUrl(series.fanartUrl)
   }
   return resolveApiUrl(series.coverUrl) || getSeriesPosterUrl(series.id)
 }
 
-function viewSeries(series: SeriesDTO) {
-  if (series.episodes && series.episodes.length > 0) {
-    router.push({ name: 'video-detail', params: { id: series.episodes[0].id } })
-  }
-}
-
-function getSeriesProgress(series: SeriesDTO): number {
-  if (!series.episodes || series.episodes.length === 0) return 0
-  const totalProgress = series.episodes.reduce((sum, ep) => sum + (ep.watchProgressPercent || 0), 0)
-  return totalProgress / series.episodes.length
-}
-
-function isSeriesWatched(series: SeriesDTO): boolean {
-  if (!series.episodes || series.episodes.length === 0) return false
-  return series.episodes.every(ep => ep.watched)
+function viewSeries(series: SeriesListDTO) {
+  router.push({ name: 'video-detail', params: { id: series.id }, query: { type: series.type } })
 }
 
 onMounted(loadVideos)
@@ -425,39 +418,12 @@ onMounted(loadVideos)
   transition: var(--transition);
 }
 
+.play-icon svg {
+  transform: translateX(2px);
+}
+
 .content-card:hover .play-icon {
   opacity: 1;
-}
-
-.favorite-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(4px);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.content-card:hover .favorite-btn {
-  opacity: 1;
-}
-
-.favorite-btn.active {
-  opacity: 1;
-  color: #ff6b6b;
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.favorite-btn:hover {
-  transform: scale(1.1);
 }
 
 .card-badge {
@@ -465,41 +431,6 @@ onMounted(loadVideos)
   bottom: 8px;
   left: 8px;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.card-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 0 8px 8px;
-}
-
-.card-progress-bar {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.card-progress-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 2px;
-  transition: width 0.3s ease;
-}
-
-.card-watched-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(46, 204, 113, 0.8);
   backdrop-filter: blur(4px);
   color: white;
   font-size: 11px;
@@ -539,17 +470,6 @@ onMounted(loadVideos)
 
 .meta-sep {
   margin: 0 4px;
-}
-
-.card-overview {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin-top: 4px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.4;
 }
 
 @media screen and (max-width: 767px) {

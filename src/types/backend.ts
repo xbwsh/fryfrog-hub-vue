@@ -1,125 +1,28 @@
-export interface MusicTrack {
-  id: number
-  createdAt: string
-  updatedAt: string
-  title: string
-  artist: string
-  album: string
-  albumArtist: string
-  trackNumber: number | null
-  discNumber: number | null
-  year: number | null
-  genre: string
-  fileName: string
-  fileSize: number
-  durationSeconds: number
-  bitrateKbps: number
-  format: string
-  coverSource: string | null
-  lyrics: string
-  lyricsSource: string | null
-  label: string | null
-  catalogNumber: string | null
-  releaseDate: string | null
-  musicBrainzId: string | null
-  artistBio: string | null
-  scrapeStatus: string | null
-  favorite: boolean
-  playCount: number
-  lastPlayedAt: string | null
-  coverUrl: string
-  imageUrl: string | null
-  streamUrl: string
+export interface ApiResponse<T> {
+  success: boolean
+  message: string
+  data: T
 }
 
-export interface Comic {
-  id: number
-  createdAt: string
-  updatedAt: string
-  title: string
-  author: string
-  series: string
-  volume: number
-  year: number
-  genre: string
-  summary: string
-  seriesSummary: string | null
-  rating: number | null
-  serializationStart: string | null
-  releaseDate: string | null
-  fileName: string
-  fileSize: number
-  pageCount: number
-  format: string
-  coverUrl: string | null
-  favorite: boolean
+export interface BackendConfig {
+  url: string
+  authenticated: boolean
 }
 
-export interface ComicVolume {
-  id: number
-  volume: number
-  title: string
-  author: string
-  series: string
-  year: number
-  pageCount: number
-  coverUrl: string | null
-  fileName: string
-  rating: number | null
-  summary: string | null
-  releaseDate: string | null
-  favorite: boolean
-  updatedAt?: string
-}
-
-export interface ComicSeries {
-  name: string
-  author: string
-  coverUrl: string | null
-  seriesSummary: string | null
-  serializationStart: string | null
-  volumeCount: number
-  comics: ComicVolume[]
-}
-
-export interface PageInfo {
-  pageNum: number
-  fileName: string
-}
-
-export interface EbookSeries {
-  name: string
-  author: string
-  coverUrl: string
-  volumeCount: number
-  books: Ebook[]
-}
-
-export interface Ebook {
-  id: number
-  createdAt: string
-  updatedAt: string
-  title: string
-  author: string
-  publisher: string
-  isbn: string
-  year: number
-  genre: string | null
-  description: string
-  fileName: string
-  fileSize: number
-  format: string
-  pageCount: number
-  language: string
-  coverUrl: string
-  downloadApiUrl: string
-  readApiUrl: string
-  favorite: boolean
+export interface PageResponse<T> {
+  content: T[]
+  page: number
+  size: number
+  totalElements: number
+  totalPages: number
 }
 
 export interface VideoDTO {
   id: number
   title: string
+  coverUrl: string | null
+  fanartUrl: string | null
+  streamUrl: string | null
   originalTitle: string | null
   director: string | null
   actors: string | null
@@ -127,28 +30,26 @@ export interface VideoDTO {
   year: number | null
   durationMinutes: number | null
   overview: string | null
-  fileName: string
-  fileSize: number
-  videoCodec: string | null
-  audioCodec: string | null
-  resolution: string | null
-  frameRate: number | null
-  bitrateKbps: number | null
-  format: string
+  fileName: string | null
+  originalFileName: string | null
+  fileSize: number | null
+  format: string | null
   favorite: boolean
   tmdbId: number | null
   mediaType: string | null
   imdbId: string | null
   rating: number | null
   voteCount: number | null
-  metadataSource: string
+  status: string | null
+  metadataSource: string | null
   metadataUpdatedAt: string | null
-  metadataDir: string | null
-  coverUrl: string | null
-  fanartUrl: string | null
-  streamUrl: string | null
+  hasMetadataDir: boolean
+  hasNfo: boolean
+  hasPoster: boolean
+  hasFanart: boolean
   scraped: boolean
   isSeries: boolean
+  libraryId: number | null
   seriesId: number | null
   seriesTitle: string | null
   seasonNumber: number | null
@@ -156,8 +57,7 @@ export interface VideoDTO {
   watchPosition: number | null
   watchProgressPercent: number | null
   watched: boolean | null
-  libraryId: number | null
-  audioIncompatible: boolean
+  isAdult: boolean | null
 }
 
 export interface VideoProgress {
@@ -169,117 +69,63 @@ export interface VideoProgress {
   updatedAt: string
 }
 
-export interface ComicProgress {
-  comicId: number
-  currentPage: number
-  totalPages: number
-  completed: boolean
-  progressPercent: number
-  updatedAt: string
-}
-
-export interface AnilistMediaTitle {
-  bestTitle: string
-  romaji: string
-  english: string
-  native: string
-}
-
-export interface AnilistCoverImage {
-  large: string
-  medium: string
-}
-
-export interface AnilistStartDate {
-  year: number
-  month: number
-  day: number
-}
-
-export interface AnilistStaffNode {
-  name: { first: string; last: string; full: string }
-}
-
-export interface AnilistStaffEdge {
-  node: AnilistStaffNode
-  role: string
-}
-
-export interface AnilistMediaItem {
-  id: number
-  title: AnilistMediaTitle
-  coverImage: AnilistCoverImage
-  description: string
-  meanScore: number
-  genres: string[]
-  startDate: AnilistStartDate
-  volumes: number
-  status: string
-  type: string
-  staff: { edges: AnilistStaffEdge[] }
-}
-
-export interface BangumiItem {
-  id: number
-  name: string
-  name_cn: string
-  summary: string
-  score: number
-  tags: string[]
-  author: string
-  cover: string
-}
-
-export interface ComicCharacter {
-  id: number
-  name: string
-  originalName: string | null
-  imageUrl: string | null
-  imagePath: string | null
-  description: string | null
-  role: string | null
-  source: string
-}
-
-export interface VideoActor {
-  id: number
-  videoId: number
-  name: string
-  character: string | null
-  imageUrl: string | null
-  sourceActorId: number | null
-}
-
-export interface EbookProgress {
-  ebookId: number
-  currentChapter: number
-  chapterProgressPercent: number
-  completed: boolean
-  updatedAt: string
+export interface SeasonDTO {
+  seasonNumber: number
+  episodes: VideoDTO[]
 }
 
 export interface SeriesDTO {
   id: number
   type: 'series' | 'standalone'
   title: string
+  coverUrl: string | null
+  fanartUrl: string | null
   originalTitle: string | null
   overview: string | null
   mediaType: string | null
   tmdbId: number | null
   rating: number | null
   year: number | null
+  seasonNumber: number | null
+  numberOfSeasons: number | null
+  totalEpisodes: number
+  status: string | null
+  isAdult: boolean | null
+  episodeCount: number
+  seasons: SeasonDTO[]
+}
+
+export interface SeriesListDTO {
+  id: number
+  type: 'series' | 'standalone'
+  title: string
   coverUrl: string | null
   fanartUrl: string | null
-  seasonNumber: number | null
+  originalTitle: string | null
+  mediaType: string | null
+  rating: number | null
+  year: number | null
+  numberOfSeasons: number | null
   totalEpisodes: number
   episodeCount: number
-  metadataDir: string | null
-  episodes: VideoDTO[]
+  isAdult: boolean | null
+  hasAdultEpisodes: boolean | null
+}
+
+export interface LibrarySeriesGroupDTO {
+  libraryId: number
+  libraryName: string
+  libraryPath: string
+  subType: string | null
+  series: SeriesListDTO[]
+  standaloneVideos: SeriesListDTO[]
+  seriesCount: number
+  standaloneCount: number
 }
 
 export interface TmdbSearchItem {
   id: number
-  year: number
+  year: number | null
   title: string
   original_title: string
   name: string
@@ -294,84 +140,44 @@ export interface TmdbSearchItem {
   vote_count: number
   media_type: string
   popularity: number
+  adult: boolean
 }
 
-export interface ChapterInfo {
-  chapterNum: number
-  title: string
-}
-
-export interface ApiResponse<T> {
-  success: boolean
-  message: string
-  data: T
-}
-
-export interface BackendConfig {
-  url: string
-  authenticated: boolean
-}
-
-export interface LibraryScanResult {
-  scan: Record<string, string>
-  organize: Record<string, string> | null
-  elapsedMs: number
-}
-
-export interface SystemSetting {
+export interface VideoActor {
   id: number
-  key: string
-  value: string
-  description: string | null
   createdAt: string
   updatedAt: string
-}
-
-export interface TmdbStatus {
-  configured: boolean
-  language: string
-  'image-size': string
-  'auto-scrape': boolean
-  'include-adult': boolean
-}
-
-export interface MusicPlaylist {
-  id: number
   name: string
-  description: string | null
-  trackCount: number
-  createdAt: string
-  updatedAt: string
-}
-
-export interface MediaInfo {
-  videoCodec: string
-  videoCodecLong: string
-  audioCodec: string
-  audioCodecLong: string
-  audioChannels: number
-  audioSampleRate: string
-  resolution: string
-  frameRate: number
-  bitrateKbps: number
-  durationSeconds: number
-  durationMinutes: number
-  format: string
-}
-
-export interface SubtitleTrack {
-  index: number
-  codec: string
-  language: string
-  title: string | null
-  default: boolean
+  character: string | null
+  sourceActorId: number | null
+  imageUrl: string | null
 }
 
 export interface ExternalSubtitle {
   fileName: string
-  ext: string
-  path: string
   language: string
+}
+
+export interface ScrapeItemStatus {
+  name: string
+  status: string
+  error: string | null
+  processedAt: string | null
+}
+
+export interface ScrapeProgress {
+  module: string
+  running: boolean
+  total: number
+  completed: number
+  failed: number
+  skipped: number
+  pending: number
+  startedAt: string | null
+  updatedAt: string | null
+  currentItem: string | null
+  items: ScrapeItemStatus[]
+  percent: number
 }
 
 export type MediaLibraryType = 'VIDEO' | 'MUSIC' | 'COMIC' | 'EBOOK'
@@ -384,6 +190,8 @@ export interface MediaLibrary {
   type: MediaLibraryType
   subType: VideoSubType | null
   enabled: boolean
+  enableScraping: boolean
+  isAdult: boolean
   sortOrder: number
   description: string | null
   createdAt: string
@@ -396,6 +204,8 @@ export interface CreateMediaLibraryRequest {
   type: MediaLibraryType
   subType?: VideoSubType
   enabled?: boolean
+  enableScraping?: boolean
+  isAdult?: boolean
   sortOrder?: number
   description?: string
 }
@@ -406,6 +216,8 @@ export interface UpdateMediaLibraryRequest {
   type?: MediaLibraryType
   subType?: VideoSubType
   enabled?: boolean
+  enableScraping?: boolean
+  isAdult?: boolean
   sortOrder?: number
   description?: string
 }
@@ -416,9 +228,17 @@ export interface DirectoryItem {
   writable: boolean
 }
 
+export interface SystemSetting {
+  id: number
+  key: string
+  value: string
+  description: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export interface LogFileInfo {
   name: string
   size: number
   lastModified: string
 }
-

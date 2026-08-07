@@ -1,6 +1,6 @@
 # Fryfrog Hub
 
-Vue 3 媒体中心前端（音乐、漫画、电子书、视频）。
+Vue 3 媒体中心前端（视频）。
 
 ## 命令
 
@@ -15,7 +15,7 @@ npm run build        # vue-tsc -b && vite build（类型检查 + 构建）
 
 - **后端**：自定义 API (`/api`)，代理到 `http://localhost:20058`
 - **API 客户端**：`src/api/backend.ts` — 单文件管理所有 API 调用、认证 token（localStorage）
-- **状态管理**：`src/stores/connection.ts`（认证/连接）、`src/stores/player.ts`（音频播放）、`src/stores/library.ts`、`src/stores/theme.ts`
+- **状态管理**：`src/stores/connection.ts`（认证/连接）、`src/stores/theme.ts`
 - **类型定义**：`src/types/backend.ts` — 所有后端类型集中定义
 - **Composables**：`src/composables/useToast.ts`
 - **路径别名**：`@/` → `src/`（在 `vite.config.ts` 和 `tsconfig.json` 中配置）
@@ -40,13 +40,7 @@ npm run build        # vue-tsc -b && vite build（类型检查 + 构建）
 | 路径 | 视图 |
 |------|------|
 | `/` | HomeView.vue |
-| `/music` | MusicView.vue |
 | `/favorites` | FavoritesView.vue |
-| `/comics` | ComicsView.vue |
-| `/comics/series/:name` | ComicSeriesDetailView.vue |
-| `/comics/:id` | ComicDetailView.vue |
-| `/ebooks` | NovelsView.vue |
-| `/ebooks/series/:name` | EbookSeriesDetailView.vue |
 | `/videos` | MoviesView.vue |
 | `/videos/:id` | VideoDetailView.vue |
 | `/settings` | SettingsView.vue |
@@ -55,7 +49,7 @@ npm run build        # vue-tsc -b && vite build（类型检查 + 构建）
 | `/colors` | ColorPalette.vue |
 | `/logs` | LogsView.vue |
 
-`ComicReader.vue`、`EbookReader.vue`、`VideoPlayer.vue` 是嵌入在详情页中的子组件，不是独立路由。
+`VideoPlayer.vue` 是嵌入在详情页中的子组件，不是独立路由。
 
 ## 部署
 

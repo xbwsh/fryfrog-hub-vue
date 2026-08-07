@@ -54,8 +54,8 @@
 
             <div class="meta-line">
               <span v-if="currentDisplayInfo.year">{{ currentDisplayInfo.year }}</span>
-              <span class="meta-sep" v-if="currentDisplayInfo.year && series.episodes">·</span>
-              <span v-if="series.episodes">{{ series.episodes.length }} 集</span>
+              <span class="meta-sep" v-if="currentDisplayInfo.year && totalEpisodes > 0">·</span>
+              <span v-if="totalEpisodes > 0">{{ totalEpisodes }} 集</span>
               <span class="meta-sep" v-if="video?.episodeNumber">·</span>
               <span v-if="video?.episodeNumber">第 {{ video.episodeNumber }} 集</span>
               <span class="meta-sep" v-if="currentDisplayInfo.genre">·</span>
@@ -63,21 +63,7 @@
             </div>
 
             <div class="action-row">
-              <div v-if="currentDisplayInfo.audioIncompatible" class="audio-incompatible-tip">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <span>音频格式可能不兼容浏览器</span>
-                <button class="tip-copy-btn" @click="handleTranscodeAudio" :disabled="transcoding">
-                  {{ transcoding ? '转码中...' : '转码为 AAC' }}
-                </button>
-                <button class="tip-copy-btn" @click="copyStreamUrl">复制链接</button>
-                <a class="tip-copy-btn" :href="`/api/v1/video/${video?.id}/playlist.m3u`" download>下载播放列表</a>
-              </div>
-              <div v-if="transcodingError" class="audio-incompatible-tip" style="color: #e74c3c;">
-                {{ transcodingError }}
-              </div>
-              <button class="play-btn" @click="playEpisode(video || series.episodes[0])">
+              <button class="play-btn" @click="playEpisode(video || firstEpisode)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
@@ -86,7 +72,7 @@
               <button
                 v-if="hasSeriesProgress"
                 class="play-btn secondary"
-                @click="playEpisode(series.episodes[0])"
+                @click="playEpisode(firstEpisode)"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"/>
@@ -124,7 +110,7 @@
                 </button>
               </Tooltip>
               <Tooltip content="下载播放列表 (PotPlayer)" placement="bottom">
-                <a class="icon-btn" :href="`/api/v1/video/${video?.id}/playlist.m3u`" download>
+                <a class="icon-btn" :href="getVideoPlaylistUrl(currentPlayId)" download>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                   </svg>
@@ -135,7 +121,6 @@
             <div class="rating-row" v-if="series.rating! > 0">
               <span class="rating-score">{{ series.rating!.toFixed(1) }}</span>
               <span class="rating-stars" v-html="starRatingSvg(series.rating!)"></span>
-              <span class="rating-vote" v-if="video?.voteCount">{{ video.voteCount }} 票</span>
             </div>
 
             <div class="hero-overview" v-if="currentDisplayInfo.overview">
@@ -168,7 +153,7 @@
           </div>
         </div>
 
-        <div class="section">
+        <div class="section" v-if="series.seasons && series.seasons.length > 0">
           <div class="episode-card">
             <div class="section-header">
               <h3>剧集</h3>
@@ -182,89 +167,88 @@
               </div>
             </div>
 
-            <!-- 海报预览视图 -->
-            <div v-if="episodeViewMode === 'poster'" class="episode-poster-grid">
             <div
-              v-for="episode in series.episodes"
-              :key="episode.id"
-              class="episode-poster-card"
-              :class="{ active: episode.id === video?.id }"
-              @click="selectEpisode(episode)"
+              v-for="season in series.seasons"
+              :key="season.seasonNumber"
+              class="season-block"
             >
-              <div class="poster-thumb">
-                <img
-                  :src="resolveApiUrl(episode.fanartUrl)"
-                  :alt="'第 ' + episode.episodeNumber + ' 集'"
-                  draggable="false"
-                  @error="onImageError"
-                />
-                <div class="poster-overlay">
-                  <div class="poster-play-btn">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="5 3 19 12 5 21 5 3"/>
-                    </svg>
-                  </div>
-                </div>
-                <div v-if="episode.watchProgressPercent! > 0" class="poster-progress">
-                  <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: Math.min(episode.watchProgressPercent!, 100) + '%' }"></div>
-                  </div>
-                </div>
-                <div v-if="episode.watched" class="poster-watched-badge">已看完</div>
+              <div class="season-label" v-if="series.seasons.length > 1">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                第 {{ season.seasonNumber }} 季
               </div>
-              <div class="poster-info">
-                <div class="poster-ep-num">第 {{ episode.episodeNumber }} 集</div>
-                <div class="poster-title">{{ episode.title }}</div>
-              </div>
-            </div>
-          </div>
 
-          <!-- 紧凑视图 -->
-          <div v-else class="episode-compact-list">
-            <div
-              v-for="episode in series.episodes"
-              :key="episode.id"
-              class="compact-item"
-              :class="{ active: episode.id === video?.id, watched: episode.watched }"
-              @click="selectEpisode(episode)"
-            >
-              {{ episode.episodeNumber }}
+              <!-- 海报预览视图 -->
+              <div v-if="episodeViewMode === 'poster'" class="episode-poster-grid">
+                <div
+                  v-for="episode in season.episodes"
+                  :key="episode.id"
+                  class="episode-poster-card"
+                  :class="{ active: episode.id === video?.id }"
+                  @click="selectEpisode(episode)"
+                >
+                  <div class="poster-thumb">
+                    <img
+                      :src="resolveApiUrl(episode.fanartUrl) || getVideoFanartUrl(episode.id)"
+                      :alt="'第 ' + episode.episodeNumber + ' 集'"
+                      draggable="false"
+                      @error="onImageError"
+                    />
+                    <div class="poster-overlay">
+                      <div class="poster-play-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                          <polygon points="5 3 19 12 5 21 5 3"/>
+                        </svg>
+                      </div>
+                    </div>
+                    <div v-if="episode.watchProgressPercent! > 0" class="poster-progress">
+                      <div class="progress-bar">
+                        <div class="progress-fill" :style="{ width: Math.min(episode.watchProgressPercent!, 100) + '%' }"></div>
+                      </div>
+                    </div>
+                    <div v-if="episode.watched" class="poster-watched-badge">已看完</div>
+                  </div>
+                  <div class="poster-info">
+                    <div class="poster-ep-num">第 {{ episode.episodeNumber }} 集</div>
+                    <div class="poster-title">{{ episode.title }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 紧凑视图 -->
+              <div v-else class="episode-compact-list">
+                <div
+                  v-for="episode in season.episodes"
+                  :key="episode.id"
+                  class="compact-item"
+                  :class="{ active: episode.id === video?.id, watched: episode.watched }"
+                  @click="selectEpisode(episode)"
+                >
+                  {{ episode.episodeNumber }}
+                </div>
+              </div>
             </div>
-          </div>
           </div>
         </div>
 
-        <div class="section">
+        <div class="section" v-if="video?.fileName">
           <div class="media-card">
             <div class="media-card-header">
               <div class="media-card-title">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                   <polygon points="5 3 19 12 5 21 5 3"/>
                 </svg>
-                <span class="media-card-filename">第 {{ video?.episodeNumber }} 集 · {{ video?.fileName }}</span>
-                <span class="media-card-badge" v-if="video?.fileSize">{{ formatFileSize(video.fileSize) }}</span>
+                <span class="media-card-filename">{{ video.episodeNumber ? '第 ' + video.episodeNumber + ' 集 · ' : '' }}{{ video.fileName }}</span>
+                <span class="media-card-badge" v-if="video.fileSize">{{ formatFileSize(video.fileSize) }}</span>
               </div>
             </div>
             <div class="media-info-grid">
-              <div class="media-info-item" v-if="video?.resolution">
-                <span class="media-info-label">分辨率</span>
-                <span class="media-info-value">{{ video.resolution }}</span>
+              <div class="media-info-item" v-if="video.format">
+                <span class="media-info-label">格式</span>
+                <span class="media-info-value">{{ video.format }}</span>
               </div>
-              <div class="media-info-item" v-if="video?.videoCodec">
-                <span class="media-info-label">视频编码</span>
-                <span class="media-info-value">{{ video.videoCodec }}</span>
-              </div>
-              <div class="media-info-item" v-if="video?.audioCodec">
-                <span class="media-info-label">音频编码</span>
-                <span class="media-info-value">{{ video.audioCodec }}</span>
-              </div>
-              <div class="media-info-item" v-if="video?.bitrateKbps">
-                <span class="media-info-label">码率</span>
-                <span class="media-info-value">{{ video.bitrateKbps }} kbps</span>
-              </div>
-              <div class="media-info-item" v-if="video?.frameRate">
-                <span class="media-info-label">帧率</span>
-                <span class="media-info-value">{{ video.frameRate }} fps</span>
+              <div class="media-info-item" v-if="video.durationMinutes">
+                <span class="media-info-label">时长</span>
+                <span class="media-info-value">{{ formatDuration(video.durationMinutes) }}</span>
               </div>
             </div>
           </div>
@@ -331,20 +315,6 @@
             </div>
 
             <div class="action-row">
-              <div v-if="video.audioIncompatible" class="audio-incompatible-tip">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-                </svg>
-                <span>音频格式可能不兼容浏览器</span>
-                <button class="tip-copy-btn" @click="handleTranscodeAudio" :disabled="transcoding">
-                  {{ transcoding ? '转码中...' : '转码为 AAC' }}
-                </button>
-                <button class="tip-copy-btn" @click="copyStreamUrl">复制链接</button>
-                <a class="tip-copy-btn" :href="`/api/v1/video/${video.id}/playlist.m3u`" download>下载播放列表</a>
-              </div>
-              <div v-if="transcodingError" class="audio-incompatible-tip" style="color: #e74c3c;">
-                {{ transcodingError }}
-              </div>
               <button class="play-btn" @click="showPlayer = true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3"/>
@@ -403,7 +373,7 @@
                 </button>
               </Tooltip>
               <Tooltip content="下载播放列表 (PotPlayer)" placement="bottom">
-                <a class="icon-btn" :href="`/api/v1/video/${video.id}/playlist.m3u`" download>
+                <a class="icon-btn" :href="getVideoPlaylistUrl(video.id)" download>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                   </svg>
@@ -411,11 +381,9 @@
               </Tooltip>
             </div>
 
-
             <div class="rating-row" v-if="video.rating! > 0">
               <span class="rating-score">{{ video.rating!.toFixed(1) }}</span>
               <span class="rating-stars" v-html="starRatingSvg(video.rating!)"></span>
-              <span class="rating-vote">{{ video.voteCount }} 票</span>
             </div>
 
             <div class="hero-overview" v-if="video.overview">
@@ -448,7 +416,7 @@
           </div>
         </div>
 
-        <div class="section">
+        <div class="section" v-if="video.fileName">
           <div class="media-card">
             <div class="media-card-header">
               <div class="media-card-title">
@@ -461,25 +429,13 @@
               </div>
             </div>
             <div class="media-info-grid">
-              <div class="media-info-item" v-if="video.resolution">
-                <span class="media-info-label">分辨率</span>
-                <span class="media-info-value">{{ video.resolution }}</span>
+              <div class="media-info-item" v-if="video.format">
+                <span class="media-info-label">格式</span>
+                <span class="media-info-value">{{ video.format }}</span>
               </div>
-              <div class="media-info-item" v-if="video.videoCodec">
-                <span class="media-info-label">视频编码</span>
-                <span class="media-info-value">{{ video.videoCodec }}</span>
-              </div>
-              <div class="media-info-item" v-if="video.audioCodec">
-                <span class="media-info-label">音频编码</span>
-                <span class="media-info-value">{{ video.audioCodec }}</span>
-              </div>
-              <div class="media-info-item" v-if="video.bitrateKbps">
-                <span class="media-info-label">码率</span>
-                <span class="media-info-value">{{ video.bitrateKbps }} kbps</span>
-              </div>
-              <div class="media-info-item" v-if="video.frameRate">
-                <span class="media-info-label">帧率</span>
-                <span class="media-info-value">{{ video.frameRate }} fps</span>
+              <div class="media-info-item" v-if="video.durationMinutes">
+                <span class="media-info-label">时长</span>
+                <span class="media-info-value">{{ formatDuration(video.durationMinutes) }}</span>
               </div>
             </div>
           </div>
@@ -492,9 +448,8 @@
       :video-id="currentPlayVideo.id"
       :video-title="currentPlayVideo.title"
       :stream-url="currentPlayVideo.streamUrl"
-      :episodes="series?.episodes || []"
+      :episodes="allEpisodes"
       :current-episode-id="currentPlayVideo.id"
-      :subtitle-tracks="subtitleTracks"
       :external-subtitles="externalSubtitles"
       @close="showPlayer = false"
       @episode-change="handleEpisodeChange"
@@ -563,8 +518,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { VideoDTO, SeriesDTO, VideoActor, SubtitleTrack, ExternalSubtitle } from '@/types/backend'
-import { getVideoById, getSeriesById, toggleVideoFavorite, getSeriesPosterUrl, getSeriesFanartUrl, deleteVideoProgress, getVideoActors, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, getSubtitleTracks, getExternalSubtitles, transcodeAudio, resolveApiUrl } from '@/api/backend'
+import type { VideoDTO, SeriesDTO, VideoActor, ExternalSubtitle } from '@/types/backend'
+import { getVideoById, getSeriesById, toggleVideoFavorite, getSeriesPosterUrl, getSeriesFanartUrl, getVideoFanartUrl, getVideoPlaylistUrl, deleteVideoProgress, getVideoActors, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, getExternalSubtitles, resolveApiUrl } from '@/api/backend'
 import { useConnectionStore } from '@/stores/connection'
 import { useToast } from '@/composables/useToast'
 import Tooltip from '@/components/Tooltip.vue'
@@ -584,7 +539,6 @@ const showPlayer = ref(false)
 type EpisodeViewMode = 'poster' | 'compact'
 const episodeViewMode = ref<EpisodeViewMode>('poster')
 const actors = ref<VideoActor[]>([])
-const subtitleTracks = ref<SubtitleTrack[]>([])
 const externalSubtitles = ref<ExternalSubtitle[]>([])
 
 // TMDB search
@@ -596,25 +550,20 @@ const tmdbSearched = ref(false)
 const tmdbSearchError = ref('')
 const bindingId = ref<number | null>(null)
 const refreshing = ref(false)
-const transcoding = ref(false)
-const transcodingError = ref('')
 
-async function handleTranscodeAudio() {
-  const targetId = video.value?.id || series.value?.episodes[0]?.id
-  if (!targetId || transcoding.value) return
-  transcoding.value = true
-  transcodingError.value = ''
-  try {
-    await transcodeAudio(targetId)
-    toast.show('音频转码完成，可以正常播放了', 'success')
-    await loadVideo()
-  } catch (e) {
-    transcodingError.value = '转码失败'
-    console.error('Transcode failed:', e)
-  } finally {
-    transcoding.value = false
+const allEpisodes = computed<VideoDTO[]>(() => {
+  if (series.value?.seasons) {
+    return series.value.seasons.flatMap(s => s.episodes)
   }
-}
+  return []
+})
+
+const firstEpisode = computed<VideoDTO | null>(() => allEpisodes.value[0] || null)
+
+const totalEpisodes = computed(() => {
+  if (series.value) return series.value.totalEpisodes || allEpisodes.value.length
+  return 0
+})
 
 async function loadVideo() {
   const id = Number(route.params.id)
@@ -625,7 +574,35 @@ async function loadVideo() {
   series.value = null
   video.value = null
   actors.value = []
-  subtitleTracks.value = []
+  externalSubtitles.value = []
+
+  // 列表页（首页/影片页）携带 type 跳转，精确按系列/独立视频查询，
+  // 避免 video 与 series 表 id 独立编号导致的撞车（查错内容）
+  const type = route.query.type as 'series' | 'standalone' | undefined
+  if (type === 'series' || type === 'standalone') {
+    try {
+      const seriesData = await getSeriesById(id, type)
+      if (seriesData) {
+        series.value = seriesData
+        video.value = firstEpisode.value
+        const episodeId = video.value?.id
+        if (episodeId) {
+          await loadActorsAndSubtitles(episodeId)
+        }
+        loading.value = false
+        return
+      }
+    } catch (e) {
+      console.error('Failed to load series:', e)
+    }
+    // 带 type 的精确查询失败（如 id 不存在）直接报错，
+    // 避免回退到 video 表按同 id 撞出错误内容
+    if (type === 'series') {
+      error.value = '加载视频详情失败'
+      loading.value = false
+      return
+    }
+  }
 
   try {
     const data = await getVideoById(id)
@@ -637,21 +614,7 @@ async function loadVideo() {
           series.value = seriesData
         }
       }
-      try {
-        actors.value = await getVideoActors(id)
-      } catch {
-        actors.value = []
-      }
-      try {
-        subtitleTracks.value = await getSubtitleTracks(id)
-      } catch {
-        subtitleTracks.value = []
-      }
-      try {
-        externalSubtitles.value = await getExternalSubtitles(id)
-      } catch {
-        externalSubtitles.value = []
-      }
+      await loadActorsAndSubtitles(id)
     } else {
       error.value = '视频不存在'
     }
@@ -663,23 +626,11 @@ async function loadVideo() {
   }
 }
 
-function selectEpisode(episode: VideoDTO) {
-  video.value = episode
-}
-
-function handleEpisodeChange(episode: VideoDTO) {
-  video.value = episode
-  showPlayer.value = true
-  loadSubtitleTracks()
-}
-
-async function loadSubtitleTracks() {
-  const id = video.value?.id || series.value?.episodes[0]?.id
-  if (!id) return
+async function loadActorsAndSubtitles(id: number) {
   try {
-    subtitleTracks.value = await getSubtitleTracks(id)
+    actors.value = await getVideoActors(id)
   } catch {
-    subtitleTracks.value = []
+    actors.value = []
   }
   try {
     externalSubtitles.value = await getExternalSubtitles(id)
@@ -688,9 +639,21 @@ async function loadSubtitleTracks() {
   }
 }
 
-function playEpisode(episode: VideoDTO) {
+function selectEpisode(episode: VideoDTO) {
+  video.value = episode
+}
+
+function handleEpisodeChange(episode: VideoDTO) {
   video.value = episode
   showPlayer.value = true
+  loadActorsAndSubtitles(episode.id)
+}
+
+function playEpisode(episode: VideoDTO | null) {
+  if (!episode) return
+  video.value = episode
+  showPlayer.value = true
+  loadActorsAndSubtitles(episode.id)
 }
 
 async function resetAndPlay() {
@@ -733,7 +696,7 @@ async function handleTmdbSearch() {
 }
 
 async function handleBindTmdb(item: any) {
-  const targetId = video.value?.id || series.value?.episodes[0]?.id
+  const targetId = currentPlayId.value
   if (!targetId || bindingId.value !== null) return
   bindingId.value = item.id
   tmdbSearchError.value = ''
@@ -752,7 +715,7 @@ async function handleBindTmdb(item: any) {
 }
 
 async function handleRefreshTmdb() {
-  const targetId = video.value?.id || series.value?.episodes[0]?.id
+  const targetId = currentPlayId.value
   if (!targetId || refreshing.value) return
   refreshing.value = true
   try {
@@ -768,7 +731,7 @@ async function handleRefreshTmdb() {
 }
 
 async function handleUnbindTmdb() {
-  const targetId = video.value?.id || series.value?.episodes[0]?.id
+  const targetId = currentPlayId.value
   if (!targetId) return
   if (!confirm('确定要解绑 TMDB 元数据吗？')) return
   try {
@@ -832,7 +795,7 @@ function onActorImageError(e: Event) {
 }
 
 function copyStreamUrl() {
-  const id = video.value?.id || series.value?.episodes[0]?.id
+  const id = currentPlayId.value
   if (!id) return
   const baseUrl = connectionStore.backendUrl || ''
   const url = `${baseUrl}/api/v1/video/${id}/stream`
@@ -843,10 +806,14 @@ function copyStreamUrl() {
   })
 }
 
+const currentPlayId = computed(() => {
+  return video.value?.id || firstEpisode.value?.id || 0
+})
+
 const currentPlayVideo = computed(() => {
-  if (series.value && series.value.episodes) {
-    const found = series.value.episodes.find(ep => ep.id === video.value?.id)
-    return found || series.value.episodes[0]
+  if (allEpisodes.value.length > 0) {
+    const found = allEpisodes.value.find(ep => ep.id === video.value?.id)
+    return found || firstEpisode.value
   }
   return video.value
 })
@@ -856,12 +823,11 @@ const currentDisplayInfo = computed(() => {
     return {
       title: series.value.title,
       originalTitle: series.value.originalTitle,
-      posterUrl: resolveApiUrl(video.value?.coverUrl) || series.value.coverUrl || getSeriesPosterUrl(series.value.id),
+      posterUrl: resolveApiUrl(video.value?.coverUrl) || resolveApiUrl(series.value.coverUrl) || getSeriesPosterUrl(series.value.id),
       backdropUrl: resolveApiUrl(video.value?.fanartUrl) || resolveApiUrl(series.value.fanartUrl) || getSeriesFanartUrl(series.value.id),
       overview: series.value.overview,
       year: series.value.year,
       genre: video.value?.genre || null,
-      audioIncompatible: video.value?.audioIncompatible ?? false
     }
   }
   if (video.value) {
@@ -873,7 +839,6 @@ const currentDisplayInfo = computed(() => {
       overview: video.value.overview,
       year: video.value.year,
       genre: video.value.genre,
-      audioIncompatible: video.value.audioIncompatible
     }
   }
   return {
@@ -884,13 +849,11 @@ const currentDisplayInfo = computed(() => {
     overview: '',
     year: 0,
     genre: null,
-    audioIncompatible: false
   }
 })
 
 const hasSeriesProgress = computed(() => {
-  if (!series.value?.episodes) return false
-  return series.value.episodes.some(ep => ep.watchPosition! > 0 && !ep.watched)
+  return allEpisodes.value.some(ep => ep.watchPosition! > 0 && !ep.watched)
 })
 
 watch(() => route.params.id, (newId) => {
@@ -958,12 +921,14 @@ onMounted(loadVideo)
   inset: 0;
   overflow: hidden;
   min-height: 50vh;
+  max-height: 75vh;
 }
 
 .backdrop img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center top;
 }
 
 .backdrop-overlay {
@@ -1071,22 +1036,6 @@ onMounted(loadVideo)
   color: var(--text-muted);
 }
 
-.tag-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.tag {
-  font-size: 13px;
-  padding: 4px 14px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  color: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
 .video-progress {
   display: flex;
   align-items: center;
@@ -1143,6 +1092,7 @@ onMounted(loadVideo)
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(4px);
   border: none;
+  text-decoration: none;
 
   transition: var(--transition);
 }
@@ -1178,11 +1128,6 @@ onMounted(loadVideo)
   font-size: 22px;
   font-weight: 700;
   color: #ffd700;
-}
-
-.rating-vote {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
 }
 
 .hero-overview {
@@ -1539,7 +1484,7 @@ onMounted(loadVideo)
 .view-mode-toggle {
   display: flex;
   gap: 4px;
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
   border-radius: var(--radius-md);
   padding: 2px;
 }
@@ -1570,6 +1515,28 @@ onMounted(loadVideo)
 .view-mode-toggle button.active {
   background: var(--accent);
   color: white;
+}
+
+.season-block {
+  margin-bottom: 24px;
+}
+
+.season-block:last-child {
+  margin-bottom: 0;
+}
+
+.season-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.season-label svg {
+  color: var(--accent);
 }
 
 .episode-poster-grid {
@@ -1626,11 +1593,15 @@ onMounted(loadVideo)
   height: 48px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.9);
-  color: var(--text-primary);
+  color: #1f1f1f;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.poster-play-btn svg {
+  transform: translateX(2px);
 }
 
 .poster-progress {
@@ -1693,7 +1664,7 @@ onMounted(loadVideo)
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
-  background: var(--bg-secondary);
+  background: var(--bg-tertiary);
   font-size: 15px;
   font-weight: 500;
   color: var(--text-primary);
@@ -1712,77 +1683,6 @@ onMounted(loadVideo)
 
 .compact-item.watched {
   opacity: 0.5;
-}
-
-.file-card {
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-}
-
-.file-card-header {
-  padding: 18px 24px 0;
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.file-card-body {
-  padding: 12px 24px 8px;
-}
-
-.file-card .file-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.file-card .file-row:last-child {
-  border-bottom: none;
-}
-
-.file-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: var(--bg-tertiary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--text-muted);
-}
-
-.file-label {
-  font-size: 14px;
-  color: var(--text-muted);
-  width: 64px;
-  flex-shrink: 0;
-}
-
-.media-info-text .file-label {
-  width: auto;
-  flex-shrink: 0;
-}
-
-.file-value {
-  font-size: 14px;
-  color: var(--text-primary);
-  word-break: break-all;
-  flex: 1;
-}
-
-.media-info-text .file-value {
-  flex: none;
-}
-
-.file-value.mono {
-  font-family: 'SF Mono', 'Menlo', monospace;
-  font-size: 13px;
-  letter-spacing: -0.01em;
 }
 
 .media-card {
@@ -1862,89 +1762,6 @@ onMounted(loadVideo)
   font-family: 'SF Mono', 'Menlo', monospace;
 }
 
-.info-card-half {
-  flex: 1;
-  min-width: 0;
-  background: var(--bg-secondary);
-  border-radius: var(--radius-lg);
-  padding: 4px 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-}
-
-.media-info-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.media-info-item:last-child {
-  border-bottom: none;
-}
-
-.media-info-item .file-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-}
-
-.media-info-text {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.media-info-text .file-label {
-  font-size: 12px;
-  color: var(--text-muted);
-  width: auto;
-}
-
-.media-info-text .file-value {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  flex: none;
-}
-
-.media-info-text .file-value.mono {
-  font-family: 'SF Mono', 'Menlo', monospace;
-  letter-spacing: -0.02em;
-}
-
-.audio-incompatible-tip {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(8px);
-  border: 1px solid rgba(234, 122, 122, 0.4);
-  border-radius: 10px;
-  color: #ea7a7a;
-  font-size: 13px;
-}
-
-.tip-copy-btn {
-  padding: 4px 12px;
-  border-radius: 6px;
-  border: 1px solid rgba(234, 122, 122, 0.5);
-  background: rgba(234, 122, 122, 0.2);
-  color: #ea7a7a;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.2s;
-  white-space: nowrap;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.tip-copy-btn:hover {
-  background: rgba(234, 122, 122, 0.35);
-}
-
 /* 平板通用 (768px ~ 1024px) */
 @media screen and (min-width: 768px) and (max-width: 1024px) {
   .hero-body {
@@ -2014,7 +1831,6 @@ onMounted(loadVideo)
   }
 
   .meta-line,
-  .tag-row,
   .action-row,
   .rating-row {
     justify-content: center;
@@ -2053,17 +1869,8 @@ onMounted(loadVideo)
     font-size: 20px;
   }
 
-  .meta-line, .tag-row {
+  .meta-line {
     font-size: 13px;
-  }
-
-  .audio-incompatible-tip {
-    width: 100%;
-    flex-wrap: wrap;
-    justify-content: center;
-    text-align: center;
-    padding: 10px 14px;
-    font-size: 12px;
   }
 
   .hero-overview {

@@ -17,18 +17,6 @@
         <AppIcon name="star" :size="20" />
         收藏
       </router-link>
-      <router-link to="/music" class="nav-item" active-class="active">
-        <AppIcon name="music-circle" :size="20" />
-        音乐
-      </router-link>
-      <router-link to="/comics" class="nav-item" active-class="active">
-        <AppIcon name="book" :size="20" />
-        漫画
-      </router-link>
-      <router-link to="/ebooks" class="nav-item" active-class="active">
-        <AppIcon name="book" :size="20" />
-        电子书
-      </router-link>
       <router-link to="/videos" class="nav-item" active-class="active">
         <AppIcon name="film" :size="20" />
         视频

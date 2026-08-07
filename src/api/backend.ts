@@ -1,37 +1,23 @@
 import axios from 'axios'
 import type {
-  MusicTrack,
-  Comic,
-  ComicSeries,
-  PageInfo,
-  Ebook,
   VideoDTO,
   SeriesDTO,
+  SeriesListDTO,
+  LibrarySeriesGroupDTO,
   TmdbSearchItem,
-  ChapterInfo,
   ApiResponse,
   BackendConfig,
   VideoProgress,
-  ComicProgress,
-  EbookProgress,
-  EbookSeries,
-  LibraryScanResult,
-  AnilistMediaItem,
-  BangumiItem,
-  SystemSetting,
-  TmdbStatus,
-  ComicCharacter,
   VideoActor,
-  MusicPlaylist,
-  MediaInfo,
-  SubtitleTrack,
   ExternalSubtitle,
+  ScrapeProgress,
   MediaLibrary,
   CreateMediaLibraryRequest,
   UpdateMediaLibraryRequest,
   DirectoryItem,
-  MediaLibraryType,
   LogFileInfo,
+  SystemSetting,
+  PageResponse,
 } from '@/types/backend'
 
 const TOKEN_KEY = 'fryfrog-token'
@@ -77,11 +63,6 @@ client.interceptors.response.use(
   },
 )
 
-function dedupeById<T extends { id: number }>(...arrays: T[][]): T[] {
-  const seen = new Set<number>()
-  return arrays.flat().filter(item => !seen.has(item.id) && (seen.add(item.id), true))
-}
-
 let config: BackendConfig = {
   url: '',
   authenticated: false,
@@ -98,310 +79,20 @@ export function resolveApiUrl(path: string | null | undefined): string {
   return `${config.url}${path}`
 }
 
-export async function testConnection(): Promise<boolean> {
-  try {
-    const response = await client.get<ApiResponse<any[]>>('/api/v1/music')
-    if (response.data.success) {
-      config = {
-        url: config.url,
-        authenticated: true,
-      }
-      return true
-    }
-    return false
-  } catch (error) {
-    console.error('Backend connection error:', error)
-    return false
-  }
-}
-
-export async function getAllTracks(): Promise<MusicTrack[]> {
-  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music')
-  return response.data.data || []
-}
-
-export async function getTrackById(id: number): Promise<MusicTrack | undefined> {
-  const response = await client.get<ApiResponse<MusicTrack>>(`/api/v1/music/${id}`)
-  return response.data.data
-}
-
-export async function searchByTitle(query: string): Promise<MusicTrack[]> {
-  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/search/title', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function searchByArtist(query: string): Promise<MusicTrack[]> {
-  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/search/artist', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function searchMusic(query: string): Promise<MusicTrack[]> {
-  const [titleResults, artistResults] = await Promise.all([
-    searchByTitle(query),
-    searchByArtist(query),
-  ])
-  return dedupeById(titleResults, artistResults)
-}
-
-export function getStreamUrl(id: number): string {
-  return `${config.url}/api/v1/music/${id}/stream`
-}
-
-export function getMusicCoverArtUrl(id: number): string {
-  return `${config.url}/api/v1/music/${id}/cover`
-}
-
-export function getArtistImageUrl(id: number): string {
-  return `${config.url}/api/v1/music/${id}/artist/image`
-}
-
-export async function getLyrics(id: number): Promise<string> {
-  const response = await client.get<ApiResponse<string>>(`/api/v1/music/${id}/lyrics`)
-  return response.data.data || ''
-}
-
-export async function getAllComics(): Promise<Comic[]> {
-  const response = await client.get<ApiResponse<Comic[]>>('/api/v1/comic')
-  return response.data.data || []
-}
-
-export async function getComicSeries(): Promise<ComicSeries[]> {
-  const response = await client.get<ApiResponse<ComicSeries[]>>('/api/v1/comic/series')
-  return response.data.data || []
-}
-
-export async function getComicById(id: number): Promise<Comic | undefined> {
-  const response = await client.get<ApiResponse<Comic>>(`/api/v1/comic/${id}`)
-  return response.data.data
-}
-
-export async function toggleComicFavorite(id: number, status: boolean): Promise<Comic | undefined> {
-  const response = await client.put<ApiResponse<Comic>>(`/api/v1/comic/${id}/favorite`, { status })
-  return response.data.data
-}
-
-export async function getComicFavorites(): Promise<Comic[]> {
-  const response = await client.get<ApiResponse<Comic[]>>('/api/v1/comic/favorites')
-  return response.data.data || []
-}
-
-export async function searchComicByTitle(query: string): Promise<Comic[]> {
-  const response = await client.get<ApiResponse<Comic[]>>('/api/v1/comic/search/title', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function searchComicByAuthor(query: string): Promise<Comic[]> {
-  const response = await client.get<ApiResponse<Comic[]>>('/api/v1/comic/search/author', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function searchComics(query: string): Promise<Comic[]> {
-  const [titleResults, authorResults] = await Promise.all([
-    searchComicByTitle(query),
-    searchComicByAuthor(query),
-  ])
-  return dedupeById(titleResults, authorResults)
-}
-
-export function getComicCoverUrl(id: number): string {
-  return `${config.url}/api/v1/comic/${id}/cover`
-}
-
-export function getSeriesCoverUrl(coverPath: string | null | undefined): string {
-  if (!coverPath) return ''
-  if (coverPath.startsWith('http')) return coverPath
-  return `${config.url}${coverPath}`
-}
-
-export function getComicCoverUrlWithCache(id: number, updatedAt?: string): string {
-  return updatedAt
-    ? `${config.url}/api/v1/comic/${id}/cover?t=${updatedAt}`
-    : `${config.url}/api/v1/comic/${id}/cover`
-}
-
-export async function getComicPages(id: number): Promise<PageInfo[]> {
-  const response = await client.get<ApiResponse<PageInfo[]>>(`/api/v1/comic/${id}/pages`)
-  return response.data.data || []
-}
-
-export function getComicPageImageUrl(id: number, pageNum: number): string {
-  return `${config.url}/api/v1/comic/${id}/pages/${pageNum}`
-}
-
-export async function searchAnilistComics(query: string): Promise<AnilistMediaItem[]> {
-  const response = await client.get<ApiResponse<AnilistMediaItem[]>>('/api/v1/comic/anilist/search', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function bindAnilistMetadata(comicId: number, anilistId: number, bindSeries?: boolean): Promise<Comic | undefined> {
-  const response = await client.post<ApiResponse<Comic>>(`/api/v1/comic/${comicId}/anilist/bind`, { anilistId, ...(bindSeries !== undefined ? { bindSeries } : {}) })
-  return response.data.data
-}
-
-export async function searchBangumiComics(query: string): Promise<BangumiItem[]> {
-  const response = await client.get<ApiResponse<BangumiItem[]>>('/api/v1/comic/bangumi/search', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function bindBangumiMetadata(comicId: number, bangumiId: number, bindSeries?: boolean): Promise<Comic | undefined> {
-  const response = await client.post<ApiResponse<Comic>>(`/api/v1/comic/${comicId}/bangumi/bind`, { bangumiId, ...(bindSeries !== undefined ? { bindSeries } : {}) })
-  return response.data.data
-}
-
-export async function getAnilistStatus(): Promise<boolean> {
-  const response = await client.get<ApiResponse<boolean>>('/api/v1/comic/anilist/status')
-  return response.data.data
-}
-
-export async function getComicCharacters(comicId: number): Promise<ComicCharacter[]> {
-  const response = await client.get<ApiResponse<ComicCharacter[]>>(`/api/v1/comic/${comicId}/characters`)
-  return response.data.data || []
-}
-
-export function getComicCharacterImageUrl(characterId: number): string {
-  return `${config.url}/api/v1/comic/character/${characterId}/image`
-}
-
-export async function getAllEbooks(): Promise<Ebook[]> {
-  const response = await client.get<ApiResponse<Ebook[]>>('/api/v1/ebook')
-  return response.data.data || []
-}
-
-export async function getEbookById(id: number): Promise<Ebook | undefined> {
-  const response = await client.get<ApiResponse<Ebook>>(`/api/v1/ebook/${id}`)
-  return response.data.data
-}
-
-export async function toggleEbookFavorite(id: number, status: boolean): Promise<Ebook | undefined> {
-  const response = await client.put<ApiResponse<Ebook>>(`/api/v1/ebook/${id}/favorite`, { status })
-  return response.data.data
-}
-
-export async function getEbookFavorites(): Promise<Ebook[]> {
-  const response = await client.get<ApiResponse<Ebook[]>>('/api/v1/ebook/favorites')
-  return response.data.data || []
-}
-
-export async function searchEbookByTitle(query: string): Promise<Ebook[]> {
-  const response = await client.get<ApiResponse<Ebook[]>>('/api/v1/ebook/search/title', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function searchEbookByAuthor(query: string): Promise<Ebook[]> {
-  const response = await client.get<ApiResponse<Ebook[]>>('/api/v1/ebook/search/author', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function searchEbooks(query: string): Promise<Ebook[]> {
-  const [titleResults, authorResults] = await Promise.all([
-    searchEbookByTitle(query),
-    searchEbookByAuthor(query),
-  ])
-  return dedupeById(titleResults, authorResults)
-}
-
-export function getEbookCoverUrl(id: number): string {
-  return `${config.url}/api/v1/ebook/${id}/cover`
-}
-
-export function getEbookCoverImageUrl(path: string): string {
-  return `${config.url}/api/v1/ebook/cover-image?path=${encodeURIComponent(path)}`
-}
-
-export async function getEbookSeries(): Promise<EbookSeries[]> {
-  const response = await client.get<ApiResponse<EbookSeries[]>>('/api/v1/ebook/series')
-  return response.data.data || []
-}
-
-export function getEbookDownloadUrl(id: number): string {
-  return `${config.url}/api/v1/ebook/${id}/download`
-}
-
-export async function readEbook(id: number): Promise<string> {
-  const response = await client.get<string>(`/api/v1/ebook/${id}/read`)
-  return response.data
-}
-
-export async function getEbookChapters(id: number): Promise<ChapterInfo[]> {
-  const response = await client.get<ApiResponse<ChapterInfo[]>>(`/api/v1/ebook/${id}/chapters`)
-  return response.data.data || []
-}
-
-export async function getEbookChapterContent(id: number, chapterNum: number): Promise<string> {
-  const response = await client.get<string>(`/api/v1/ebook/${id}/chapters/${chapterNum}`)
-  return response.data
-}
-
-export function getEpubImageUrl(ebookId: number, file: string): string {
-  return `${config.url}/api/v1/ebook/${ebookId}/image?file=${encodeURIComponent(file)}`
-}
-
-export async function getAllVideos(): Promise<VideoDTO[]> {
-  const response = await client.get<ApiResponse<VideoDTO[]>>('/api/v1/video')
-  return response.data.data || []
-}
+// ---------- 视频 ----------
 
 export async function getVideoById(id: number): Promise<VideoDTO | undefined> {
   const response = await client.get<ApiResponse<VideoDTO>>(`/api/v1/video/${id}`)
   return response.data.data
 }
 
-export async function toggleVideoFavorite(id: number, status: boolean): Promise<VideoDTO | undefined> {
-  const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/favorite`, { status })
-  return response.data.data
-}
-
-export async function toggleVideoWatched(id: number, watched: boolean): Promise<VideoDTO | undefined> {
-  if (watched) {
-    const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/watched`)
-    return response.data.data
-  } else {
-    const response = await client.delete<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/watched`)
-    return response.data.data
-  }
-}
-
-export async function getVideoFavorites(): Promise<VideoDTO[]> {
-  const response = await client.get<ApiResponse<VideoDTO[]>>('/api/v1/video/favorites')
+export async function getVideoActors(id: number): Promise<VideoActor[]> {
+  const response = await client.get<ApiResponse<VideoActor[]>>(`/api/v1/video/${id}/actors`)
   return response.data.data || []
 }
 
-export async function searchVideoByTitle(query: string): Promise<VideoDTO[]> {
-  const response = await client.get<ApiResponse<VideoDTO[]>>('/api/v1/video/search/title', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function searchVideoByDirector(query: string): Promise<VideoDTO[]> {
-  const response = await client.get<ApiResponse<VideoDTO[]>>('/api/v1/video/search/director', {
-    params: { q: query },
-  })
-  return response.data.data || []
-}
-
-export async function searchVideos(query: string): Promise<VideoDTO[]> {
-  const [titleResults, directorResults] = await Promise.all([
-    searchVideoByTitle(query),
-    searchVideoByDirector(query),
-  ])
-  return dedupeById(titleResults, directorResults)
+export function getVideoActorImageUrl(actorId: number): string {
+  return `${config.url}/api/v1/video/actor/${actorId}/image`
 }
 
 export function getVideoCoverUrl(id: number): string {
@@ -416,23 +107,40 @@ export function getVideoStreamUrl(id: number): string {
   return `${config.url}/api/v1/video/${id}/stream`
 }
 
-export async function cleanupVideoRecords(): Promise<Record<string, number>> {
-  const response = await client.post<ApiResponse<Record<string, number>>>('/api/v1/video/cleanup')
+export function getVideoTranscodeStreamUrl(id: number, quality = '1080p', subtitle?: string): string {
+  const params = new URLSearchParams({ quality })
+  if (subtitle) params.set('subtitle', subtitle)
+  return `${config.url}/api/v1/video/${id}/stream/transcode?${params.toString()}`
+}
+
+export function getVideoPlaylistUrl(id: number): string {
+  return `${config.url}/api/v1/video/${id}/playlist.m3u`
+}
+
+export async function toggleVideoFavorite(id: number, status: boolean): Promise<VideoDTO | undefined> {
+  const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/favorite`, null, {
+    params: { status },
+  })
   return response.data.data
 }
 
-export async function getVideoActors(id: number): Promise<VideoActor[]> {
-  const response = await client.get<ApiResponse<VideoActor[]>>(`/api/v1/video/${id}/actors`)
-  return response.data.data || []
-}
-
-export function getVideoActorImageUrl(actorId: number): string {
-  return `${config.url}/api/v1/video/actor/${actorId}/image`
-}
-
-export async function checkTmdbStatus(): Promise<boolean> {
-  const response = await client.get<ApiResponse<boolean>>('/api/v1/video/tmdb/status')
+export async function setVideoWatched(id: number, completed: boolean): Promise<VideoDTO | undefined> {
+  const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/watched`, { completed })
   return response.data.data
+}
+
+export async function getVideoProgress(id: number): Promise<VideoProgress | null> {
+  const response = await client.get<ApiResponse<VideoProgress>>(`/api/v1/video/${id}/progress`)
+  return response.data.data || null
+}
+
+export async function saveVideoProgress(id: number, position: number, duration: number): Promise<VideoProgress> {
+  const response = await client.put<ApiResponse<VideoProgress>>(`/api/v1/video/${id}/progress`, { position, duration })
+  return response.data.data
+}
+
+export async function deleteVideoProgress(id: number): Promise<void> {
+  await client.delete<ApiResponse<unknown>>(`/api/v1/video/${id}/progress`)
 }
 
 export async function searchTmdb(query: string): Promise<TmdbSearchItem[]> {
@@ -442,51 +150,19 @@ export async function searchTmdb(query: string): Promise<TmdbSearchItem[]> {
   return response.data.data || []
 }
 
-export async function bindTmdb(id: number, tmdbId: number, mediaType: string): Promise<VideoDTO | undefined> {
-  const response = await client.post<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/tmdb/bind`, { tmdbId, mediaType })
+export async function bindTmdb(id: number, tmdbId: number, mediaType: string): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/${id}/tmdb/bind`, { tmdbId, mediaType })
   return response.data.data
 }
 
-export async function refreshTmdb(id: number): Promise<VideoDTO | undefined> {
-  const response = await client.post<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/tmdb/refresh`)
+export async function refreshTmdb(id: number): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/${id}/tmdb/refresh`)
   return response.data.data
 }
 
-export async function unbindTmdb(id: number): Promise<VideoDTO | undefined> {
-  const response = await client.post<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/tmdb/unbind`)
+export async function unbindTmdb(id: number): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/${id}/tmdb/unbind`)
   return response.data.data
-}
-
-export async function getMediaInfo(id: number): Promise<MediaInfo | null> {
-  const response = await client.get<ApiResponse<MediaInfo>>(`/api/v1/video/${id}/media-info`)
-  return response.data.data || null
-}
-
-export async function getSubtitleTracks(id: number): Promise<SubtitleTrack[]> {
-  const response = await client.get<ApiResponse<SubtitleTrack[]>>(`/api/v1/video/${id}/subtitles`)
-  return response.data.data || []
-}
-
-export function getSubtitleVttUrl(id: number, streamIndex: number): string {
-  return `/api/v1/video/${id}/subtitle/vtt?index=${streamIndex}`
-}
-
-export function getExternalSubtitleVttUrl(id: number, fileName: string): string {
-  return `/api/v1/video/${id}/subtitle/vtt?file=${encodeURIComponent(fileName)}`
-}
-
-export async function getExternalSubtitles(id: number): Promise<ExternalSubtitle[]> {
-  const response = await client.get<ApiResponse<ExternalSubtitle[]>>(`/api/v1/video/${id}/subtitle/external`)
-  return response.data.data || []
-}
-
-export async function transcodeAudio(id: number): Promise<string> {
-  const response = await client.post<ApiResponse<string>>(`/api/v1/video/${id}/audio/transcode`)
-  return response.data.data
-}
-
-export function getVideoTranscodeStreamUrl(id: number): string {
-  return `${config.url}/api/v1/video/${id}/stream?transcoded=true`
 }
 
 export async function getNfoContent(id: number): Promise<string> {
@@ -504,56 +180,68 @@ export async function downloadVideoCovers(id: number): Promise<Record<string, st
   return response.data.data
 }
 
-export async function getVideoProgress(id: number): Promise<VideoProgress | null> {
-  const response = await client.get<ApiResponse<VideoProgress>>(`/api/v1/video/${id}/progress`)
-  return response.data.data || null
-}
-
-export async function saveVideoProgress(id: number, position: number, duration: number): Promise<VideoProgress> {
-  const response = await client.put<ApiResponse<VideoProgress>>(`/api/v1/video/${id}/progress`, { position, duration })
+export async function rescrapeByLibrary(libraryId: number): Promise<string> {
+  const response = await client.post<ApiResponse<string>>(`/api/v1/video/tmdb/rescrape-library/${libraryId}`)
   return response.data.data
 }
 
-export async function deleteVideoProgress(id: number): Promise<void> {
-  await client.delete<ApiResponse<void>>(`/api/v1/video/${id}/progress`)
-}
-
-export async function getComicProgress(id: number): Promise<ComicProgress | null> {
-  const response = await client.get<ApiResponse<ComicProgress>>(`/api/v1/comic/${id}/progress`)
-  return response.data.data || null
-}
-
-export async function saveComicProgress(id: number, currentPage: number, totalPages: number): Promise<ComicProgress> {
-  const response = await client.put<ApiResponse<ComicProgress>>(`/api/v1/comic/${id}/progress`, { currentPage, totalPages })
+export async function supplementScrape(libraryId: number, force = false): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/scrape/supplement/${libraryId}`, null, {
+    params: { force },
+  })
   return response.data.data
 }
 
-export async function deleteComicProgress(id: number): Promise<void> {
-  await client.delete<ApiResponse<void>>(`/api/v1/comic/${id}/progress`)
-}
-
-export async function getEbookProgress(id: number): Promise<EbookProgress | null> {
-  const response = await client.get<ApiResponse<EbookProgress>>(`/api/v1/ebook/${id}/progress`)
-  return response.data.data || null
-}
-
-export async function saveEbookProgress(id: number, currentChapter: number, totalChapters: number): Promise<EbookProgress> {
-  const response = await client.put<ApiResponse<EbookProgress>>(`/api/v1/ebook/${id}/progress`, { currentChapter, totalChapters })
+export async function scrapeAdultOnly(libraryId?: number): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>('/api/v1/video/scrape/adult-only', null, {
+    params: libraryId ? { libraryId } : {},
+  })
   return response.data.data
 }
 
-export async function deleteEbookProgress(id: number): Promise<void> {
-  await client.delete<ApiResponse<void>>(`/api/v1/ebook/${id}/progress`)
+export async function getScrapeProgress(): Promise<ScrapeProgress | null> {
+  const response = await client.get<ApiResponse<ScrapeProgress>>('/api/v1/video/scrape/progress')
+  return response.data.data || null
 }
 
-export async function getAllSeries(): Promise<SeriesDTO[]> {
-  const response = await client.get<ApiResponse<SeriesDTO[]>>('/api/v1/video/series')
+// 外挂字幕
+export async function getExternalSubtitles(id: number): Promise<ExternalSubtitle[]> {
+  const response = await client.get<ApiResponse<Record<string, string>[]>>(`/api/v1/video/${id}/subtitles`)
+  const data = response.data.data || []
+  return data.map(item => ({
+    fileName: item.fileName || Object.values(item)[0] || '',
+    language: item.language || '',
+  }))
+}
+
+export function getExternalSubtitleUrl(id: number, fileName: string): string {
+  return `${config.url}/api/v1/video/${id}/subtitles/${encodeURIComponent(fileName)}`
+}
+
+// ---------- 视频系列 ----------
+
+export async function getAllSeries(): Promise<SeriesListDTO[]> {
+  const page = await getSeriesPage(0, 500)
+  return page.content
+}
+
+export async function getSeriesPage(page = 0, size = 20): Promise<PageResponse<SeriesListDTO>> {
+  const response = await client.get<ApiResponse<PageResponse<SeriesListDTO>>>('/api/v1/video/series', {
+    params: { page, size },
+  })
+  return response.data.data
+}
+
+export async function getSeriesById(id: number, type?: 'series' | 'standalone'): Promise<SeriesDTO | undefined> {
+  const response = await client.get<ApiResponse<SeriesDTO>>(`/api/v1/video/series/${id}`, {
+    params: type ? { type } : {},
+  })
+  return response.data.data
+}
+
+export async function getSeriesGroupedByLibrary(): Promise<LibrarySeriesGroupDTO[]> {
+  const response = await client.get<ApiResponse<LibrarySeriesGroupDTO[]>>('/api/v1/video/series/grouped-by-library')
   return response.data.data || []
-}
-
-export async function getSeriesById(id: number): Promise<SeriesDTO | undefined> {
-  const response = await client.get<ApiResponse<SeriesDTO>>(`/api/v1/video/series/${id}`)
-  return response.data.data
 }
 
 export function getSeriesPosterUrl(id: number): string {
@@ -564,114 +252,28 @@ export function getSeriesFanartUrl(id: number): string {
   return `${config.url}/api/v1/video/series/${id}/fanart`
 }
 
-export async function toggleFavorite(id: number, status: boolean): Promise<MusicTrack | undefined> {
-  const response = await client.put<ApiResponse<MusicTrack>>(`/api/v1/music/${id}/favorite`, { status })
-  return response.data.data
+export async function getVideoFavorites(): Promise<VideoDTO[]> {
+  const response = await client.get<ApiResponse<PageResponse<VideoDTO>>>('/api/v1/video/favorites', {
+    params: { page: 0, size: 500 },
+  })
+  return response.data.data?.content || []
 }
 
-export async function getFavorites(): Promise<MusicTrack[]> {
-  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/favorites')
-  return response.data.data || []
-}
-
-export async function recordMusicPlay(id: number): Promise<void> {
-  await client.post(`/api/v1/music/${id}/play`)
-}
-
-export async function getRecentlyPlayed(): Promise<MusicTrack[]> {
-  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/recently-played')
-  return response.data.data || []
-}
-
-export async function getMostPlayed(): Promise<MusicTrack[]> {
-  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/most-played')
-  return response.data.data || []
-}
-
-export async function getRecentlyAdded(): Promise<MusicTrack[]> {
-  const response = await client.get<ApiResponse<MusicTrack[]>>('/api/v1/music/recently-added')
-  return response.data.data || []
-}
-
-export async function getMusicRecommendations(): Promise<Record<string, MusicTrack[]>> {
-  const response = await client.get<ApiResponse<Record<string, MusicTrack[]>>>('/api/v1/music/recommendations')
-  return response.data.data || {}
-}
-
-export async function getPlaylists(): Promise<MusicPlaylist[]> {
-  const response = await client.get<ApiResponse<MusicPlaylist[]>>('/api/v1/music/playlists')
-  return response.data.data || []
-}
-
-export async function createPlaylist(name: string, description?: string): Promise<MusicPlaylist> {
-  const response = await client.post<ApiResponse<MusicPlaylist>>('/api/v1/music/playlists', { name, description })
-  return response.data.data
-}
-
-export async function updatePlaylist(id: number, name: string, description?: string): Promise<MusicPlaylist> {
-  const response = await client.put<ApiResponse<MusicPlaylist>>(`/api/v1/music/playlists/${id}`, { name, description })
-  return response.data.data
-}
-
-export async function deletePlaylist(id: number): Promise<void> {
-  await client.delete(`/api/v1/music/playlists/${id}`)
-}
-
-export async function getPlaylistTracks(id: number): Promise<MusicTrack[]> {
-  const response = await client.get<ApiResponse<MusicTrack[]>>(`/api/v1/music/playlists/${id}/tracks`)
-  return response.data.data || []
-}
-
-export async function addTrackToPlaylist(playlistId: number, trackId: number): Promise<void> {
-  await client.post(`/api/v1/music/playlists/${playlistId}/tracks`, { trackId })
-}
-
-export async function removeTrackFromPlaylist(playlistId: number, trackId: number): Promise<void> {
-  await client.delete(`/api/v1/music/playlists/${playlistId}/tracks/${trackId}`)
-}
-
-export async function scanAllLibraries(): Promise<LibraryScanResult> {
-  const response = await client.post<ApiResponse<LibraryScanResult>>('/api/v1/media-libraries/scan')
-  return response.data.data
-}
-
-export async function scanLibraryById(libraryId: number): Promise<LibraryScanResult> {
-  const response = await client.post<ApiResponse<LibraryScanResult>>(`/api/v1/media-libraries/${libraryId}/scan`)
-  return response.data.data
-}
-
-export async function reorganizeMusic(): Promise<number> {
-  const response = await client.post<ApiResponse<number>>('/api/v1/music/reorganize')
-  return response.data.data || 0
-}
-
-export async function scanDirectory(path: string): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/music/scan', null, {
-    params: { path },
+export async function searchVideoByTitle(query: string, page = 0, size = 20): Promise<PageResponse<VideoDTO>> {
+  const response = await client.get<ApiResponse<PageResponse<VideoDTO>>>('/api/v1/video/search/title', {
+    params: { q: query, page, size },
   })
   return response.data.data
 }
 
-export async function scanComicDirectory(path: string): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/comic/scan', null, {
-    params: { path },
+export async function searchVideoByDirector(query: string, page = 0, size = 20): Promise<PageResponse<VideoDTO>> {
+  const response = await client.get<ApiResponse<PageResponse<VideoDTO>>>('/api/v1/video/search/director', {
+    params: { q: query, page, size },
   })
   return response.data.data
 }
 
-export async function scanEbookDirectory(path: string): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/ebook/scan', null, {
-    params: { path },
-  })
-  return response.data.data
-}
-
-export async function scanVideoDirectory(path: string): Promise<string> {
-  const response = await client.post<ApiResponse<string>>('/api/v1/video/scan', null, {
-    params: { path },
-  })
-  return response.data.data
-}
+// ---------- 系统设置 ----------
 
 export async function getAllSettings(): Promise<SystemSetting[]> {
   const response = await client.get<ApiResponse<SystemSetting[]>>('/api/v1/settings')
@@ -692,10 +294,7 @@ export async function updateSetting(key: string, value: string): Promise<SystemS
   return response.data.data
 }
 
-export async function getTmdbStatus(): Promise<TmdbStatus> {
-  const response = await client.get<ApiResponse<TmdbStatus>>('/api/v1/settings/tmdb/status')
-  return response.data.data
-}
+// ---------- 媒体资源库 ----------
 
 export async function getAllMediaLibraries(): Promise<MediaLibrary[]> {
   const response = await client.get<ApiResponse<MediaLibrary[]>>('/api/v1/media-libraries')
@@ -726,12 +325,24 @@ export async function toggleMediaLibrary(id: number): Promise<MediaLibrary> {
   return response.data.data
 }
 
-export async function browseDirectory(path?: string, type?: MediaLibraryType): Promise<DirectoryItem[]> {
+export async function browseDirectory(path?: string): Promise<DirectoryItem[]> {
   const response = await client.get<ApiResponse<DirectoryItem[]>>('/api/v1/media-libraries/browse', {
-    params: { ...(path ? { path } : {}), ...(type ? { type } : {}) },
+    params: path ? { path } : {},
   })
   return response.data.data || []
 }
+
+export async function scanAllLibraries(): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>('/api/v1/media-libraries/scan')
+  return response.data.data
+}
+
+export async function scanLibraryById(libraryId: number): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/media-libraries/${libraryId}/scan`)
+  return response.data.data
+}
+
+// ---------- 日志 ----------
 
 export async function getLogFiles(): Promise<LogFileInfo[]> {
   const response = await client.get<ApiResponse<LogFileInfo[]>>('/api/v1/logs')
@@ -742,8 +353,10 @@ export function getLogDownloadUrl(fileName: string): string {
   return `${config.url}/api/v1/logs/${encodeURIComponent(fileName)}`
 }
 
+// ---------- 认证 ----------
+
 export async function authLogin(password: string): Promise<string> {
-  const response = await client.post<{ token: string; success: boolean }>('/api/v1/auth/login', {
+  const response = await client.post<{ token?: string; success?: boolean }>('/api/v1/auth/login', {
     password,
   })
   const token = response.data.token
@@ -762,7 +375,7 @@ export async function authLogout(): Promise<void> {
 
 export async function authStatus(): Promise<boolean> {
   try {
-    const response = await client.get<{ enabled: boolean }>('/api/v1/auth/status')
+    const response = await client.get<{ enabled?: boolean }>('/api/v1/auth/status')
     return response.data.enabled === true
   } catch {
     return false

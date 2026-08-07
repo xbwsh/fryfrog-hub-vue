@@ -23,7 +23,7 @@
       @ratechange="playbackRate = videoEl?.playbackRate ?? 1"
     >
       <track
-        v-if="activeSubtitle"
+        v-if="activeSubtitle && !burningSubtitle"
         kind="subtitles"
         :src="activeSubtitleUrl"
         :srclang="activeSubtitle.language"
@@ -235,18 +235,6 @@
                 <button class="panel-item" :class="{ active: !activeSubtitle }" @click="disableSubtitles">
                   <span class="item-title">关闭字幕</span>
                 </button>
-                <template v-if="subtitleTracks && subtitleTracks.length > 0">
-                  <div class="panel-section-label">内封字幕</div>
-                  <button
-                    v-for="track in subtitleTracks"
-                    :key="'internal-' + track.index"
-                    class="panel-item"
-                    :class="{ active: activeSubtitle?.type === 'internal' && activeSubtitle?.index === track.index }"
-                    @click="selectSubtitle({ type: 'internal', index: track.index, language: track.language, label: track.title || track.language })"
-                  >
-                    <span class="item-title">{{ track.title || track.language }}</span>
-                  </button>
-                </template>
                 <template v-if="externalSubtitles && externalSubtitles.length > 0">
                   <div class="panel-section-label">外挂字幕</div>
                   <button
@@ -257,6 +245,7 @@
                     @click="selectSubtitle({ type: 'external', fileName: sub.fileName, language: sub.language, label: sub.fileName })"
                   >
                     <span class="item-title">{{ sub.fileName }}</span>
+                    <span v-if="needBurnIn(sub.fileName)" class="burn-badge">烧录</span>
                   </button>
                 </template>
               </div>
@@ -281,14 +270,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
-import type { VideoDTO, SubtitleTrack, ExternalSubtitle } from '@/types/backend'
-import { getVideoStreamUrl, getSubtitleVttUrl, getExternalSubtitleVttUrl, getVideoProgress, saveVideoProgress, resolveApiUrl } from '@/api/backend'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import type { VideoDTO, ExternalSubtitle } from '@/types/backend'
+import { getVideoStreamUrl, getExternalSubtitleUrl, getVideoTranscodeStreamUrl, getVideoProgress, saveVideoProgress, resolveApiUrl } from '@/api/backend'
 
 interface SubtitleOption {
-  type: 'internal' | 'external'
-  index?: number
-  fileName?: string
+  type: 'external'
+  fileName: string
   language: string
   label: string
 }
@@ -299,7 +287,6 @@ const props = defineProps<{
   streamUrl?: string | null
   episodes?: VideoDTO[]
   currentEpisodeId?: number
-  subtitleTracks?: SubtitleTrack[]
   externalSubtitles?: ExternalSubtitle[]
 }>()
 
@@ -314,7 +301,39 @@ const videoEl = ref<HTMLVideoElement>()
 const progressRef = ref<HTMLElement>()
 
 // state
-const streamUrl = computed(() => resolveApiUrl(props.streamUrl) || getVideoStreamUrl(props.videoId))
+// 浏览器原生支持的字幕格式，其余（ASS/SSA/PGS/VobSub）需后端烧录进视频流
+const NATIVE_SUBTITLE_EXTS = ['.srt', '.vtt']
+
+function needBurnIn(fileName: string): boolean {
+  const lower = fileName.toLowerCase()
+  return !NATIVE_SUBTITLE_EXTS.some(ext => lower.endsWith(ext))
+}
+
+const burningSubtitle = computed(() => {
+  if (activeSubtitle.value?.type !== 'external') return ''
+  return needBurnIn(activeSubtitle.value.fileName) ? activeSubtitle.value.fileName : ''
+})
+
+const streamUrl = computed(() => {
+  const burn = burningSubtitle.value
+  if (burn) {
+    return getVideoTranscodeStreamUrl(props.videoId, '1080p', burn)
+  }
+  return resolveApiUrl(props.streamUrl) || getVideoStreamUrl(props.videoId)
+})
+
+// 字幕烧录需要重新请求视频流，切换源后重新加载并尽量保留播放位置
+watch(streamUrl, () => {
+  const el = videoEl.value
+  if (!el) return
+  const pos = el.currentTime || 0
+  el.load()
+  if (pos > 0) {
+    el.addEventListener('loadedmetadata', () => { el.currentTime = pos }, { once: true })
+  }
+  el.play().catch(() => {})
+})
+
 const isPlaying = ref(false)
 const isMuted = ref(false)
 const volume = ref(1)
@@ -355,18 +374,13 @@ let hideTimer: ReturnType<typeof setTimeout> | null = null
 let controlsTimer: ReturnType<typeof setTimeout> | null = null
 
 const hasSubtitles = computed(() => {
-  const hasInternal = props.subtitleTracks && props.subtitleTracks.length > 0
-  const hasExternal = props.externalSubtitles && props.externalSubtitles.length > 0
-  return hasInternal || hasExternal
+  return props.externalSubtitles && props.externalSubtitles.length > 0
 })
 
 const activeSubtitleUrl = computed(() => {
   if (!activeSubtitle.value) return ''
-  if (activeSubtitle.value.type === 'internal' && activeSubtitle.value.index != null) {
-    return getSubtitleVttUrl(props.videoId, activeSubtitle.value.index)
-  }
   if (activeSubtitle.value.type === 'external' && activeSubtitle.value.fileName) {
-    return getExternalSubtitleVttUrl(props.videoId, activeSubtitle.value.fileName)
+    return getExternalSubtitleUrl(props.videoId, activeSubtitle.value.fileName)
   }
   return ''
 })
@@ -663,10 +677,10 @@ onMounted(() => {
   saveTimer = setInterval(saveProgress, 10000)
   document.addEventListener('fullscreenchange', onFullscreenChange)
 
-  // auto-select first available subtitle
-  if (props.subtitleTracks && props.subtitleTracks.length > 0) {
-    const defaultTrack = props.subtitleTracks.find(t => t.default) || props.subtitleTracks[0]
-    selectSubtitle({ type: 'internal', index: defaultTrack.index, language: defaultTrack.language, label: defaultTrack.title || defaultTrack.language })
+  // auto-select first available external subtitle
+  if (props.externalSubtitles && props.externalSubtitles.length > 0) {
+    const defaultTrack = props.externalSubtitles[0]
+    selectSubtitle({ type: 'external', fileName: defaultTrack.fileName, language: defaultTrack.language, label: defaultTrack.fileName })
   }
 })
 
@@ -1151,6 +1165,16 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.burn-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(234, 122, 122, 0.25);
+  color: #ea7a7a;
 }
 
 /* --- episode panel --- */

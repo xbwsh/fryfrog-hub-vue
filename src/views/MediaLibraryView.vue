@@ -162,14 +162,11 @@
             <p class="form-hint">填写服务器上的绝对路径，或点击浏览选择</p>
           </div>
           <div class="form-group">
-            <label class="form-label">类型 <span class="required">*</span></label>
-            <select v-model="form.type" class="form-select">
+            <label class="form-label">类型</label>
+            <select v-model="form.type" class="form-select" :disabled="true">
               <option value="VIDEO">VIDEO - 视频</option>
-              <option value="MUSIC">MUSIC - 音乐</option>
-              <option value="COMIC">COMIC - 漫画</option>
-              <option value="EBOOK">EBOOK - 电子书</option>
             </select>
-            <div v-if="form.type === 'VIDEO'" class="sub-type-group">
+            <div class="sub-type-group">
               <label class="form-label">视频子类型</label>
               <select v-model="form.subType" class="form-select">
                 <option value="MOVIE">电影 - TMDB 搜电影</option>
@@ -178,7 +175,7 @@
               </select>
             </div>
             <div class="type-info">
-              <div v-if="form.type === 'VIDEO'" class="type-desc">
+              <div class="type-desc">
                 <svg class="type-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                   <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
                   <line x1="7" y1="2" x2="7" y2="22"/>
@@ -186,30 +183,6 @@
                   <line x1="2" y1="12" x2="22" y2="12"/>
                 </svg>
                 <span>扫描视频文件，按子类型刮削 TMDB 元数据</span>
-              </div>
-              <div v-else-if="form.type === 'MUSIC'" class="type-desc">
-                <svg class="type-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M9 18V5l12-2v13"/>
-                  <circle cx="6" cy="18" r="3"/>
-                  <circle cx="18" cy="16" r="3"/>
-                </svg>
-                <span>扫描音频文件，提取标签信息</span>
-              </div>
-              <div v-else-if="form.type === 'COMIC'" class="type-desc">
-                <svg class="type-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                </svg>
-                <span>扫描漫画文件，支持 CBZ/CBR 格式</span>
-              </div>
-              <div v-else-if="form.type === 'EBOOK'" class="type-desc">
-                <svg class="type-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                  <line x1="8" y1="7" x2="16" y2="7"/>
-                  <line x1="8" y1="11" x2="16" y2="11"/>
-                </svg>
-                <span>扫描电子书文件，支持 EPUB/MOBI 格式</span>
               </div>
             </div>
           </div>
@@ -383,17 +356,11 @@ const sortedLibraries = computed(() => {
 })
 
 function getTypeLabel(type: MediaLibraryType, subType?: VideoSubType | null): string {
-  const labels: Record<MediaLibraryType, string> = {
-    VIDEO: '视频',
-    MUSIC: '音乐',
-    COMIC: '漫画',
-    EBOOK: '电子书',
-  }
   if (type === 'VIDEO' && subType) {
     const subLabels: Record<VideoSubType, string> = { MOVIE: '电影', TV: '电视剧', MIXED: '混合' }
-    return `${labels[type]}·${subLabels[subType]}`
+    return `视频·${subLabels[subType]}`
   }
-  return labels[type]
+  return '视频'
 }
 
 async function loadLibraries() {
@@ -463,11 +430,11 @@ async function onDrop(e: DragEvent, targetLib: MediaLibrary) {
   draggingId.value = null
 }
 
-async function loadDirectories(path?: string, type?: MediaLibraryType) {
+async function loadDirectories(path?: string) {
   dirLoading.value = true
   dirError.value = ''
   try {
-    directories.value = await browseDirectory(path, type)
+    directories.value = await browseDirectory(path)
     currentDirPath.value = path || ''
   } catch (e) {
     dirError.value = '加载目录失败'
@@ -482,7 +449,7 @@ function openDirBrowser() {
   if (form.value.path) {
     loadDirectories(form.value.path)
   } else {
-    loadDirectories(undefined, form.value.type)
+    loadDirectories(undefined)
   }
 }
 

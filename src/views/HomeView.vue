@@ -2,197 +2,8 @@
   <div class="home-view">
     <div class="welcome-section">
       <h1 class="welcome-title">欢迎回来</h1>
-      <p class="welcome-subtitle">探索你的媒体库</p>
+      <p class="welcome-subtitle">探索你的视频库</p>
     </div>
-
-    <section class="content-section">
-      <div class="section-header">
-        <div class="section-title">
-          <h2>音乐</h2>
-          <span v-if="playerStore.currentTrack" class="now-playing-hint">
-            正在播放：{{ playerStore.currentTrack.title }} · {{ playerStore.currentTrack.artist }}
-          </span>
-        </div>
-        <router-link to="/music" class="see-all">查看全部</router-link>
-      </div>
-      <div class="scroll-wrapper" v-if="musicTracks.length > 0">
-        <button
-          v-show="canScrollLeft.music"
-          class="scroll-btn scroll-btn-left"
-          @click="scrollLeft('music')"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        </button>
-        <div
-          class="content-grid"
-          ref="musicGrid"
-          @wheel="handleWheel($event, 'music')"
-          @scroll="updateScrollState('music')"
-        >
-          <div v-for="track in musicTracks" :key="track.id" class="content-card" @click="playMusic(track)">
-            <div class="card-cover music-cover">
-              <img loading="lazy" :src="resolveApiUrl(track.coverUrl)" alt="封面" draggable="false" />
-            </div>
-            <div class="card-info">
-              <span class="card-title">{{ track.title }}</span>
-              <span class="card-subtitle">{{ track.artist }}</span>
-            </div>
-          </div>
-        </div>
-        <button
-          v-show="canScrollRight.music"
-          class="scroll-btn scroll-btn-right"
-          @click="scrollRight('music')"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
-        <div class="fade-mask fade-mask-left" v-show="canScrollLeft.music"></div>
-        <div class="fade-mask fade-mask-right" v-show="canScrollRight.music"></div>
-      </div>
-      <div class="content-grid" v-else>
-        <div v-for="i in 6" :key="'music-' + i" class="content-card">
-          <div class="card-cover music-cover">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="12" cy="12" r="10"/>
-              <polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/>
-            </svg>
-          </div>
-          <div class="card-info">
-            <span class="card-title">示例音乐 {{ i }}</span>
-            <span class="card-subtitle">艺术家 {{ i }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="content-section">
-      <div class="section-header">
-        <div class="section-title">
-          <h2>漫画</h2>
-          <span v-if="lastReadComic" class="now-playing-hint">
-            最近在看：{{ lastReadComic.title }} · 已阅读 {{ lastReadComicProgress }}%
-          </span>
-        </div>
-        <router-link to="/comics" class="see-all">查看全部</router-link>
-      </div>
-      <div class="scroll-wrapper" v-if="comics.length > 0">
-        <button
-          v-show="canScrollLeft.comics"
-          class="scroll-btn scroll-btn-left"
-          @click="scrollLeft('comics')"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        </button>
-        <div
-          class="content-grid"
-          ref="comicsGrid"
-          @wheel="handleWheel($event, 'comics')"
-          @scroll="updateScrollState('comics')"
-        >
-          <div v-for="comic in comics" :key="comic.id" class="content-card" @click="readComic(comic)">
-            <div class="card-cover comic-cover">
-              <img loading="lazy" :src="resolveApiUrl(comic.coverUrl)" alt="封面" draggable="false" @error="onImageError" />
-            </div>
-            <div class="card-info">
-              <span class="card-title">{{ comic.title }}</span>
-              <span class="card-subtitle">{{ comic.author }}</span>
-            </div>
-          </div>
-        </div>
-        <button
-          v-show="canScrollRight.comics"
-          class="scroll-btn scroll-btn-right"
-          @click="scrollRight('comics')"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
-        <div class="fade-mask fade-mask-left" v-show="canScrollLeft.comics"></div>
-        <div class="fade-mask fade-mask-right" v-show="canScrollRight.comics"></div>
-      </div>
-      <div class="content-grid" v-else>
-        <div v-for="i in 6" :key="'comic-' + i" class="content-card">
-          <div class="card-cover comic-cover">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
-              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
-            </svg>
-          </div>
-          <div class="card-info">
-            <span class="card-title">示例漫画 {{ i }}</span>
-            <span class="card-subtitle">作者 {{ i }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="content-section">
-      <div class="section-header">
-        <div class="section-title">
-          <h2>电子书</h2>
-        </div>
-        <router-link to="/ebooks" class="see-all">查看全部</router-link>
-      </div>
-      <div class="scroll-wrapper" v-if="ebooks.length > 0">
-        <button
-          v-show="canScrollLeft.ebooks"
-          class="scroll-btn scroll-btn-left"
-          @click="scrollLeft('ebooks')"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        </button>
-        <div
-          class="content-grid"
-          ref="ebooksGrid"
-          @wheel="handleWheel($event, 'ebooks')"
-          @scroll="updateScrollState('ebooks')"
-        >
-          <div v-for="book in ebooks" :key="book.id" class="content-card" @click="readEbook(book)">
-            <div class="card-cover ebook-cover">
-              <img loading="lazy" :src="getEbookCoverUrl(book.id)" alt="封面" draggable="false" @error="onImageError" />
-            </div>
-            <div class="card-info">
-              <span class="card-title">{{ book.title }}</span>
-              <span class="card-subtitle">{{ book.author }}</span>
-            </div>
-          </div>
-        </div>
-        <button
-          v-show="canScrollRight.ebooks"
-          class="scroll-btn scroll-btn-right"
-          @click="scrollRight('ebooks')"
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="9 18 15 12 9 6"/>
-          </svg>
-        </button>
-        <div class="fade-mask fade-mask-left" v-show="canScrollLeft.ebooks"></div>
-        <div class="fade-mask fade-mask-right" v-show="canScrollRight.ebooks"></div>
-      </div>
-      <div class="content-grid" v-else>
-        <div v-for="i in 6" :key="'ebook-' + i" class="content-card">
-          <div class="card-cover ebook-cover">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-          </div>
-          <div class="card-info">
-            <span class="card-title">示例电子书 {{ i }}</span>
-            <span class="card-subtitle">作者 {{ i }}</span>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <section class="content-section">
       <div class="section-header">
@@ -203,9 +14,9 @@
       </div>
       <div class="scroll-wrapper" v-if="seriesList.length > 0">
         <button
-          v-show="canScrollLeft.videos"
+          v-show="canScrollLeft"
           class="scroll-btn scroll-btn-left"
-          @click="scrollLeft('videos')"
+          @click="scrollLeft"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="15 18 9 12 15 6"/>
@@ -214,8 +25,8 @@
         <div
           class="content-grid"
           ref="videosGrid"
-          @wheel="handleWheel($event, 'videos')"
-          @scroll="updateScrollState('videos')"
+          @wheel="handleWheel"
+          @scroll="updateScrollState"
         >
           <div v-for="series in seriesList" :key="series.id" class="content-card" @click="watchVideo(series)">
             <div class="card-cover video-cover">
@@ -223,21 +34,21 @@
             </div>
             <div class="card-info">
               <span class="card-title">{{ series.title }}</span>
-              <span class="card-subtitle">{{ series.year }} · {{ series.episodes ? series.episodes.length : 0 }} 集</span>
+              <span class="card-subtitle">{{ series.year }} · {{ series.totalEpisodes || series.episodeCount }} 集</span>
             </div>
           </div>
         </div>
         <button
-          v-show="canScrollRight.videos"
+          v-show="canScrollRight"
           class="scroll-btn scroll-btn-right"
-          @click="scrollRight('videos')"
+          @click="scrollRight"
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polyline points="9 18 15 12 9 6"/>
           </svg>
         </button>
-        <div class="fade-mask fade-mask-left" v-show="canScrollLeft.videos"></div>
-        <div class="fade-mask fade-mask-right" v-show="canScrollRight.videos"></div>
+        <div class="fade-mask fade-mask-left" v-show="canScrollLeft"></div>
+        <div class="fade-mask fade-mask-right" v-show="canScrollRight"></div>
       </div>
       <div class="content-grid" v-else>
         <div v-for="i in 6" :key="'video-' + i" class="content-card">
@@ -260,162 +71,58 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { usePlayerStore } from '@/stores/player'
 import {
-  getAllTracks,
-  getAllComics,
-  getAllEbooks,
   getAllSeries,
   resolveApiUrl,
-  getEbookCoverUrl,
   getSeriesPosterUrl,
-  getComicProgress,
 } from '@/api/backend'
-import type { MusicTrack, Comic, Ebook, SeriesDTO, ComicProgress } from '@/types/backend'
+import type { SeriesListDTO } from '@/types/backend'
 
-const playerStore = usePlayerStore()
 const router = useRouter()
 
-const musicTracks = ref<MusicTrack[]>([])
-const comics = ref<Comic[]>([])
-const ebooks = ref<Ebook[]>([])
-const seriesList = ref<SeriesDTO[]>([])
-const comicProgressMap = ref<Map<number, ComicProgress>>(new Map())
+const seriesList = ref<SeriesListDTO[]>([])
 
-const lastReadComic = computed(() => {
-  let latestComic: Comic | null = null
-  let latestTime = 0
-  for (const comic of comics.value) {
-    const progress = comicProgressMap.value.get(comic.id)
-    if (progress) {
-      const time = new Date(progress.updatedAt).getTime()
-      if (time > latestTime) {
-        latestTime = time
-        latestComic = comic
-      }
-    }
-  }
-  return latestComic
-})
-
-const lastReadComicProgress = computed(() => {
-  if (!lastReadComic.value) return 0
-  const progress = comicProgressMap.value.get(lastReadComic.value.id)
-  return progress ? Math.round(progress.progressPercent) : 0
-})
-
-const musicGrid = ref<HTMLElement | null>(null)
-const comicsGrid = ref<HTMLElement | null>(null)
-const ebooksGrid = ref<HTMLElement | null>(null)
 const videosGrid = ref<HTMLElement | null>(null)
 
-const canScrollLeft = reactive({
-  music: false,
-  comics: false,
-  ebooks: false,
-  videos: false,
-})
+const canScrollLeft = ref(false)
+const canScrollRight = ref(false)
 
-const canScrollRight = reactive({
-  music: false,
-  comics: false,
-  ebooks: false,
-  videos: false,
-})
-
-function getGridRef(section: string): HTMLElement | null {
-  const refs: Record<string, HTMLElement | null> = {
-    music: musicGrid.value,
-    comics: comicsGrid.value,
-    ebooks: ebooksGrid.value,
-    videos: videosGrid.value,
-  }
-  return refs[section]
-}
-
-function updateScrollState(section: 'music' | 'comics' | 'ebooks' | 'videos') {
-  const grid = getGridRef(section)
+function updateScrollState() {
+  const grid = videosGrid.value
   if (!grid) return
-  canScrollLeft[section] = grid.scrollLeft > 10
-  canScrollRight[section] = grid.scrollLeft < grid.scrollWidth - grid.clientWidth - 10
+  canScrollLeft.value = grid.scrollLeft > 10
+  canScrollRight.value = grid.scrollLeft < grid.scrollWidth - grid.clientWidth - 10
 }
 
-function scrollLeft(section: 'music' | 'comics' | 'ebooks' | 'videos') {
-  const grid = getGridRef(section)
+function scrollLeft() {
+  const grid = videosGrid.value
   if (grid) {
     grid.scrollBy({ left: -300, behavior: 'smooth' })
   }
 }
 
-function scrollRight(section: 'music' | 'comics' | 'ebooks' | 'videos') {
-  const grid = getGridRef(section)
+function scrollRight() {
+  const grid = videosGrid.value
   if (grid) {
     grid.scrollBy({ left: 300, behavior: 'smooth' })
   }
 }
 
-async function loadComicProgress() {
-  const results = await Promise.allSettled(
-    comics.value.map(comic => getComicProgress(comic.id))
-  )
-  const map = new Map<number, ComicProgress>()
-  results.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
-      const progress = result.value
-      if (progress && !progress.completed) {
-        map.set(comics.value[i].id, progress)
-      }
-    }
-  })
-  comicProgressMap.value = map
-}
-
 onMounted(async () => {
   try {
-    const [tracks, comicsData, ebooksData, seriesData] = await Promise.allSettled([
-      getAllTracks(),
-      getAllComics(),
-      getAllEbooks(),
-      getAllSeries(),
-    ])
-
-    if (tracks.status === 'fulfilled') musicTracks.value = tracks.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    if (comicsData.status === 'fulfilled') {
-      comics.value = comicsData.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      await loadComicProgress()
-    }
-    if (ebooksData.status === 'fulfilled') ebooks.value = ebooksData.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    if (seriesData.status === 'fulfilled') seriesList.value = seriesData.value.sort((a, b) => (b.year || 0) - (a.year || 0))
-
+    const seriesData = await getAllSeries()
+    seriesList.value = seriesData.sort((a, b) => (b.year || 0) - (a.year || 0))
     await nextTick()
-    updateScrollState('music')
-    updateScrollState('comics')
-    updateScrollState('ebooks')
-    updateScrollState('videos')
+    updateScrollState()
   } catch (error) {
     console.error('Failed to load home data:', error)
   }
 })
 
-function playMusic(track: MusicTrack) {
-  playerStore.playTrack(track, musicTracks.value)
-  router.push('/music')
-}
-
-function readComic(comic: Comic) {
-  router.push({ name: 'comic-detail', params: { id: comic.id } })
-}
-
-function readEbook(book: Ebook) {
-  router.push({ name: 'ebooks', query: { read: book.id } })
-}
-
-function watchVideo(series: SeriesDTO) {
-  if (series.episodes && series.episodes.length > 0) {
-    router.push({ name: 'video-detail', params: { id: series.episodes[0].id } })
-  }
+function watchVideo(series: SeriesListDTO) {
+  router.push({ name: 'video-detail', params: { id: series.id }, query: { type: series.type } })
 }
 
 function onImageError(e: Event) {
@@ -423,8 +130,8 @@ function onImageError(e: Event) {
   img.style.display = 'none'
 }
 
-function handleWheel(e: WheelEvent, section: 'music' | 'comics' | 'ebooks' | 'videos') {
-  const grid = getGridRef(section)
+function handleWheel(e: WheelEvent) {
+  const grid = videosGrid.value
   if (!grid) return
 
   const canScrollL = grid.scrollLeft > 0
@@ -478,58 +185,6 @@ function handleWheel(e: WheelEvent, section: 'music' | 'comics' | 'ebooks' | 'vi
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.now-playing-hint {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--accent);
-  font-weight: 400;
-}
-
-.eq-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-}
-
-.eq-bar {
-  width: 3px;
-  background: var(--accent);
-  border-radius: 1px;
-  animation: eq 0.5s ease-in-out infinite alternate;
-}
-
-.eq-bar:nth-child(1) {
-  height: 6px;
-  animation-delay: 0s;
-}
-
-.eq-bar:nth-child(2) {
-  height: 10px;
-  animation-delay: 0.15s;
-}
-
-.eq-bar:nth-child(3) {
-  height: 5px;
-  animation-delay: 0.3s;
-}
-
-@keyframes eq {
-  0% { height: 3px; }
-  100% { height: 12px; }
-}
-
-.pause-icon {
-  font-size: 10px;
-  line-height: 1;
-  letter-spacing: -1px;
-  flex-shrink: 0;
 }
 
 .section-header h2 {
@@ -650,18 +305,6 @@ function handleWheel(e: WheelEvent, section: 'music' | 'comics' | 'ebooks' | 'vi
   object-fit: cover;
 }
 
-.music-cover {
-  background: linear-gradient(135deg, #e85d4a, #c0392b);
-}
-
-.comic-cover {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-}
-
-.ebook-cover {
-  background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-
 .video-cover {
   background: linear-gradient(135deg, #9b59b6, #8e44ad);
 }
@@ -746,12 +389,6 @@ function handleWheel(e: WheelEvent, section: 'music' | 'comics' | 'ebooks' | 'vi
   .section-title {
     min-width: 0;
     overflow: hidden;
-  }
-
-  .now-playing-hint {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
   }
 }
 </style>
