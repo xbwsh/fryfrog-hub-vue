@@ -2,8 +2,8 @@
   <div class="videos-view">
     <div class="view-header">
       <div class="header-left">
-        <h1>视频</h1>
-        <p class="view-subtitle">管理你的视频库</p>
+        <h1>视频管理</h1>
+        <p class="view-subtitle">管理视频库中的系列与视频</p>
       </div>
       <div class="header-actions">
         <div class="filter-tabs">
@@ -11,101 +11,146 @@
           <button :class="{ active: filterType === 'movie' }" @click="filterType = 'movie'">电影</button>
           <button :class="{ active: filterType === 'tv' }" @click="filterType = 'tv'">电视剧</button>
         </div>
-        <button class="view-toggle-btn" @click="toggleViewMode" :title="showBackdrop ? '切换为海报' : '切换为背景图'">
-          <svg v-if="showBackdrop" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-            <line x1="8" y1="21" x2="16" y2="21"/>
-            <line x1="12" y1="17" x2="12" y2="21"/>
-          </svg>
-          <svg v-else width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-            <circle cx="8.5" cy="8.5" r="1.5"/>
-            <polyline points="21 15 16 10 5 21"/>
-          </svg>
-          {{ showBackdrop ? '背景图' : '海报' }}
-        </button>
         <div class="search-bar">
           <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/>
             <line x1="21" y1="21" x2="16.65" y2="16.65"/>
           </svg>
-          <input v-model="searchQuery" type="text" placeholder="搜索视频..." @input="handleSearch" />
+          <input v-model="searchQuery" type="text" placeholder="搜索视频标题..." @input="handleSearch" />
         </div>
       </div>
     </div>
 
-    <div v-if="loading" class="loading-state">
+    <div v-if="showFullLoading" class="loading-state">
       <div class="loading-spinner"></div>
       <p>加载中...</p>
     </div>
 
-    <div v-else-if="error" class="error-state">
+    <div v-else-if="error && !hasRows" class="error-state">
       <p>{{ error }}</p>
-      <button @click="loadVideos">重试</button>
+      <button @click="loadSeries">重试</button>
     </div>
 
-    <div v-else-if="filteredList.length === 0" class="empty-state">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-        <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/>
-        <line x1="7" y1="2" x2="7" y2="22"/>
-        <line x1="17" y1="2" x2="17" y2="22"/>
-        <line x1="2" y1="12" x2="22" y2="12"/>
-      </svg>
+    <div v-else-if="!hasRows && !searching && searchActive" class="empty-state">
+      <p>未找到相关视频</p>
+    </div>
+
+    <div v-else-if="!hasRows && !searching && !searchActive" class="empty-state">
       <p>暂无视频</p>
     </div>
 
-    <div v-else class="content-grid" :class="{ 'backdrop-mode': showBackdrop }">
-      <div v-for="series in filteredList" :key="series.id" class="content-card" @click="viewSeries(series)">
-        <div class="card-cover video-cover" :class="{ 'backdrop-cover': showBackdrop }">
-          <img :src="getImageUrl(series)" :alt="series.title" draggable="false" @error="onImageError" />
-          <div class="play-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-              <polygon points="5 3 19 12 5 21 5 3"/>
-            </svg>
-          </div>
-          <div class="card-badge" v-if="series.type === 'standalone'">独立</div>
-          <div class="card-badge" v-else-if="getEpisodeCount(series) > 0">{{ getEpisodeCount(series) }} 集</div>
-        </div>
-        <div class="card-info">
-          <div class="card-title-row">
-            <span class="card-title">{{ series.title }}</span>
-            <span v-if="series.mediaType" class="media-type-badge" :class="mediaTypeClass(series.mediaType)">
-              {{ mediaTypeLabel(series.mediaType) }}
-            </span>
-          </div>
-          <div class="card-meta">
-            <span v-if="series.year">{{ series.year }}</span>
-            <span v-if="getEpisodeCount(series) > 0" class="meta-sep">·</span>
-            <span v-if="getEpisodeCount(series) > 0">{{ getEpisodeCount(series) }} 集</span>
-          </div>
-        </div>
+    <div v-else class="table-wrap">
+      <div v-if="searching || loading" class="table-loading-bar">
+        <div class="spinner-mini"></div>
+        <span>{{ searching ? '搜索中...' : '加载中...' }}</span>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>标题</th>
+            <th>类型</th>
+            <th>年份</th>
+            <th>评分</th>
+            <th>集数</th>
+            <th>状态</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template v-if="searchActive">
+            <tr v-for="video in searchResults" :key="'v' + video.id" class="row-clickable" @click="viewVideo(video)">
+              <td class="cell-id">{{ video.id }}</td>
+              <td class="cell-primary">
+                <span class="cell-title">{{ video.title }}</span>
+                <span v-if="video.seriesTitle" class="cell-sub">{{ video.seriesTitle }}</span>
+              </td>
+              <td><span class="type-badge" :class="mediaTypeClass(video.mediaType)">{{ mediaTypeLabel(video.mediaType) }}</span></td>
+              <td>{{ video.year || '-' }}</td>
+              <td class="cell-rating">{{ video.rating ? video.rating.toFixed(1) : '-' }}</td>
+              <td>{{ video.episodeNumber ? `第 ${video.episodeNumber} 集` : '-' }}</td>
+              <td>
+                <span class="status-badge" :class="video.scraped ? 'on' : 'off'">
+                  {{ video.scraped ? '已刮削' : '未刮削' }}
+                </span>
+              </td>
+              <td class="cell-actions">
+                <span class="action-btn">管理</span>
+              </td>
+            </tr>
+          </template>
+          <tr v-else v-for="series in filteredList" :key="'s' + series.id" class="row-clickable" @click="viewSeries(series)">
+            <td class="cell-id">{{ series.id }}</td>
+            <td class="cell-primary">
+              <span class="cell-title">{{ series.title }}</span>
+            </td>
+            <td>
+              <span class="type-badge" :class="mediaTypeClass(series.mediaType)">
+                {{ series.type === 'standalone' ? '独立' : mediaTypeLabel(series.mediaType) }}
+              </span>
+            </td>
+            <td>{{ series.year || '-' }}</td>
+            <td class="cell-rating">{{ series.rating ? series.rating.toFixed(1) : '-' }}</td>
+            <td>{{ getEpisodeCount(series) }}</td>
+            <td>
+              <span class="status-badge" :class="series.favorite ? 'on' : 'off'">
+                {{ series.favorite ? '已收藏' : '-' }}
+              </span>
+            </td>
+            <td class="cell-actions">
+              <span class="action-btn">管理</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="pagination" v-if="totalPages > 0">
+        <button :disabled="page === 0" @click="changePage(page - 1)">上一页</button>
+        <span class="page-info">第 {{ page + 1 }} / {{ totalPages }} 页 · 共 {{ totalElements }} 条</span>
+        <button :disabled="page >= totalPages - 1" @click="changePage(page + 1)">下一页</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import type { SeriesListDTO } from '@/types/backend'
-import { getAllSeries, getSeriesPosterUrl, resolveApiUrl } from '@/api/backend'
+import type { SeriesListDTO, VideoDTO } from '@/types/backend'
+import { getSeriesPage, searchVideoByTitle } from '@/api/backend'
+import { useToast } from '@/composables/useToast'
 
 const router = useRouter()
+const toast = useToast()
+
 const seriesList = ref<SeriesListDTO[]>([])
+const searchResults = ref<VideoDTO[]>([])
 const loading = ref(false)
+const searching = ref(false)
 const error = ref('')
 const searchQuery = ref('')
-const showBackdrop = ref(false)
+const showSearch = ref(false)
 const filterType = ref<'all' | 'movie' | 'tv'>('all')
+const page = ref(0)
+const totalPages = ref(0)
+const totalElements = ref(0)
+const searchTotalPages = ref(0)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+let searchSeq = 0
+
+const searchActive = computed(() => showSearch.value && searchQuery.value.trim().length > 0)
 
 const filteredList = computed(() => {
   if (filterType.value === 'all') return seriesList.value
   return seriesList.value.filter(s => mediaTypeClass(s.mediaType) === filterType.value)
 })
 
-function toggleViewMode() {
-  showBackdrop.value = !showBackdrop.value
-}
+const hasRows = computed(() =>
+  searchActive.value ? searchResults.value.length > 0 : filteredList.value.length > 0,
+)
+
+// 仅在没有任何数据可展示时才显示整页加载态，避免搜索/翻页时表格被替换造成闪烁
+const showFullLoading = computed(() => !hasRows.value && (loading.value || searching.value))
 
 function mediaTypeClass(mediaType: string | null): 'movie' | 'tv' {
   return (mediaType || '').toLowerCase().startsWith('movie') ? 'movie' : 'tv'
@@ -119,58 +164,90 @@ function getEpisodeCount(series: SeriesListDTO): number {
   return series.totalEpisodes || series.episodeCount || 0
 }
 
-async function loadVideos() {
+async function loadSeries() {
   loading.value = true
   error.value = ''
   try {
-    seriesList.value = await getAllSeries()
+    const result = await getSeriesPage(page.value, 20)
+    seriesList.value = result.content
+    totalPages.value = result.totalPages
+    totalElements.value = result.totalElements
   } catch (e) {
     error.value = '加载视频失败'
-    console.error('Failed to load videos:', e)
+    console.error('Failed to load series:', e)
   } finally {
     loading.value = false
   }
 }
 
-async function handleSearch() {
-  if (!searchQuery.value.trim()) {
-    await loadVideos()
-    return
-  }
-  loading.value = true
+async function doBackendSearch(query: string) {
+  const seq = ++searchSeq
+  searching.value = true
   error.value = ''
   try {
-    const allSeries = await getAllSeries()
-    const q = searchQuery.value.toLowerCase()
-    seriesList.value = allSeries.filter(s =>
-      s.title.toLowerCase().includes(q) ||
-      (s.originalTitle && s.originalTitle.toLowerCase().includes(q))
-    )
+    const result = await searchVideoByTitle(query, page.value, 20)
+    if (seq !== searchSeq) return // 已有更新的搜索请求，丢弃过期响应
+    searchResults.value = result?.content || []
+    searchTotalPages.value = result?.totalPages || 0
   } catch (e) {
-    error.value = '搜索失败'
+    if (seq !== searchSeq) return
+    toast.show('搜索失败', 'error')
     console.error('Search failed:', e)
   } finally {
-    loading.value = false
+    if (seq === searchSeq) {
+      searching.value = false
+    }
   }
 }
 
-function onImageError(e: Event) {
-  const img = e.target as HTMLImageElement
-  img.style.display = 'none'
+function handleSearch() {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
+  }
+  const q = searchQuery.value.trim()
+  if (!q) {
+    searchSeq++ // 使在途的搜索请求失效
+    searching.value = false
+    showSearch.value = false
+    searchResults.value = []
+    page.value = 0
+    loadSeries()
+    return
+  }
+  showSearch.value = true
+  page.value = 0
+  searchTimer = setTimeout(() => doBackendSearch(q), 350)
 }
 
-function getImageUrl(series: SeriesListDTO): string {
-  if (showBackdrop.value && series.fanartUrl) {
-    return resolveApiUrl(series.fanartUrl)
+function changePage(target: number) {
+  if (target < 0) return
+  if (!searchActive.value && target >= totalPages.value) return
+  if (searchActive.value && target >= searchTotalPages.value) return
+  page.value = target
+  if (searchActive.value) {
+    doBackendSearch(searchQuery.value.trim())
+  } else {
+    loadSeries()
   }
-  return resolveApiUrl(series.coverUrl) || getSeriesPosterUrl(series.id)
 }
 
 function viewSeries(series: SeriesListDTO) {
   router.push({ name: 'video-detail', params: { id: series.id }, query: { type: series.type } })
 }
 
-onMounted(loadVideos)
+function viewVideo(video: VideoDTO) {
+  router.push({ name: 'video-detail', params: { id: video.id } })
+}
+
+onUnmounted(() => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+    searchTimer = null
+  }
+})
+
+onMounted(loadSeries)
 </script>
 
 <style scoped>
@@ -206,26 +283,6 @@ onMounted(loadVideos)
   display: flex;
   align-items: center;
   gap: 10px;
-}
-
-.view-toggle-btn {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  transition: var(--transition);
-  white-space: nowrap;
-}
-
-.view-toggle-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
 }
 
 .search-bar {
@@ -287,25 +344,6 @@ onMounted(loadVideos)
   color: white;
 }
 
-.media-type-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 11px;
-  font-weight: 500;
-  flex-shrink: 0;
-}
-
-.media-type-badge.movie {
-  background: rgba(52, 152, 219, 0.15);
-  color: #3498db;
-}
-
-.media-type-badge.tv {
-  background: rgba(46, 204, 113, 0.15);
-  color: #2ecc71;
-}
-
 .loading-state,
 .error-state,
 .empty-state {
@@ -318,9 +356,23 @@ onMounted(loadVideos)
   color: var(--text-secondary);
 }
 
-.empty-state svg {
+.table-loading-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px;
   color: var(--text-muted);
-  opacity: 0.5;
+  font-size: 12px;
+}
+
+.spinner-mini {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
 }
 
 .loading-spinner {
@@ -352,124 +404,172 @@ onMounted(loadVideos)
   background: var(--accent-hover);
 }
 
-.content-grid {
+.table-wrap {
   flex: 1;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  grid-auto-rows: max-content;
-  gap: 16px;
-  padding: 0 32px 32px;
   overflow-y: auto;
+  padding: 0 32px 24px;
 }
 
-.content-grid.backdrop-mode {
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-}
-
-.content-card {
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
   background: var(--bg-secondary);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  font-size: 13px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.data-table th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+
+.data-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.row-clickable {
   cursor: pointer;
   transition: var(--transition);
 }
 
-.content-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+.row-clickable:hover {
+  background: var(--bg-hover);
 }
 
-.card-cover {
-  aspect-ratio: 2/3;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.6);
-  overflow: hidden;
-  position: relative;
+.cell-id {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-.backdrop-cover {
-  aspect-ratio: 2/1;
+.cell-primary {
+  min-width: 220px;
 }
 
-.card-cover img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.video-cover {
-  background: linear-gradient(135deg, #9b59b6, #8e44ad);
-}
-
-.play-icon {
-  position: absolute;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.play-icon svg {
-  transform: translateX(2px);
-}
-
-.content-card:hover .play-icon {
-  opacity: 1;
-}
-
-.card-badge {
-  position: absolute;
-  bottom: 8px;
-  left: 8px;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 12px;
-}
-
-.card-info {
-  padding: 12px;
-}
-
-.card-title-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-}
-
-.card-title {
-  font-size: 14px;
+.cell-title {
+  display: block;
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  min-width: 0;
+  max-width: 320px;
 }
 
-.card-meta {
+.cell-sub {
+  display: block;
   font-size: 12px;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 320px;
 }
 
-.meta-sep {
-  margin: 0 4px;
+.cell-rating {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  color: #ffd700;
+}
+
+.type-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.type-badge.movie {
+  background: rgba(52, 152, 219, 0.15);
+  color: #3498db;
+}
+
+.type-badge.tv {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-badge.on {
+  background: rgba(46, 204, 113, 0.15);
+  color: #2ecc71;
+}
+
+.status-badge.off {
+  background: rgba(231, 76, 60, 0.15);
+  color: #e74c3c;
+}
+
+.cell-actions {
+  white-space: nowrap;
+}
+
+.action-btn {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 0 0;
+}
+
+.pagination button {
+  padding: 6px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.pagination button:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 13px;
+  color: var(--text-muted);
 }
 
 @media screen and (max-width: 767px) {
@@ -483,11 +583,6 @@ onMounted(loadVideos)
     flex-wrap: wrap;
   }
 
-  .view-toggle-btn {
-    flex: 1;
-    justify-content: center;
-  }
-
   .search-bar {
     flex: 1;
   }
@@ -496,14 +591,8 @@ onMounted(loadVideos)
     width: 100%;
   }
 
-  .content-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 12px;
+  .table-wrap {
     padding: 0 16px 16px;
-  }
-
-  .content-grid.backdrop-mode {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   }
 }
 </style>

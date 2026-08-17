@@ -5,14 +5,15 @@ import topLevelAwait from 'vite-plugin-top-level-await'
 import { resolve } from 'path'
 
 export default defineConfig({
-  plugins: [vue(), wasm(), topLevelAwait()],
+  plugins: [
+    vue(),
+    wasm(),
+    topLevelAwait(),
+  ],
   resolve: {
     alias: {
       '@': resolve(__dirname, 'src'),
     },
-  },
-  optimizeDeps: {
-    include: ['throughput'],
   },
   server: {
     host: '0.0.0.0',

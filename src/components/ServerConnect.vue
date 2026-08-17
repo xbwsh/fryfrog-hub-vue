@@ -14,6 +14,11 @@
         </div>
 
         <div class="form-group">
+          <label>用户名</label>
+          <input v-model="localUsername" type="text" placeholder="admin" />
+        </div>
+
+        <div class="form-group">
           <label>密码</label>
           <input v-model="localPassword" type="password" placeholder="请输入密码" required autofocus />
         </div>
@@ -42,6 +47,7 @@ const emit = defineEmits<{
 const connectionStore = useConnectionStore()
 
 const localBackendUrl = ref(connectionStore.backendUrl)
+const localUsername = ref('')
 const localPassword = ref('')
 const connecting = ref(false)
 const errorMsg = ref('')
@@ -55,14 +61,17 @@ async function handleLogin() {
     if (url && url !== connectionStore.backendUrl) {
       connectionStore.setBackendUrl(url)
     }
-    const success = await connectionStore.login(localPassword.value)
+    const username = localUsername.value.trim() || 'admin'
+    const success = await connectionStore.login(username, localPassword.value)
     if (success) {
       emit('connected')
     } else {
       errorMsg.value = '登录失败'
     }
-  } catch {
-    errorMsg.value = '登录失败，请检查服务器地址是否正确'
+  } catch (err) {
+    errorMsg.value = err instanceof Error && err.message
+      ? err.message
+      : '登录失败，请检查服务器地址或密码是否正确'
   } finally {
     connecting.value = false
   }

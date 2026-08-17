@@ -7,7 +7,7 @@ const storageKey = 'theme-mode'
 const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
 
 export const useThemeStore = defineStore('theme', () => {
-  const mode = ref<ThemeMode>((localStorage.getItem(storageKey) as ThemeMode) || 'system')
+  const mode = ref<ThemeMode>((localStorage.getItem(storageKey) as ThemeMode) || 'dark')
   const systemPrefersDark = ref(mediaQuery.matches)
 
   const resolvedTheme = computed(() => mode.value === 'system'

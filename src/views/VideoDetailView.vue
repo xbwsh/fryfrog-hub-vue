@@ -13,7 +13,7 @@
     <div v-else-if="series" class="detail-content">
       <div class="hero-section">
         <div class="backdrop">
-          <img v-if="currentDisplayInfo.backdropUrl" :src="currentDisplayInfo.backdropUrl" :alt="currentDisplayInfo.title" draggable="false" @error="onImageError" />
+          <img v-if="currentDisplayInfo.backdropUrl" v-img-cache="currentDisplayInfo.backdropUrl" :src="currentDisplayInfo.backdropUrl" :alt="currentDisplayInfo.title" draggable="false" @error="onImageError" />
           <div class="backdrop-overlay"></div>
         </div>
 
@@ -28,6 +28,7 @@
           <div class="poster-col">
             <img
               v-if="currentDisplayInfo.posterUrl"
+              v-img-cache="currentDisplayInfo.posterUrl"
               :src="currentDisplayInfo.posterUrl"
               :alt="currentDisplayInfo.title"
               class="poster-img"
@@ -49,7 +50,16 @@
           </div>
 
           <div class="info-col">
-            <h1 class="video-title">{{ currentDisplayInfo.title }}</h1>
+            <img
+              v-if="currentDisplayInfo.logoUrl"
+              v-img-cache="currentDisplayInfo.logoUrl"
+              :src="currentDisplayInfo.logoUrl"
+              :alt="currentDisplayInfo.title"
+              class="video-logo"
+              draggable="false"
+              @error="onImageError"
+            />
+            <h1 v-else class="video-title">{{ currentDisplayInfo.title }}</h1>
             <p class="video-original-title" v-if="currentDisplayInfo.originalTitle && currentDisplayInfo.originalTitle !== currentDisplayInfo.title">{{ currentDisplayInfo.originalTitle }}</p>
 
             <div class="meta-line">
@@ -63,22 +73,6 @@
             </div>
 
             <div class="action-row">
-              <button class="play-btn" @click="playEpisode(video || firstEpisode)">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-                {{ hasSeriesProgress ? '继续播放' : '播放' }}
-              </button>
-              <button
-                v-if="hasSeriesProgress"
-                class="play-btn secondary"
-                @click="playEpisode(firstEpisode)"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-                从头播放
-              </button>
               <Tooltip content="刮削元数据" placement="bottom">
                 <button class="icon-btn scrape-btn" @click="showTmdbSearch = true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -101,21 +95,6 @@
                   </svg>
                 </button>
               </Tooltip>
-              <Tooltip content="复制播放链接" placement="bottom">
-                <button class="icon-btn" @click="copyStreamUrl">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                  </svg>
-                </button>
-              </Tooltip>
-              <Tooltip content="下载播放列表 (PotPlayer)" placement="bottom">
-                <a class="icon-btn" :href="getVideoPlaylistUrl(currentPlayId)" download>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                </a>
-              </Tooltip>
             </div>
 
             <div class="rating-row" v-if="series.rating! > 0">
@@ -137,7 +116,7 @@
             <h3>演职人员</h3>
             <div class="actor-list">
             <div class="actor-item" v-for="actor in actors" :key="actor.id">
-              <img v-if="actor.imageUrl" :src="resolveApiUrl(actor.imageUrl)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
+              <img v-if="actor.imageUrl" v-img-cache="resolveApiUrl(actor.imageUrl)" :src="resolveApiUrl(actor.imageUrl)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
               <div v-else class="actor-avatar-placeholder">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -188,24 +167,14 @@
                 >
                   <div class="poster-thumb">
                     <img
+                      v-img-cache="resolveApiUrl(episode.fanartUrl) || getVideoFanartUrl(episode.id)"
+                      loading="lazy"
+                      decoding="async"
                       :src="resolveApiUrl(episode.fanartUrl) || getVideoFanartUrl(episode.id)"
                       :alt="'第 ' + episode.episodeNumber + ' 集'"
                       draggable="false"
                       @error="onImageError"
                     />
-                    <div class="poster-overlay">
-                      <div class="poster-play-btn">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                          <polygon points="5 3 19 12 5 21 5 3"/>
-                        </svg>
-                      </div>
-                    </div>
-                    <div v-if="episode.watchProgressPercent! > 0" class="poster-progress">
-                      <div class="progress-bar">
-                        <div class="progress-fill" :style="{ width: Math.min(episode.watchProgressPercent!, 100) + '%' }"></div>
-                      </div>
-                    </div>
-                    <div v-if="episode.watched" class="poster-watched-badge">已看完</div>
                   </div>
                   <div class="poster-info">
                     <div class="poster-ep-num">第 {{ episode.episodeNumber }} 集</div>
@@ -259,7 +228,7 @@
     <div v-else-if="video" class="detail-content">
       <div class="hero-section">
         <div class="backdrop">
-          <img v-if="video.fanartUrl" :src="resolveApiUrl(video.fanartUrl)" :alt="video.title" draggable="false" @error="onImageError" />
+          <img v-if="video.fanartUrl" v-img-cache="resolveApiUrl(video.fanartUrl)" :src="resolveApiUrl(video.fanartUrl)" :alt="video.title" draggable="false" @error="onImageError" />
           <div class="backdrop-overlay"></div>
         </div>
 
@@ -274,6 +243,7 @@
           <div class="poster-col">
             <img
               v-if="video.coverUrl"
+              v-img-cache="resolveApiUrl(video.coverUrl)"
               :src="resolveApiUrl(video.coverUrl)"
               :alt="video.title"
               class="poster-img"
@@ -295,7 +265,16 @@
           </div>
 
           <div class="info-col">
-            <h1 class="video-title">{{ video.title }}</h1>
+            <img
+              v-if="currentDisplayInfo.logoUrl"
+              v-img-cache="currentDisplayInfo.logoUrl"
+              :src="currentDisplayInfo.logoUrl"
+              :alt="currentDisplayInfo.title"
+              class="video-logo"
+              draggable="false"
+              @error="onImageError"
+            />
+            <h1 v-else class="video-title">{{ currentDisplayInfo.title }}</h1>
             <p class="video-original-title" v-if="video.originalTitle && video.originalTitle !== video.title">{{ video.originalTitle }}</p>
 
             <div class="meta-line">
@@ -306,31 +285,7 @@
               <span v-if="video.genre">{{ video.genre }}</span>
             </div>
 
-            <div v-if="video.watchProgressPercent! > 0" class="video-progress">
-              <div class="progress-bar">
-                <div class="progress-fill" :style="{ width: Math.min(video.watchProgressPercent!, 100) + '%' }"></div>
-              </div>
-              <span v-if="video.watched" class="progress-text watched">已看完</span>
-              <span v-else class="progress-text">{{ Math.round(video.watchProgressPercent!) }}%</span>
-            </div>
-
             <div class="action-row">
-              <button class="play-btn" @click="showPlayer = true">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-                {{ video.watchPosition! > 0 && !video.watched ? '继续播放' : '播放' }}
-              </button>
-              <button
-                v-if="video.watchPosition! > 0 && !video.watched"
-                class="play-btn secondary"
-                @click="resetAndPlay"
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <polygon points="5 3 19 12 5 21 5 3"/>
-                </svg>
-                从头播放
-              </button>
               <Tooltip content="刮削元数据" placement="bottom">
                 <button class="icon-btn scrape-btn" @click="showTmdbSearch = true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -353,32 +308,6 @@
                   </svg>
                 </button>
               </Tooltip>
-              <Tooltip :content="video.favorite ? '取消收藏' : '收藏'" placement="bottom">
-                <button
-                  class="icon-btn"
-                  :class="{ active: video.favorite }"
-                  @click="handleToggleFavorite"
-                >
-                <svg width="18" height="18" viewBox="0 0 24 24" :fill="video.favorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                </svg>
-              </button>
-              </Tooltip>
-              <Tooltip content="复制播放链接" placement="bottom">
-                <button class="icon-btn" @click="copyStreamUrl">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                  </svg>
-                </button>
-              </Tooltip>
-              <Tooltip content="下载播放列表 (PotPlayer)" placement="bottom">
-                <a class="icon-btn" :href="getVideoPlaylistUrl(video.id)" download>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-                  </svg>
-                </a>
-              </Tooltip>
             </div>
 
             <div class="rating-row" v-if="video.rating! > 0">
@@ -400,7 +329,7 @@
             <h3>演职人员</h3>
             <div class="actor-list">
             <div class="actor-item" v-for="actor in actors" :key="actor.id">
-              <img v-if="actor.imageUrl" :src="resolveApiUrl(actor.imageUrl)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
+              <img v-if="actor.imageUrl" v-img-cache="resolveApiUrl(actor.imageUrl)" :src="resolveApiUrl(actor.imageUrl)" :alt="actor.name" class="actor-avatar" draggable="false" @error="onActorImageError" />
               <div v-else class="actor-avatar-placeholder">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -443,18 +372,6 @@
       </div>
     </div>
 
-    <VideoPlayer
-      v-if="showPlayer && currentPlayVideo"
-      :video-id="currentPlayVideo.id"
-      :video-title="currentPlayVideo.title"
-      :stream-url="currentPlayVideo.streamUrl"
-      :episodes="allEpisodes"
-      :current-episode-id="currentPlayVideo.id"
-      :external-subtitles="externalSubtitles"
-      @close="showPlayer = false"
-      @episode-change="handleEpisodeChange"
-    />
-
     <Teleport to="body">
       <div v-if="showTmdbSearch" class="modal-overlay" @click.self="showTmdbSearch = false">
         <div class="tmdb-modal">
@@ -484,7 +401,7 @@
                 class="tmdb-card"
                 :class="{ binding: bindingId === item.id }"
               >
-                <img v-if="item.poster_path" :src="`https://image.tmdb.org/t/p/w200${item.poster_path}`" class="tmdb-poster" draggable="false" />
+                <img v-if="item.poster_path" v-img-cache="`https://image.tmdb.org/t/p/w200${item.poster_path}`" :src="`https://image.tmdb.org/t/p/w200${item.poster_path}`" class="tmdb-poster" draggable="false" />
                 <div v-else class="tmdb-poster-placeholder"></div>
                 <div class="tmdb-info">
                   <div class="tmdb-title">{{ item.title || item.name }}</div>
@@ -518,15 +435,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import type { VideoDTO, SeriesDTO, VideoActor, ExternalSubtitle } from '@/types/backend'
-import { getVideoById, getSeriesById, toggleVideoFavorite, getSeriesPosterUrl, getSeriesFanartUrl, getVideoFanartUrl, getVideoPlaylistUrl, deleteVideoProgress, getVideoActors, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, getExternalSubtitles, resolveApiUrl } from '@/api/backend'
-import { useConnectionStore } from '@/stores/connection'
-import { useToast } from '@/composables/useToast'
+import type { VideoDTO, SeriesDTO, VideoActor } from '@/types/backend'
+import { getVideoById, getSeriesById, getSeriesPosterUrl, getSeriesFanartUrl, getVideoFanartUrl, getVideoActors, searchTmdb, bindTmdb, refreshTmdb, unbindTmdb, resolveApiUrl } from '@/api/backend'
 import Tooltip from '@/components/Tooltip.vue'
-import VideoPlayer from '@/views/VideoPlayer.vue'
-
-const connectionStore = useConnectionStore()
-const toast = useToast()
 
 const router = useRouter()
 const route = useRoute()
@@ -535,11 +446,9 @@ const video = ref<VideoDTO | null>(null)
 const series = ref<SeriesDTO | null>(null)
 const loading = ref(false)
 const error = ref('')
-const showPlayer = ref(false)
 type EpisodeViewMode = 'poster' | 'compact'
 const episodeViewMode = ref<EpisodeViewMode>('poster')
 const actors = ref<VideoActor[]>([])
-const externalSubtitles = ref<ExternalSubtitle[]>([])
 
 // TMDB search
 const showTmdbSearch = ref(false)
@@ -574,7 +483,6 @@ async function loadVideo() {
   series.value = null
   video.value = null
   actors.value = []
-  externalSubtitles.value = []
 
   // 列表页（首页/影片页）携带 type 跳转，精确按系列/独立视频查询，
   // 避免 video 与 series 表 id 独立编号导致的撞车（查错内容）
@@ -587,7 +495,7 @@ async function loadVideo() {
         video.value = firstEpisode.value
         const episodeId = video.value?.id
         if (episodeId) {
-          await loadActorsAndSubtitles(episodeId)
+          await loadActors(episodeId)
         }
         loading.value = false
         return
@@ -614,7 +522,7 @@ async function loadVideo() {
           series.value = seriesData
         }
       }
-      await loadActorsAndSubtitles(id)
+      await loadActors(id)
     } else {
       error.value = '视频不存在'
     }
@@ -626,57 +534,16 @@ async function loadVideo() {
   }
 }
 
-async function loadActorsAndSubtitles(id: number) {
+async function loadActors(id: number) {
   try {
     actors.value = await getVideoActors(id)
   } catch {
     actors.value = []
   }
-  try {
-    externalSubtitles.value = await getExternalSubtitles(id)
-  } catch {
-    externalSubtitles.value = []
-  }
 }
 
 function selectEpisode(episode: VideoDTO) {
   video.value = episode
-}
-
-function handleEpisodeChange(episode: VideoDTO) {
-  video.value = episode
-  showPlayer.value = true
-  loadActorsAndSubtitles(episode.id)
-}
-
-function playEpisode(episode: VideoDTO | null) {
-  if (!episode) return
-  video.value = episode
-  showPlayer.value = true
-  loadActorsAndSubtitles(episode.id)
-}
-
-async function resetAndPlay() {
-  if (!video.value) return
-  try {
-    await deleteVideoProgress(video.value.id)
-    video.value = { ...video.value, watchPosition: 0, watchProgressPercent: 0, watched: false }
-    showPlayer.value = true
-  } catch (e) {
-    console.error('Failed to reset progress:', e)
-  }
-}
-
-async function handleToggleFavorite() {
-  if (!video.value) return
-  try {
-    const updated = await toggleVideoFavorite(video.value.id, !video.value.favorite)
-    if (updated) {
-      video.value = updated
-    }
-  } catch (e) {
-    console.error('Failed to toggle favorite:', e)
-  }
 }
 
 async function handleTmdbSearch() {
@@ -794,34 +661,15 @@ function onActorImageError(e: Event) {
   (e.target as HTMLImageElement).style.display = 'none'
 }
 
-function copyStreamUrl() {
-  const id = currentPlayId.value
-  if (!id) return
-  const baseUrl = connectionStore.backendUrl || ''
-  const url = `${baseUrl}/api/v1/video/${id}/stream`
-  navigator.clipboard.writeText(url).then(() => {
-    toast.show('播放链接已复制到剪贴板', 'success')
-  }).catch(() => {
-    toast.show('复制失败', 'error')
-  })
-}
-
 const currentPlayId = computed(() => {
   return video.value?.id || firstEpisode.value?.id || 0
-})
-
-const currentPlayVideo = computed(() => {
-  if (allEpisodes.value.length > 0) {
-    const found = allEpisodes.value.find(ep => ep.id === video.value?.id)
-    return found || firstEpisode.value
-  }
-  return video.value
 })
 
 const currentDisplayInfo = computed(() => {
   if (series.value) {
     return {
       title: series.value.title,
+      logoUrl: resolveApiUrl(series.value.logoUrl) || resolveApiUrl(video.value?.logoUrl) || '',
       originalTitle: series.value.originalTitle,
       posterUrl: resolveApiUrl(video.value?.coverUrl) || resolveApiUrl(series.value.coverUrl) || getSeriesPosterUrl(series.value.id),
       backdropUrl: resolveApiUrl(video.value?.fanartUrl) || resolveApiUrl(series.value.fanartUrl) || getSeriesFanartUrl(series.value.id),
@@ -833,6 +681,7 @@ const currentDisplayInfo = computed(() => {
   if (video.value) {
     return {
       title: video.value.title,
+      logoUrl: resolveApiUrl(video.value.logoUrl) || '',
       originalTitle: video.value.originalTitle,
       posterUrl: resolveApiUrl(video.value.coverUrl) || '',
       backdropUrl: resolveApiUrl(video.value.fanartUrl) || '',
@@ -843,6 +692,7 @@ const currentDisplayInfo = computed(() => {
   }
   return {
     title: '',
+    logoUrl: '',
     originalTitle: '',
     posterUrl: '',
     backdropUrl: '',
@@ -850,10 +700,6 @@ const currentDisplayInfo = computed(() => {
     year: 0,
     genre: null,
   }
-})
-
-const hasSeriesProgress = computed(() => {
-  return allEpisodes.value.some(ep => ep.watchPosition! > 0 && !ep.watched)
 })
 
 watch(() => route.params.id, (newId) => {
@@ -1014,6 +860,15 @@ onMounted(loadVideo)
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+.video-logo {
+  max-width: 100%;
+  max-height: 120px;
+  object-fit: contain;
+  object-position: left center;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
+}
+
 .video-original-title {
   font-size: 17px;
   color: rgba(255, 255, 255, 0.75);
@@ -1036,49 +891,12 @@ onMounted(loadVideo)
   color: var(--text-muted);
 }
 
-.video-progress {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
-}
-
 .action-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 12px;
-}
-
-.play-btn {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 14px 36px;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: 17px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.play-btn:hover {
-  background: var(--accent-hover);
-}
-
-.play-btn.secondary {
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.play-btn.secondary:hover {
-  background: rgba(255, 255, 255, 0.25);
-  color: #fff;
 }
 
 .icon-btn {
@@ -1573,66 +1391,6 @@ onMounted(loadVideo)
   object-fit: cover;
 }
 
-.poster-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.episode-poster-card:hover .poster-overlay {
-  opacity: 1;
-}
-
-.poster-play-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.9);
-  color: #1f1f1f;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.poster-play-btn svg {
-  transform: translateX(2px);
-}
-
-.poster-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: rgba(0, 0, 0, 0.3);
-}
-
-.poster-progress .progress-bar {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-.poster-progress .progress-fill {
-  background: var(--accent);
-}
-
-.poster-watched-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 2px 8px;
-  background: rgba(46, 204, 113, 0.9);
-  color: white;
-  font-size: 11px;
-  font-weight: 500;
-  border-radius: 4px;
-}
-
 .poster-info {
   padding: 0 2px;
 }
@@ -1854,11 +1612,6 @@ onMounted(loadVideo)
 
   .video-title {
     font-size: 20px;
-  }
-
-  .play-btn {
-    font-size: 14px;
-    padding: 10px 20px;
   }
 
   .hero-overview p {

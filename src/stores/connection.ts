@@ -7,7 +7,9 @@ import {
   getStoredToken,
   setOnAuthRequired,
   verifyToken,
+  getCurrentUser,
 } from '@/api/backend'
+import type { UserDTO } from '@/types/backend'
 
 const DEFAULT_BACKEND_URL = 'http://localhost:20058'
 
@@ -19,6 +21,7 @@ export const useConnectionStore = defineStore('connection', () => {
   const isAuthenticated = ref(false)
   const connected = ref(false)
   const showServerAddress = ref(localStorage.getItem(showServerAddressStorageKey) !== 'false')
+  const user = ref<UserDTO | null>(null)
 
   function applyBackendConfig() {
     setBackendConfig({ url: backendUrl.value, authenticated: isAuthenticated.value })
@@ -30,9 +33,10 @@ export const useConnectionStore = defineStore('connection', () => {
     applyBackendConfig()
   }
 
-  async function login(password: string): Promise<boolean> {
+  async function login(username: string, password: string): Promise<boolean> {
     applyBackendConfig()
-    await authLogin(password)
+    const result = await authLogin(username, password)
+    user.value = result.user || null
     isAuthenticated.value = true
     connected.value = true
     return true
@@ -50,15 +54,20 @@ export const useConnectionStore = defineStore('connection', () => {
       return false
     }
 
+    user.value = (await getCurrentUser()) || null
     isAuthenticated.value = true
     connected.value = true
     return true
   }
 
   async function disconnect() {
-    await authLogout()
-    isAuthenticated.value = false
-    connected.value = false
+    try {
+      await authLogout()
+    } finally {
+      isAuthenticated.value = false
+      connected.value = false
+      user.value = null
+    }
   }
 
   function setShowServerAddress(value: boolean) {
@@ -69,6 +78,7 @@ export const useConnectionStore = defineStore('connection', () => {
   setOnAuthRequired(() => {
     isAuthenticated.value = false
     connected.value = false
+    user.value = null
   })
 
   return {
@@ -76,6 +86,7 @@ export const useConnectionStore = defineStore('connection', () => {
     isAuthenticated,
     connected,
     showServerAddress,
+    user,
     login,
     restoreConnection,
     disconnect,

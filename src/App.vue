@@ -13,6 +13,13 @@
         </button>
         <h1 class="mobile-title">Fryfrog Hub</h1>
       </header>
+      <header class="topbar" v-show="!showMobileMenuBtn">
+        <h1 class="page-title">{{ pageTitle }}</h1>
+        <div class="topbar-right">
+          <span v-if="connectionStore.showServerAddress" class="server-url">{{ serverDisplay }}</span>
+          <span v-if="connectionStore.user" class="user-name">{{ displayName }}</span>
+        </div>
+      </header>
       <main class="main-content">
         <router-view />
       </main>
@@ -46,9 +53,10 @@ import Sidebar from '@/components/Sidebar.vue'
 import AppIcon from '@/components/AppIcon.vue'
 import Toast from '@/components/Toast.vue'
 import { useToast } from '@/composables/useToast'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const connectionStore = useConnectionStore()
+const route = useRoute()
 const router = useRouter()
 const toast = useToast()
 
@@ -77,6 +85,26 @@ function checkMobile() {
 function toggleSidebar() {
   showMobileSidebar.value = !showMobileSidebar.value
 }
+
+const pageTitle = computed(() => {
+  const metaTitle = route.meta.title as string | undefined
+  return metaTitle || '管理后台'
+})
+
+const serverDisplay = computed(() => {
+  try {
+    const url = new URL(connectionStore.backendUrl)
+    return url.host
+  } catch {
+    return connectionStore.backendUrl
+  }
+})
+
+const displayName = computed(() => {
+  const user = connectionStore.user
+  if (!user) return ''
+  return user.nickname || user.username
+})
 
 async function onConnected() {
   router.push('/')
@@ -167,6 +195,43 @@ watch(connected, (isConnected, wasConnected) => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.topbar {
+  flex-shrink: 0;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 32px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.page-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.server-url {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .main-content {

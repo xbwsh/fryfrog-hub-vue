@@ -17,9 +17,26 @@ export interface PageResponse<T> {
   totalPages: number
 }
 
+export interface UserDTO {
+  id: number
+  username: string
+  nickname: string | null
+  avatar: string | null
+  role: string
+  enabled: boolean
+  createdAt: string | null
+  lastLoginAt: string | null
+}
+
+export interface LoginResponse {
+  token: string
+  user?: UserDTO
+}
+
 export interface VideoDTO {
   id: number
   title: string
+  logoUrl: string | null
   coverUrl: string | null
   fanartUrl: string | null
   streamUrl: string | null
@@ -47,6 +64,8 @@ export interface VideoDTO {
   hasNfo: boolean
   hasPoster: boolean
   hasFanart: boolean
+  releaseDate: string | null
+  tags: string | null
   scraped: boolean
   isSeries: boolean
   libraryId: number | null
@@ -58,6 +77,8 @@ export interface VideoDTO {
   watchProgressPercent: number | null
   watched: boolean | null
   isAdult: boolean | null
+  resolution: string | null
+  resolutionLabel: string | null
 }
 
 export interface VideoProgress {
@@ -71,6 +92,7 @@ export interface VideoProgress {
 
 export interface SeasonDTO {
   seasonNumber: number
+  coverUrl: string | null
   episodes: VideoDTO[]
 }
 
@@ -78,6 +100,7 @@ export interface SeriesDTO {
   id: number
   type: 'series' | 'standalone'
   title: string
+  logoUrl: string | null
   coverUrl: string | null
   fanartUrl: string | null
   originalTitle: string | null
@@ -86,11 +109,13 @@ export interface SeriesDTO {
   tmdbId: number | null
   rating: number | null
   year: number | null
+  releaseDate: string | null
   seasonNumber: number | null
   numberOfSeasons: number | null
   totalEpisodes: number
   status: string | null
   isAdult: boolean | null
+  favorite: boolean
   episodeCount: number
   seasons: SeasonDTO[]
 }
@@ -99,16 +124,19 @@ export interface SeriesListDTO {
   id: number
   type: 'series' | 'standalone'
   title: string
+  logoUrl: string | null
   coverUrl: string | null
   fanartUrl: string | null
   originalTitle: string | null
   mediaType: string | null
   rating: number | null
   year: number | null
+  releaseDate: string | null
   numberOfSeasons: number | null
   totalEpisodes: number
   episodeCount: number
   isAdult: boolean | null
+  favorite: boolean
   hasAdultEpisodes: boolean | null
 }
 
@@ -121,6 +149,15 @@ export interface LibrarySeriesGroupDTO {
   standaloneVideos: SeriesListDTO[]
   seriesCount: number
   standaloneCount: number
+}
+
+export interface CalendarItem {
+  seriesId: number
+  title: string
+  coverUrl: string | null
+  fanartUrl: string | null
+  nextEpisodeDate: string | null
+  nextEpisodeNumber: string | null
 }
 
 export interface TmdbSearchItem {
@@ -156,6 +193,7 @@ export interface VideoActor {
 export interface ExternalSubtitle {
   fileName: string
   language: string
+  url?: string
 }
 
 export interface ScrapeItemStatus {
@@ -167,6 +205,7 @@ export interface ScrapeItemStatus {
 
 export interface ScrapeProgress {
   module: string
+  stage: string | null
   running: boolean
   total: number
   completed: number
@@ -194,6 +233,11 @@ export interface MediaLibrary {
   isAdult: boolean
   sortOrder: number
   description: string | null
+  mediaTypeFilter: string | null
+  movieSubType: boolean
+  tvSubType: boolean
+  videoType: boolean
+  mixedSubType: boolean
   createdAt: string
   updatedAt: string
 }
@@ -241,4 +285,48 @@ export interface LogFileInfo {
   name: string
   size: number
   lastModified: string
+}
+
+export interface VideoMetadataUpdateRequest {
+  title?: string
+  overview?: string
+  rating?: number
+  year?: number
+  releaseDate?: string
+  genre?: string
+  director?: string
+  actors?: string
+  originalTitle?: string
+  tags?: string
+}
+
+export interface SeriesMetadataUpdateRequest {
+  title?: string
+  overview?: string
+  rating?: number
+  year?: number
+  releaseDate?: string
+  originalTitle?: string
+  status?: string
+}
+
+export interface FrameSelectRequest {
+  index?: number
+  type?: 'poster' | 'fanart'
+}
+
+export interface SeriesFrameSelectRequest {
+  videoId?: number
+  index?: number
+}
+
+export interface PipelineProgressDTO {
+  libraryId: number
+  stage: string
+  running: boolean
+  percent: number
+  currentItem: string
+  scrapingEnabled: boolean
+  scanPercent: number
+  scrapePercent: number
 }

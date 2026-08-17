@@ -65,21 +65,99 @@
           </div>
         </div>
       </div>
+
+      <div class="settings-section">
+        <div class="section-title" @click="toggleSection('system')">
+          <span class="section-chevron" :class="{ collapsed: !sections.system }"></span>
+          系统设置
+        </div>
+        <div class="section-body" :class="{ collapsed: !sections.system }">
+          <div v-if="settingsLoading" class="setting-item settings-loading">
+            <p class="item-description">加载中...</p>
+          </div>
+          <div v-else-if="settingsError" class="setting-item settings-error">
+            <div class="item-info">
+              <h3 class="item-label">加载失败</h3>
+              <p class="item-description">{{ settingsError }}</p>
+            </div>
+            <button class="btn-save" @click="loadSettings">重试</button>
+          </div>
+          <template v-else>
+            <div class="setting-item">
+              <div class="item-info">
+                <h3 class="item-label">自动刮削</h3>
+                <p class="item-description">扫描时自动刮削 TMDB 元数据（全局开关）</p>
+              </div>
+              <button
+                class="toggle-switch"
+                :class="{ active: scrapeEnabled }"
+                :disabled="savingKeys.has('scrape.auto-scrape')"
+                @click="toggleSetting('scrape.auto-scrape')"
+              >
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="setting-item">
+              <div class="item-info">
+                <h3 class="item-label">定时扫描</h3>
+                <p class="item-description">按固定间隔自动扫描媒体资源库</p>
+              </div>
+              <button
+                class="toggle-switch"
+                :class="{ active: periodicScanEnabled }"
+                :disabled="savingKeys.has('watcher.periodic-scan')"
+                @click="toggleSetting('watcher.periodic-scan')"
+              >
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="setting-item setting-item-wide">
+              <div class="item-info">
+                <h3 class="item-label">扫描间隔（秒）</h3>
+                <p class="item-description">定时扫描的运行间隔，修改后立即生效</p>
+              </div>
+              <div class="url-input-group">
+                <input
+                  v-model="intervalInput"
+                  type="number"
+                  min="1"
+                  class="url-input"
+                  :disabled="!periodicScanEnabled || savingKeys.has('watcher.periodic-scan-interval')"
+                  @keydown.enter="saveInterval"
+                  @blur="saveInterval"
+                />
+                <button
+                  class="btn-save"
+                  :disabled="!intervalDirty || savingKeys.has('watcher.periodic-scan-interval')"
+                  @click="saveInterval"
+                >
+                  保存
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { useConnectionStore } from '@/stores/connection'
+import { useToast } from '@/composables/useToast'
+import { getAllSettings, updateSetting } from '@/api/backend'
+import type { SystemSetting } from '@/types/backend'
 
 const themeStore = useThemeStore()
 const connectionStore = useConnectionStore()
+const toast = useToast()
 
 const sections = reactive({
   server: true,
   appearance: true,
+  system: false,
 })
 
 function toggleSection(key: keyof typeof sections) {
@@ -100,6 +178,77 @@ const themeMode = computed({
   set: (value: ThemeMode) => themeStore.setMode(value),
 })
 
+const settingsLoading = ref(false)
+const settingsError = ref('')
+const settings = reactive<Record<string, SystemSetting>>({})
+const savingKeys = ref(new Set<string>())
+const intervalInput = ref('')
+
+const scrapeEnabled = computed(() => settings['scrape.auto-scrape']?.value === 'true')
+const periodicScanEnabled = computed(() => settings['watcher.periodic-scan']?.value === 'true')
+const intervalDirty = computed(() => {
+  const current = settings['watcher.periodic-scan-interval']?.value
+  return intervalInput.value !== '' && intervalInput.value !== current
+})
+
+function applySettings(list: SystemSetting[]) {
+  list.forEach(s => {
+    settings[s.key] = s
+  })
+  if (settings['watcher.periodic-scan-interval']) {
+    intervalInput.value = settings['watcher.periodic-scan-interval'].value
+  }
+}
+
+async function loadSettings() {
+  settingsLoading.value = true
+  settingsError.value = ''
+  try {
+    applySettings(await getAllSettings())
+  } catch (e) {
+    settingsError.value = '无法加载服务器设置'
+    console.error('Failed to load settings:', e)
+  } finally {
+    settingsLoading.value = false
+  }
+}
+
+async function toggleSetting(key: string) {
+  const current = settings[key]?.value === 'true'
+  const next = current ? 'false' : 'true'
+  savingKeys.value.add(key)
+  try {
+    const updated = await updateSetting(key, next)
+    settings[key] = updated
+    toast.show(current ? '已关闭' : '已开启', 'success')
+  } catch (e) {
+    console.error('Failed to update setting:', e)
+    toast.show('更新失败', 'error')
+  } finally {
+    savingKeys.value.delete(key)
+  }
+}
+
+async function saveInterval() {
+  const key = 'watcher.periodic-scan-interval'
+  const value = intervalInput.value.trim()
+  if (!value || savingKeys.value.has(key) || !intervalDirty.value) return
+
+  savingKeys.value.add(key)
+  try {
+    const updated = await updateSetting(key, value)
+    settings[key] = updated
+    intervalInput.value = updated.value
+    toast.show(`扫描间隔已更新为 ${updated.value} 秒`, 'success')
+  } catch (e) {
+    console.error('Failed to update interval:', e)
+    toast.show('更新失败', 'error')
+  } finally {
+    savingKeys.value.delete(key)
+  }
+}
+
+onMounted(loadSettings)
 </script>
 
 <style scoped>
@@ -193,6 +342,10 @@ const themeMode = computed({
   padding: 10px 12px;
   border-radius: var(--radius-md);
   transition: var(--transition);
+}
+
+.setting-item-wide {
+  grid-column: 1 / -1;
 }
 
 .setting-item:hover {

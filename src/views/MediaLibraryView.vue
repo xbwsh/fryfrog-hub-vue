@@ -24,6 +24,17 @@
       </div>
     </div>
 
+    <div v-if="scanProgress.running" class="scan-progress-wrap">
+      <div class="scan-progress-info">
+        <span class="scan-progress-stage">{{ scanProgress.stage }}</span>
+        <span v-if="scanProgress.currentItem" class="scan-progress-item">当前：{{ scanProgress.currentItem }}</span>
+        <span class="scan-progress-percent">{{ Math.round(scanProgress.percent) }}%</span>
+      </div>
+      <div class="scan-progress-bar">
+        <div class="scan-progress-fill" :style="{ width: Math.min(scanProgress.percent, 100) + '%' }"></div>
+      </div>
+    </div>
+
     <div v-if="loading" class="loading-state">
       <div class="loading-spinner"></div>
       <p>加载中...</p>
@@ -301,8 +312,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import type { MediaLibrary, MediaLibraryType, VideoSubType, DirectoryItem } from '@/types/backend'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import type { MediaLibrary, MediaLibraryType, VideoSubType, DirectoryItem, ScrapeProgress } from '@/types/backend'
 import { useToast } from '@/composables/useToast'
 import {
   getAllMediaLibraries,
@@ -313,6 +324,8 @@ import {
   browseDirectory,
   scanAllLibraries,
   scanLibraryById,
+  getScanProgress,
+  getPipelineProgress,
 } from '@/api/backend'
 
 const toast = useToast()
@@ -337,6 +350,23 @@ const draggingId = ref<number | null>(null)
 const dragOverId = ref<number | null>(null)
 const scanningAll = ref(false)
 const scanningId = ref<number | null>(null)
+const scanProgress = ref<{ running: boolean; percent: number; currentItem: string; stage: string }>({
+  running: false,
+  percent: 0,
+  currentItem: '',
+  stage: '',
+})
+let scanTimer: ReturnType<typeof setInterval> | null = null
+let scanStartedAt = 0
+
+const PIPELINE_STAGES: Record<string, string> = {
+  scan: '扫描中',
+  scrape: '刮削中',
+  actors: '抓取演员',
+  assets: '处理图片',
+  done: '完成',
+  idle: '空闲',
+}
 
 const form = ref({
   name: '',
@@ -587,33 +617,141 @@ async function handleDelete() {
   }
 }
 
-onMounted(loadLibraries)
+function clearScanPolling() {
+  if (scanTimer) {
+    clearInterval(scanTimer)
+    scanTimer = null
+  }
+}
+
+function scanElapsed(): number {
+  return Date.now() - scanStartedAt
+}
+
+function formatElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000)
+  if (s < 60) return `${s} 秒`
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return sec > 0 ? `${m} 分 ${sec} 秒` : `${m} 分钟`
+}
+
+function aggregateScan(list: ScrapeProgress[]) {
+  let total = 0
+  let completed = 0
+  const current = new Set<string>()
+  list.forEach(p => {
+    total += p.total
+    completed += p.completed + p.failed + p.skipped
+    if (p.currentItem) current.add(p.currentItem)
+  })
+  return {
+    total,
+    completed,
+    allDone: list.every(p => !p.running),
+    currentItem: Array.from(current).join('、'),
+    percent: total > 0 ? (completed / total) * 100 : 0,
+  }
+}
 
 async function handleScanAll() {
   if (scanningAll.value) return
   scanningAll.value = true
+  scanStartedAt = Date.now()
+  scanProgress.value = { running: true, percent: 0, currentItem: '', stage: '准备扫描...' }
   try {
     const result = await scanAllLibraries()
-    toast.showHtml(`<div class="toast-title">扫描完成</div><div class="toast-time">耗时 ${result.elapsedMs}ms</div>`, 'success', 3000)
+    if (result.libraryCount === 0) {
+      clearScanPolling()
+      scanProgress.value = { running: false, percent: 0, currentItem: '', stage: '' }
+      scanStartedAt = Date.now()
+      toast.show('没有启用的资源库', 'info')
+      return
+    }
+    scanProgress.value = { running: true, percent: 0, currentItem: '', stage: '扫描 0/0' }
+    const tick = async () => {
+      try {
+        const list = await getScanProgress()
+        if (!list || list.length === 0) return
+        const agg = aggregateScan(list)
+        scanProgress.value = {
+          running: true,
+          percent: agg.percent,
+          currentItem: agg.currentItem,
+          stage: agg.allDone ? '完成' : `扫描 ${agg.completed}/${agg.total}`,
+        }
+        if (agg.allDone) {
+          clearScanPolling()
+          scanningAll.value = false
+          scanProgress.value.running = false
+          const elapsed = scanElapsed()
+          setTimeout(() => {
+            scanProgress.value = { running: false, percent: 0, currentItem: '', stage: '' }
+          }, 5000)
+          toast.showHtml(`<div class="toast-title">扫描完成</div><div class="toast-time">耗时 ${formatElapsed(elapsed)}</div>`, 'success', 3000)
+        }
+      } catch (e) {
+        console.error('Failed to poll scan progress:', e)
+      }
+    }
+    scanTimer = setInterval(tick, 1000)
+    await tick()
   } catch {
-    toast.show('扫描失败，请检查后端连接', 'error')
-  } finally {
+    clearScanPolling()
     scanningAll.value = false
+    scanProgress.value = { running: false, percent: 0, currentItem: '', stage: '' }
+    toast.show('扫描失败，请检查后端连接', 'error')
   }
 }
 
 async function handleScanOne(lib: MediaLibrary) {
   if (scanningId.value !== null) return
   scanningId.value = lib.id
+  scanStartedAt = Date.now()
+  scanProgress.value = { running: true, percent: 0, currentItem: '', stage: `「${lib.name}」准备中...` }
   try {
-    const result = await scanLibraryById(lib.id)
-    toast.showHtml(`<div class="toast-title">「${lib.name}」扫描完成</div><div class="toast-time">耗时 ${result.elapsedMs}ms</div>`, 'success', 3000)
+    await scanLibraryById(lib.id)
+    const tick = async () => {
+      try {
+        const p = await getPipelineProgress(lib.id)
+        if (!p) return
+        const stageLabel = PIPELINE_STAGES[p.stage] || p.stage || ''
+        scanProgress.value = {
+          running: true,
+          percent: p.percent || 0,
+          currentItem: p.currentItem || '',
+          stage: `「${lib.name}」${stageLabel}`,
+        }
+        const done = !p.running || p.stage === 'done' || (p.percent ?? 0) >= 100
+        if (done) {
+          clearScanPolling()
+          scanningId.value = null
+          scanProgress.value.running = false
+          const elapsed = scanElapsed()
+          setTimeout(() => {
+            scanProgress.value = { running: false, percent: 0, currentItem: '', stage: '' }
+          }, 5000)
+          toast.showHtml(`<div class="toast-title">「${lib.name}」扫描完成</div><div class="toast-time">耗时 ${formatElapsed(elapsed)}</div>`, 'success', 3000)
+        }
+      } catch (e) {
+        console.error('Failed to poll pipeline progress:', e)
+      }
+    }
+    scanTimer = setInterval(tick, 1000)
+    await tick()
   } catch {
-    toast.show('扫描失败，请检查后端连接', 'error')
-  } finally {
+    clearScanPolling()
     scanningId.value = null
+    scanProgress.value = { running: false, percent: 0, currentItem: '', stage: '' }
+    toast.show('扫描失败，请检查后端连接', 'error')
   }
 }
+
+onMounted(loadLibraries)
+
+onUnmounted(() => {
+  clearScanPolling()
+})
 </script>
 
 <style scoped>
@@ -649,6 +787,56 @@ async function handleScanOne(lib: MediaLibrary) {
   display: flex;
   gap: 10px;
   align-items: center;
+}
+
+.scan-progress-wrap {
+  margin: 0 32px 12px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.scan-progress-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.scan-progress-stage {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.scan-progress-item {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scan-progress-percent {
+  font-family: monospace;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.scan-progress-bar {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.scan-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.4s ease;
 }
 
 .btn-add {

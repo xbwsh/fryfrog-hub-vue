@@ -1,38 +1,43 @@
 <template>
   <nav class="sidebar" :class="{ mobile, tablet, open: mobile && show }">
     <div class="sidebar-header">
-      <div class="header-info" v-show="!mobile">
-        <span class="logo-text">Fryfrog Hub</span>
-        <span v-if="connectionStore.showServerAddress" class="server-url">{{ serverDisplay }}</span>
-      </div>
+      <span class="logo-text">Fryfrog Hub</span>
     </div>
 
-    <div class="nav-section">
-      <h3 class="nav-label">内容</h3>
+    <div class="nav-section" @click="emit('close')">
+      <h3 class="nav-label">概览</h3>
       <router-link to="/" class="nav-item" active-class="active" :exact="true">
         <AppIcon name="home" :size="20" />
-        首页
-      </router-link>
-      <router-link to="/favorites" class="nav-item" active-class="active">
-        <AppIcon name="star" :size="20" />
-        收藏
-      </router-link>
-      <router-link to="/videos" class="nav-item" active-class="active">
-        <AppIcon name="film" :size="20" />
-        视频
+        仪表盘
       </router-link>
     </div>
 
-    <div class="nav-section">
-      <h3 class="nav-label">系统</h3>
+    <div class="nav-section" @click="emit('close')">
+      <h3 class="nav-label">媒体管理</h3>
+      <router-link to="/videos" class="nav-item" active-class="active">
+        <AppIcon name="film" :size="20" />
+        视频管理
+      </router-link>
       <router-link to="/media-libraries" class="nav-item" active-class="active">
         <AppIcon name="folder" :size="20" />
-        资源库
+        媒体库
       </router-link>
+    </div>
+
+    <div class="nav-section" @click="emit('close')">
+      <h3 class="nav-label">系统管理</h3>
       <router-link to="/settings" class="nav-item" active-class="active">
         <AppIcon name="settings" :size="20" />
-        设置
+        系统设置
       </router-link>
+      <router-link to="/logs" class="nav-item" active-class="active">
+        <AppIcon name="file-text" :size="20" />
+        日志管理
+      </router-link>
+    </div>
+
+    <div class="nav-section" @click="emit('close')">
+      <h3 class="nav-label">开发工具</h3>
       <router-link to="/icons" class="nav-item" active-class="active">
         <AppIcon name="grid" :size="20" />
         图标库
@@ -40,10 +45,6 @@
       <router-link to="/colors" class="nav-item" active-class="active">
         <AppIcon name="dropper" :size="20" />
         色彩
-      </router-link>
-      <router-link to="/logs" class="nav-item" active-class="active">
-        <AppIcon name="file-text" :size="20" />
-        日志
       </router-link>
     </div>
 
@@ -57,7 +58,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useConnectionStore } from '@/stores/connection'
 import { useRouter } from 'vue-router'
 import AppIcon from '@/components/AppIcon.vue'
@@ -71,21 +71,13 @@ defineProps<{
   tablet?: boolean
 }>()
 
-defineEmits<{
+const emit = defineEmits<{
   close: []
 }>()
 
-const serverDisplay = computed(() => {
-  try {
-    const url = new URL(connectionStore.backendUrl)
-    return url.host
-  } catch {
-    return connectionStore.backendUrl
-  }
-})
-
 async function handleDisconnect() {
   await connectionStore.disconnect()
+  emit('close')
   router.push('/')
 }
 </script>
@@ -128,23 +120,11 @@ async function handleDisconnect() {
   padding: 20px 16px;
 }
 
-.header-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
 .logo-text {
   font-family: var(--font-display);
   font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-}
-
-.server-url {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-family: monospace;
 }
 
 .nav-section {

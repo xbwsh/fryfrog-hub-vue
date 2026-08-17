@@ -18,6 +18,14 @@ import type {
   LogFileInfo,
   SystemSetting,
   PageResponse,
+  VideoMetadataUpdateRequest,
+  SeriesMetadataUpdateRequest,
+  FrameSelectRequest,
+  SeriesFrameSelectRequest,
+  PipelineProgressDTO,
+  UserDTO,
+  CalendarItem,
+  LoginResponse,
 } from '@/types/backend'
 
 const TOKEN_KEY = 'fryfrog-token'
@@ -124,8 +132,8 @@ export async function toggleVideoFavorite(id: number, status: boolean): Promise<
   return response.data.data
 }
 
-export async function setVideoWatched(id: number, completed: boolean): Promise<VideoDTO | undefined> {
-  const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/watched`, { completed })
+export async function setVideoWatched(id: number, completed: boolean): Promise<VideoProgress | undefined> {
+  const response = await client.put<ApiResponse<VideoProgress>>(`/api/v1/video/${id}/watched`, { completed })
   return response.data.data
 }
 
@@ -180,37 +188,57 @@ export async function downloadVideoCovers(id: number): Promise<Record<string, st
   return response.data.data
 }
 
+export async function updateVideoMetadata(id: number, data: VideoMetadataUpdateRequest): Promise<VideoDTO> {
+  const response = await client.put<ApiResponse<VideoDTO>>(`/api/v1/video/${id}/metadata`, data)
+  return response.data.data
+}
+
+export async function generateFrameCandidates(id: number): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/${id}/frames`)
+  return response.data.data
+}
+
+export function getFrameCandidateImageUrl(id: number, index: number): string {
+  return `${config.url}/api/v1/video/${id}/frames/${index}`
+}
+
+export async function selectFrame(id: number, data: FrameSelectRequest): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/${id}/frames/select`, data)
+  return response.data.data
+}
+
+export async function refreshAllMovieActors(): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>('/api/v1/video/refresh-all-actors')
+  return response.data.data
+}
+
 export async function rescrapeByLibrary(libraryId: number): Promise<string> {
   const response = await client.post<ApiResponse<string>>(`/api/v1/video/tmdb/rescrape-library/${libraryId}`)
   return response.data.data
 }
 
-export async function supplementScrape(libraryId: number, force = false): Promise<Record<string, unknown>> {
-  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/scrape/supplement/${libraryId}`, null, {
-    params: { force },
+export async function getScrapeProgress(module?: string): Promise<ScrapeProgress | null> {
+  const response = await client.get<ApiResponse<ScrapeProgress>>('/api/v1/video/scrape/progress', {
+    params: module ? { module } : {},
   })
-  return response.data.data
-}
-
-export async function scrapeAdultOnly(libraryId?: number): Promise<Record<string, unknown>> {
-  const response = await client.post<ApiResponse<Record<string, unknown>>>('/api/v1/video/scrape/adult-only', null, {
-    params: libraryId ? { libraryId } : {},
-  })
-  return response.data.data
-}
-
-export async function getScrapeProgress(): Promise<ScrapeProgress | null> {
-  const response = await client.get<ApiResponse<ScrapeProgress>>('/api/v1/video/scrape/progress')
   return response.data.data || null
 }
 
 // 外挂字幕
+interface SubtitleEntry {
+  filename?: string
+  fileName?: string
+  language?: string
+  url?: string
+}
+
 export async function getExternalSubtitles(id: number): Promise<ExternalSubtitle[]> {
-  const response = await client.get<ApiResponse<Record<string, string>[]>>(`/api/v1/video/${id}/subtitles`)
+  const response = await client.get<ApiResponse<SubtitleEntry[]>>(`/api/v1/video/${id}/subtitles`)
   const data = response.data.data || []
   return data.map(item => ({
-    fileName: item.fileName || Object.values(item)[0] || '',
+    fileName: item.filename || item.fileName || '',
     language: item.language || '',
+    url: item.url || '',
   }))
 }
 
@@ -250,6 +278,47 @@ export function getSeriesPosterUrl(id: number): string {
 
 export function getSeriesFanartUrl(id: number): string {
   return `${config.url}/api/v1/video/series/${id}/fanart`
+}
+
+export function getSeasonCoverUrl(seriesId: number, seasonNumber: number): string {
+  return `${config.url}/api/v1/video/series/${seriesId}/season/${seasonNumber}/cover`
+}
+
+export async function getFavoriteSeries(): Promise<SeriesListDTO[]> {
+  const response = await client.get<ApiResponse<SeriesListDTO[]>>('/api/v1/video/series/favorites')
+  return response.data.data || []
+}
+
+export async function getUpcomingCalendar(): Promise<CalendarItem[]> {
+  const response = await client.get<ApiResponse<CalendarItem[]>>('/api/v1/video/series/calendar')
+  return response.data.data || []
+}
+
+export async function updateSeriesMetadata(id: number, data: SeriesMetadataUpdateRequest): Promise<SeriesDTO> {
+  const response = await client.put<ApiResponse<SeriesDTO>>(`/api/v1/video/series/${id}/metadata`, data)
+  return response.data.data
+}
+
+export async function setSeriesFavorite(id: number, status: boolean): Promise<SeriesDTO> {
+  const response = await client.put<ApiResponse<SeriesDTO>>(`/api/v1/video/series/${id}/favorite`, null, {
+    params: { status },
+  })
+  return response.data.data
+}
+
+export async function refreshSeasonCovers(seriesId: number): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/series/${seriesId}/refresh-season-covers`)
+  return response.data.data
+}
+
+export async function selectSeriesFanart(seriesId: number, data: SeriesFrameSelectRequest): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>(`/api/v1/video/series/${seriesId}/frames/select`, data)
+  return response.data.data
+}
+
+export async function refreshAllSeasonCovers(): Promise<Record<string, unknown>> {
+  const response = await client.post<ApiResponse<Record<string, unknown>>>('/api/v1/video/series/refresh-all-season-covers')
+  return response.data.data
 }
 
 export async function getVideoFavorites(): Promise<VideoDTO[]> {
@@ -342,6 +411,18 @@ export async function scanLibraryById(libraryId: number): Promise<Record<string,
   return response.data.data
 }
 
+export async function getPipelineProgress(libraryId: number): Promise<PipelineProgressDTO> {
+  const response = await client.get<ApiResponse<PipelineProgressDTO>>(`/api/v1/media-libraries/${libraryId}/pipeline-progress`)
+  return response.data.data
+}
+
+export async function getScanProgress(libraryId?: number): Promise<ScrapeProgress[]> {
+  const response = await client.get<ApiResponse<ScrapeProgress[]>>('/api/v1/media-libraries/scan/progress', {
+    params: libraryId ? { libraryId } : {},
+  })
+  return response.data.data || []
+}
+
 // ---------- 日志 ----------
 
 export async function getLogFiles(): Promise<LogFileInfo[]> {
@@ -355,14 +436,29 @@ export function getLogDownloadUrl(fileName: string): string {
 
 // ---------- 认证 ----------
 
-export async function authLogin(password: string): Promise<string> {
-  const response = await client.post<{ token?: string; success?: boolean }>('/api/v1/auth/login', {
-    password,
-  })
-  const token = response.data.token
-  if (!token) throw new Error('登录失败：未获取到 token')
-  setStoredToken(token)
-  return token
+export async function authLogin(username = 'admin', password: string): Promise<LoginResponse> {
+  try {
+    const response = await client.post<{ token?: string; user?: UserDTO }>('/api/v1/auth/login', {
+      username,
+      password,
+    })
+    if (!response.data.token) throw new Error('登录失败：未获取到 token')
+    const result: LoginResponse = { token: response.data.token, user: response.data.user }
+    setStoredToken(result.token)
+    return result
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const data = err.response?.data as { message?: string } | undefined
+      if (data?.message) {
+        const retry = (err.response?.data as { retryAfterSeconds?: number } | undefined)?.retryAfterSeconds
+        const msg = retry
+          ? `${data.message}（等待 ${Math.ceil(retry / 60)} 分钟后再试）`
+          : data.message
+        throw new Error(msg)
+      }
+    }
+    throw err
+  }
 }
 
 export async function authLogout(): Promise<void> {
@@ -379,6 +475,15 @@ export async function authStatus(): Promise<boolean> {
     return response.data.enabled === true
   } catch {
     return false
+  }
+}
+
+export async function getCurrentUser(): Promise<UserDTO | undefined> {
+  try {
+    const response = await client.get<ApiResponse<UserDTO>>('/api/v1/auth/me')
+    return response.data.data
+  } catch {
+    return undefined
   }
 }
 
