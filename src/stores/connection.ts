@@ -36,7 +36,15 @@ export const useConnectionStore = defineStore('connection', () => {
   async function login(username: string, password: string): Promise<boolean> {
     applyBackendConfig()
     const result = await authLogin(username, password)
-    user.value = result.user || null
+    const loggedUser = result.user || null
+    if (!loggedUser || loggedUser.role !== 'ADMIN') {
+      await authLogout()
+      user.value = null
+      isAuthenticated.value = false
+      connected.value = false
+      throw new Error('仅管理员可访问此后台')
+    }
+    user.value = loggedUser
     isAuthenticated.value = true
     connected.value = true
     return true
@@ -54,7 +62,16 @@ export const useConnectionStore = defineStore('connection', () => {
       return false
     }
 
-    user.value = (await getCurrentUser()) || null
+    const loggedUser = (await getCurrentUser()) || null
+    if (!loggedUser || loggedUser.role !== 'ADMIN') {
+      await authLogout()
+      user.value = null
+      isAuthenticated.value = false
+      connected.value = false
+      return false
+    }
+
+    user.value = loggedUser
     isAuthenticated.value = true
     connected.value = true
     return true
